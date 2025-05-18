@@ -348,16 +348,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Debug information
-  console.log("Auth state:", {
-    isAuthenticated,
-    isLoading,
-    hasUser: !!user,
-    hasSession: !!session,
-    userId: user?.id,
-    sessionUserId: session?.user?.id,
-  });
-
   return (
     <AuthContext.Provider
       value={{
