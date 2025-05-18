@@ -32,12 +32,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
-  const supabase = getSupabaseBrowserClient()
+
+  // Initialize Supabase client inside a try-catch to handle potential errors
+  const getSupabase = () => {
+    try {
+      return getSupabaseBrowserClient()
+    } catch (error) {
+      console.error("Error initializing Supabase client:", error)
+      return null
+    }
+  }
+
+  const supabase = getSupabase()
 
   // Check for existing session on mount
   useEffect(() => {
     const fetchSession = async () => {
       try {
+        if (!supabase) {
+          console.error("Supabase client not available")
+          setIsLoading(false)
+          return
+        }
+
         const {
           data: { session },
           error,
@@ -62,27 +79,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetchSession()
 
     // Set up auth state change listener
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      setSession(newSession)
+    if (supabase) {
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+        setSession(newSession)
 
-      if (event === "SIGNED_IN" && newSession) {
-        await fetchUserProfile(newSession.user)
-      } else if (event === "SIGNED_OUT") {
-        setUser(null)
-        setIsAuthenticated(false)
+        if (event === "SIGNED_IN" && newSession) {
+          await fetchUserProfile(newSession.user)
+        } else if (event === "SIGNED_OUT") {
+          setUser(null)
+          setIsAuthenticated(false)
+        }
+      })
+
+      return () => {
+        subscription.unsubscribe()
       }
-    })
-
-    return () => {
-      subscription.unsubscribe()
     }
   }, [])
 
   // Fetch user profile from the database
   const fetchUserProfile = async (authUser: User) => {
     try {
+      if (!supabase) {
+        console.error("Supabase client not available")
+        return
+      }
+
       const { data, error } = await supabase.from("users").select("*").eq("id", authUser.id).single()
 
       if (error) {
@@ -115,6 +139,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Create a new user profile in our database
   const createUserProfile = async (authUser: User) => {
     try {
+      if (!supabase) {
+        console.error("Supabase client not available")
+        return
+      }
+
       const { data, error } = await supabase
         .from("users")
         .insert({
@@ -148,6 +177,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
+      if (!supabase) {
+        throw new Error("Supabase client not available")
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -166,6 +199,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (name: string, email: string, password: string) => {
     try {
+      if (!supabase) {
+        throw new Error("Supabase client not available")
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -193,6 +230,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("User not authenticated")
       }
 
+      if (!supabase) {
+        throw new Error("Supabase client not available")
+      }
+
       const { error } = await supabase.from("users").update({ account_type: "paid" }).eq("id", user.id)
 
       if (error) {
@@ -214,6 +255,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      if (!supabase) {
+        throw new Error("Supabase client not available")
+      }
+
       const { error } = await supabase.auth.signOut()
 
       if (error) {
@@ -224,8 +269,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null)
       setIsAuthenticated(false)
 
-      // Force a page reload to ensure all components re-render
-      window.location.href = "/"
+      // Use Next.js router instead of forcing a full page reload
+      router.push("/")
+      router.refresh()
     } catch (error) {
       console.error("Logout error:", error)
       throw error

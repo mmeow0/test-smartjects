@@ -1,24 +1,65 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { SmartjectCard } from "@/components/smartject-card"
-import { HeroSection } from "@/components/hero-section"
-import { SearchBar } from "@/components/search-bar"
-import { CompanyLogos } from "@/components/company-logos"
-import { NewsletterSignup } from "@/components/newsletter-signup"
-import { mockSmartjects } from "@/lib/mock-data"
+"use client"
+
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SmartjectCard } from "@/components/smartject-card";
+import { HeroSection } from "@/components/hero-section";
+import { SearchBar } from "@/components/search-bar";
+import { CompanyLogos } from "@/components/company-logos";
+import { NewsletterSignup } from "@/components/newsletter-signup";
+import { useEffect, useState } from "react";
+import { SmartjectType } from "@/lib/types";
+import { smartjectService } from "@/lib/services";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [smartjects, setSmartjects] = useState<SmartjectType[]>([]);
+
   // Sort smartjects for different tabs
-  const recentSmartjects = [...mockSmartjects]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 6)
+  const recentSmartjects = [...smartjects]
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+    .slice(0, 6);
 
-  const mostNeededSmartjects = [...mockSmartjects].sort((a, b) => b.votes.need - a.votes.need).slice(0, 6)
+  // Fetch smartjects and filter options from Supabase
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const smartjectsData = await smartjectService.getSmartjects();
+        setSmartjects(smartjectsData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const mostProvidedSmartjects = [...mockSmartjects].sort((a, b) => b.votes.provide - a.votes.provide).slice(0, 6)
+    fetchData();
+  }, []);
 
-  const mostBelievedSmartjects = [...mockSmartjects].sort((a, b) => b.votes.believe - a.votes.believe).slice(0, 6)
+  const mostNeededSmartjects = [...smartjects]
+    .sort((a, b) => b.votes.need - a.votes.need)
+    .slice(0, 6);
+
+  const mostProvidedSmartjects = [...smartjects]
+    .sort((a, b) => b.votes.provide - a.votes.provide)
+    .slice(0, 6);
+
+  const mostBelievedSmartjects = [...smartjects]
+    .sort((a, b) => b.votes.believe - a.votes.believe)
+    .slice(0, 6);
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -41,11 +82,37 @@ export default function Home() {
           </TabsList>
 
           <TabsContent value="recent" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {recentSmartjects.map((smartject) => (
-                <SmartjectCard key={smartject.id} smartject={smartject} />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array(6)
+                  .fill(0)
+                  .map((_, i) => (
+                    <Card key={i} className="h-[400px]">
+                      <div className="h-40 relative">
+                        <Skeleton className="h-full w-full" />
+                      </div>
+                      <div className="p-5 space-y-4">
+                        <Skeleton className="h-6 w-3/4" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </div>
+                        <div className="flex gap-2">
+                          <Skeleton className="h-8 w-20" />
+                          <Skeleton className="h-8 w-20" />
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {recentSmartjects.map((smartject) => (
+                  <SmartjectCard key={smartject.id} smartject={smartject} />
+                ))}
+              </div>
+            )}
             <div className="flex justify-center mt-8">
               <Button variant="outline" size="lg" asChild>
                 <a href="/hub">View More Smartjects</a>
@@ -54,11 +121,37 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="most-needed" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {mostNeededSmartjects.map((smartject) => (
-                <SmartjectCard key={smartject.id} smartject={smartject} />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array(6)
+                  .fill(0)
+                  .map((_, i) => (
+                    <Card key={i} className="h-[400px]">
+                      <div className="h-40 relative">
+                        <Skeleton className="h-full w-full" />
+                      </div>
+                      <div className="p-5 space-y-4">
+                        <Skeleton className="h-6 w-3/4" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </div>
+                        <div className="flex gap-2">
+                          <Skeleton className="h-8 w-20" />
+                          <Skeleton className="h-8 w-20" />
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {mostNeededSmartjects.map((smartject) => (
+                  <SmartjectCard key={smartject.id} smartject={smartject} />
+                ))}
+              </div>
+            )}
             <div className="flex justify-center mt-8">
               <Button variant="outline" size="lg" asChild>
                 <a href="/hub">View More Smartjects</a>
@@ -67,11 +160,37 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="most-provided" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {mostProvidedSmartjects.map((smartject) => (
-                <SmartjectCard key={smartject.id} smartject={smartject} />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array(6)
+                  .fill(0)
+                  .map((_, i) => (
+                    <Card key={i} className="h-[400px]">
+                      <div className="h-40 relative">
+                        <Skeleton className="h-full w-full" />
+                      </div>
+                      <div className="p-5 space-y-4">
+                        <Skeleton className="h-6 w-3/4" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </div>
+                        <div className="flex gap-2">
+                          <Skeleton className="h-8 w-20" />
+                          <Skeleton className="h-8 w-20" />
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {mostProvidedSmartjects.map((smartject) => (
+                  <SmartjectCard key={smartject.id} smartject={smartject} />
+                ))}
+              </div>
+            )}
             <div className="flex justify-center mt-8">
               <Button variant="outline" size="lg" asChild>
                 <a href="/hub">View More Smartjects</a>
@@ -80,11 +199,37 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="most-believed" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {mostBelievedSmartjects.map((smartject) => (
-                <SmartjectCard key={smartject.id} smartject={smartject} />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array(6)
+                  .fill(0)
+                  .map((_, i) => (
+                    <Card key={i} className="h-[400px]">
+                      <div className="h-40 relative">
+                        <Skeleton className="h-full w-full" />
+                      </div>
+                      <div className="p-5 space-y-4">
+                        <Skeleton className="h-6 w-3/4" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </div>
+                        <div className="flex gap-2">
+                          <Skeleton className="h-8 w-20" />
+                          <Skeleton className="h-8 w-20" />
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {mostBelievedSmartjects.map((smartject) => (
+                  <SmartjectCard key={smartject.id} smartject={smartject} />
+                ))}
+              </div>
+            )}
             <div className="flex justify-center mt-8">
               <Button variant="outline" size="lg" asChild>
                 <a href="/hub">View More Smartjects</a>
@@ -97,7 +242,9 @@ export default function Home() {
       <Card className="my-12">
         <CardHeader>
           <CardTitle>How Smartjects Works</CardTitle>
-          <CardDescription>From research to implementation in three simple steps</CardDescription>
+          <CardDescription>
+            From research to implementation in three simple steps
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -106,7 +253,9 @@ export default function Home() {
                 <span className="text-primary font-bold text-xl">1</span>
               </div>
               <h3 className="text-xl font-semibold mb-2">Discover</h3>
-              <p className="text-muted-foreground">Browse AI research transformed into practical business projects</p>
+              <p className="text-muted-foreground">
+                Browse AI research transformed into practical business projects
+              </p>
             </div>
             <div className="flex flex-col items-center text-center">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -114,7 +263,8 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold mb-2">Connect</h3>
               <p className="text-muted-foreground">
-                Express interest with "I believe", "I need", or "I provide" options
+                Express interest with "I believe", "I need", or "I provide"
+                options
               </p>
             </div>
             <div className="flex flex-col items-center text-center">
@@ -123,7 +273,8 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold mb-2">Implement</h3>
               <p className="text-muted-foreground">
-                Create proposals, match with partners, and formalize with smart contracts
+                Create proposals, match with partners, and formalize with smart
+                contracts
               </p>
             </div>
           </div>
@@ -135,5 +286,5 @@ export default function Home() {
 
       <NewsletterSignup />
     </div>
-  )
+  );
 }
