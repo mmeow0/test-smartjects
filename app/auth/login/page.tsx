@@ -1,60 +1,74 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { useAuth } from "@/components/auth-provider"
-import { useToast } from "@/hooks/use-toast"
-import { Github, Twitter } from "lucide-react"
-import { Separator } from "@/components/ui/separator"
-import { getSupabaseBrowserClient } from "@/lib/supabase"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useAuth } from "@/components/auth-provider";
+import { useToast } from "@/hooks/use-toast";
+import { Github, Twitter } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 export default function LoginPage() {
-  const router = useRouter()
-  const { login } = useAuth()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  const { login, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-  })
-  const supabase = getSupabaseBrowserClient()
+  });
+  const supabase = getSupabaseBrowserClient();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) router.push("/dashboard");
+  }, [isAuthenticated]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
-      await login(formData.email, formData.password)
+      await login(formData.email, formData.password);
       toast({
         title: "Login successful",
         description: "Welcome back to Smartjects!",
-      })
-      router.push("/dashboard")
+      });
+      router.push("/dashboard");
     } catch (error: any) {
       toast({
         title: "Login failed",
-        description: error.message || "Please check your credentials and try again.",
+        description:
+          error.message || "Please check your credentials and try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  const handleOAuthLogin = async (provider: "google" | "github" | "twitter") => {
-    setIsLoading(true)
+  const handleOAuthLogin = async (
+    provider: "google" | "github" | "twitter"
+  ) => {
+    setIsLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -62,27 +76,29 @@ export default function LoginPage() {
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
         },
-      })
+      });
 
       if (error) {
-        throw error
+        throw error;
       }
     } catch (error: any) {
       toast({
         title: "Login failed",
         description: error.message || `Failed to login with ${provider}.`,
         variant: "destructive",
-      })
-      setIsLoading(false)
+      });
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="container flex items-center justify-center min-h-screen py-12">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Login</CardTitle>
-          <CardDescription>Enter your credentials to access your account</CardDescription>
+          <CardDescription>
+            Enter your credentials to access your account
+          </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -101,7 +117,10 @@ export default function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-sm text-primary hover:underline"
+                >
                   Forgot password?
                 </Link>
               </div>
@@ -125,12 +144,19 @@ export default function LoginPage() {
                 <Separator className="w-full" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              <Button variant="outline" type="button" disabled={isLoading} onClick={() => handleOAuthLogin("google")}>
+              <Button
+                variant="outline"
+                type="button"
+                disabled={isLoading}
+                onClick={() => handleOAuthLogin("google")}
+              >
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -152,11 +178,21 @@ export default function LoginPage() {
                 </svg>
                 Google
               </Button>
-              <Button variant="outline" type="button" disabled={isLoading} onClick={() => handleOAuthLogin("github")}>
+              <Button
+                variant="outline"
+                type="button"
+                disabled={isLoading}
+                onClick={() => handleOAuthLogin("github")}
+              >
                 <Github className="mr-2 h-4 w-4" />
                 GitHub
               </Button>
-              <Button variant="outline" type="button" disabled={isLoading} onClick={() => handleOAuthLogin("twitter")}>
+              <Button
+                variant="outline"
+                type="button"
+                disabled={isLoading}
+                onClick={() => handleOAuthLogin("twitter")}
+              >
                 <Twitter className="mr-2 h-4 w-4" />
                 Twitter
               </Button>
@@ -164,7 +200,10 @@ export default function LoginPage() {
 
             <div className="text-center text-sm mt-4">
               Don&apos;t have an account?{" "}
-              <Link href="/auth/register" className="text-primary hover:underline">
+              <Link
+                href="/auth/register"
+                className="text-primary hover:underline"
+              >
                 Sign up
               </Link>
             </div>
@@ -172,5 +211,5 @@ export default function LoginPage() {
         </form>
       </Card>
     </div>
-  )
+  );
 }

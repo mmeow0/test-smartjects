@@ -1,4 +1,5 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient, SupabaseClient } from "@supabase/supabase-js"
+import { GenericSchema } from "@supabase/supabase-js/dist/module/lib/types"
 
 // Create a single supabase client for the browser
 const createBrowserClient = () => {
@@ -15,7 +16,7 @@ export const getSupabaseBrowserClient = () => {
   if (!browserClient) {
     browserClient = createBrowserClient()
   }
-  return browserClient
+  return browserClient as SupabaseClient<unknown, never, GenericSchema>
 }
 
 // Server-side Supabase client (for server components and API routes)

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-import { getSupabaseBrowserClient } from "@/lib/supabase-client" // Import getSupabaseBrowserClient
 
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -49,6 +48,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { getSupabaseBrowserClient } from "@/lib/supabase"
 
 // Define deliverable type
 interface Deliverable {
