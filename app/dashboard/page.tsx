@@ -1,39 +1,58 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { SmartjectCard } from "@/components/smartject-card"
-import { useAuth } from "@/components/auth-provider"
-import { mockSmartjects } from "@/lib/mock-data"
-import { Badge } from "@/components/ui/badge"
-import { ArrowRight, CheckCircle, Clock, DollarSign, FileText, MessageSquare } from "lucide-react"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { SmartjectCard } from "@/components/smartject-card";
+import { useAuth } from "@/components/auth-provider";
+import { Badge } from "@/components/ui/badge";
+import {
+  ArrowRight,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  FileText,
+  MessageSquare,
+} from "lucide-react";
+import { useUserSmartjects } from "@/hooks/use-user-smartjects";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Update the dashboard page to include proposals, matches, and contracts
 export default function DashboardPage() {
-  const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
-  const [loading, setLoading] = useState(true)
+  const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
+
+  const { smartjects, isLoading, refetch } = useUserSmartjects(user?.id);
+
+  const [loading, setLoading] = useState(true);
 
   // Redirect if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push("/auth/login")
+      router.push("/auth/login");
     } else {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [isAuthenticated, router])
+  }, [isAuthenticated, router]);
 
   if (!isAuthenticated || loading) {
-    return null
+    return null;
   }
 
   // In a real app, we would fetch the user's smartjects from an API
-  const believedSmartjects = mockSmartjects.slice(0, 3)
-  const needSmartjects = user?.accountType === "paid" ? mockSmartjects.slice(3, 5) : []
-  const provideSmartjects = user?.accountType === "paid" ? mockSmartjects.slice(5, 7) : []
+  const believedSmartjects = smartjects.believe;
+  const needSmartjects = user?.accountType === "paid" ? smartjects.need : [];
+  const provideSmartjects =
+    user?.accountType === "paid" ? smartjects.provide : [];
 
   // Mock data for proposals
   const recentProposals = [
@@ -53,7 +72,7 @@ export default function DashboardPage() {
       budget: 12000,
       type: "provide",
     },
-  ]
+  ];
 
   // Mock data for matches
   const recentMatches = [
@@ -77,7 +96,7 @@ export default function DashboardPage() {
       // Added proposal IDs for direct navigation
       proposalIds: ["proposal-4"],
     },
-  ]
+  ];
 
   // Mock data for contracts
   const activeContracts = [
@@ -101,7 +120,7 @@ export default function DashboardPage() {
       nextMilestoneDate: "2024-01-15",
       budget: 17500,
     },
-  ]
+  ];
 
   const getStatusBadge = (status: string, type: string) => {
     switch (status) {
@@ -110,32 +129,38 @@ export default function DashboardPage() {
           <Badge variant="secondary" className="flex items-center gap-1">
             <FileText className="h-3 w-3" /> Submitted
           </Badge>
-        )
+        );
       case "accepted":
         return (
           <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
             <CheckCircle className="h-3 w-3" /> Accepted
           </Badge>
-        )
+        );
       case "new":
-        return <Badge className="bg-blue-100 text-blue-800">New Match</Badge>
+        return <Badge className="bg-blue-100 text-blue-800">New Match</Badge>;
       case "contract_ready":
-        return <Badge className="bg-green-100 text-green-800">Contract Ready</Badge>
+        return (
+          <Badge className="bg-green-100 text-green-800">Contract Ready</Badge>
+        );
       case "active":
-        return <Badge className="bg-green-100 text-green-800">Active</Badge>
+        return <Badge className="bg-green-100 text-green-800">Active</Badge>;
       case "pending_start":
-        return <Badge className="bg-blue-100 text-blue-800">Pending Start</Badge>
+        return (
+          <Badge className="bg-blue-100 text-blue-800">Pending Start</Badge>
+        );
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Badge variant="outline">{status}</Badge>;
     }
-  }
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold">My Dashboard</h1>
-          <p className="text-muted-foreground">Track your smartjects, proposals, and contracts</p>
+          <p className="text-muted-foreground">
+            Track your smartjects, proposals, and contracts
+          </p>
         </div>
         {user?.accountType === "free" && (
           <Button className="mt-4 md:mt-0" asChild>
@@ -148,17 +173,23 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Believed Smartjects</CardTitle>
-            <CardDescription>Smartjects you've shown interest in</CardDescription>
+            <CardDescription>
+              Smartjects you've shown interest in
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{believedSmartjects.length}</div>
+            <div className="text-3xl font-bold">
+              {believedSmartjects.length}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">I Need</CardTitle>
-            <CardDescription>Smartjects you're looking to implement</CardDescription>
+            <CardDescription>
+              Smartjects you're looking to implement
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{needSmartjects.length}</div>
@@ -182,7 +213,11 @@ export default function DashboardPage() {
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">My Proposals</h2>
-              <Button variant="outline" onClick={() => router.push("/proposals")} className="flex items-center">
+              <Button
+                variant="outline"
+                onClick={() => router.push("/proposals")}
+                className="flex items-center"
+              >
                 View All <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -196,9 +231,12 @@ export default function DashboardPage() {
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-lg">{proposal.title}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {proposal.title}
+                        </CardTitle>
                         <CardDescription>
-                          Last updated on {new Date(proposal.updatedAt).toLocaleDateString()} •{" "}
+                          Last updated on{" "}
+                          {new Date(proposal.updatedAt).toLocaleDateString()} •{" "}
                           {proposal.type === "need" ? "I Need" : "I Provide"}
                         </CardDescription>
                       </div>
@@ -208,7 +246,9 @@ export default function DashboardPage() {
                   <CardContent>
                     <div className="flex items-center">
                       <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <span className="font-medium">${proposal.budget.toLocaleString()}</span>
+                      <span className="font-medium">
+                        ${proposal.budget.toLocaleString()}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
@@ -216,8 +256,12 @@ export default function DashboardPage() {
               {recentProposals.length === 0 && (
                 <Card className="col-span-2">
                   <CardContent className="flex flex-col items-center justify-center py-8">
-                    <p className="text-muted-foreground mb-4">You haven't created any proposals yet.</p>
-                    <Button onClick={() => router.push("/proposals/create")}>Create Your First Proposal</Button>
+                    <p className="text-muted-foreground mb-4">
+                      You haven't created any proposals yet.
+                    </p>
+                    <Button onClick={() => router.push("/proposals/create")}>
+                      Create Your First Proposal
+                    </Button>
                   </CardContent>
                 </Card>
               )}
@@ -228,19 +272,29 @@ export default function DashboardPage() {
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Recent Matches</h2>
-              <Button variant="outline" onClick={() => router.push("/matches")} className="flex items-center">
+              <Button
+                variant="outline"
+                onClick={() => router.push("/matches")}
+                className="flex items-center"
+              >
                 View All <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {recentMatches.map((match) => (
-                <Card key={match.id} className="hover:bg-muted/50 transition-colors">
+                <Card
+                  key={match.id}
+                  className="hover:bg-muted/50 transition-colors"
+                >
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-lg">{match.smartjectTitle}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {match.smartjectTitle}
+                        </CardTitle>
                         <CardDescription>
-                          Matched on {new Date(match.matchedDate).toLocaleDateString()} •{" "}
+                          Matched on{" "}
+                          {new Date(match.matchedDate).toLocaleDateString()} •{" "}
                           {match.type === "need" ? "I Need" : "I Provide"}
                         </CardDescription>
                       </div>
@@ -251,7 +305,8 @@ export default function DashboardPage() {
                     <div className="flex items-center">
                       <MessageSquare className="h-4 w-4 mr-1 text-muted-foreground" />
                       <span className="font-medium">
-                        {match.proposals} {match.proposals === 1 ? "proposal" : "proposals"}
+                        {match.proposals}{" "}
+                        {match.proposals === 1 ? "proposal" : "proposals"}
                       </span>
                     </div>
                   </CardContent>
@@ -260,7 +315,11 @@ export default function DashboardPage() {
                       <Button
                         variant="default"
                         className="w-full"
-                        onClick={() => router.push(`/matches/${match.id}/contract/${match.proposalIds[0]}`)}
+                        onClick={() =>
+                          router.push(
+                            `/matches/${match.id}/contract/${match.proposalIds[0]}`
+                          )
+                        }
                       >
                         View Contract
                       </Button>
@@ -269,14 +328,20 @@ export default function DashboardPage() {
                         <Button
                           variant="outline"
                           className="flex-1"
-                          onClick={() => router.push(`/proposals/${match.proposalIds[0]}`)}
+                          onClick={() =>
+                            router.push(`/proposals/${match.proposalIds[0]}`)
+                          }
                         >
                           View Proposal
                         </Button>
                         <Button
                           variant="default"
                           className="flex-1"
-                          onClick={() => router.push(`/matches/${match.id}/negotiate/${match.proposalIds[0]}`)}
+                          onClick={() =>
+                            router.push(
+                              `/matches/${match.id}/negotiate/${match.proposalIds[0]}`
+                            )
+                          }
                         >
                           Negotiate
                         </Button>
@@ -288,8 +353,12 @@ export default function DashboardPage() {
               {recentMatches.length === 0 && (
                 <Card className="col-span-2">
                   <CardContent className="flex flex-col items-center justify-center py-8">
-                    <p className="text-muted-foreground mb-4">You don't have any matches yet.</p>
-                    <Button onClick={() => router.push("/smartjects/hub")}>Browse Smartjects</Button>
+                    <p className="text-muted-foreground mb-4">
+                      You don't have any matches yet.
+                    </p>
+                    <Button onClick={() => router.push("/smartjects/hub")}>
+                      Browse Smartjects
+                    </Button>
                   </CardContent>
                 </Card>
               )}
@@ -300,7 +369,11 @@ export default function DashboardPage() {
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Active Contracts</h2>
-              <Button variant="outline" onClick={() => router.push("/contracts")} className="flex items-center">
+              <Button
+                variant="outline"
+                onClick={() => router.push("/contracts")}
+                className="flex items-center"
+              >
                 View All <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -314,9 +387,12 @@ export default function DashboardPage() {
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="text-lg">{contract.smartjectTitle}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {contract.smartjectTitle}
+                        </CardTitle>
                         <CardDescription>
-                          Contract with {contract.otherParty} • You are the {contract.role}
+                          Contract with {contract.otherParty} • You are the{" "}
+                          {contract.role}
                         </CardDescription>
                       </div>
                       {getStatusBadge(contract.status, "")}
@@ -330,14 +406,19 @@ export default function DashboardPage() {
                         </p>
                         <p className="font-medium">{contract.nextMilestone}</p>
                         <p className="text-xs text-muted-foreground">
-                          Due: {new Date(contract.nextMilestoneDate).toLocaleDateString()}
+                          Due:{" "}
+                          {new Date(
+                            contract.nextMilestoneDate
+                          ).toLocaleDateString()}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground flex items-center">
                           <DollarSign className="h-4 w-4 mr-1" /> Budget
                         </p>
-                        <p className="font-medium">${contract.budget.toLocaleString()}</p>
+                        <p className="font-medium">
+                          ${contract.budget.toLocaleString()}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -346,8 +427,12 @@ export default function DashboardPage() {
               {activeContracts.length === 0 && (
                 <Card className="col-span-2">
                   <CardContent className="flex flex-col items-center justify-center py-8">
-                    <p className="text-muted-foreground mb-4">You don't have any active contracts yet.</p>
-                    <Button onClick={() => router.push("/matches")}>View Your Matches</Button>
+                    <p className="text-muted-foreground mb-4">
+                      You don't have any active contracts yet.
+                    </p>
+                    <Button onClick={() => router.push("/matches")}>
+                      View Your Matches
+                    </Button>
                   </CardContent>
                 </Card>
               )}
@@ -364,88 +449,135 @@ export default function DashboardPage() {
         </TabsList>
 
         <TabsContent value="believe" className="space-y-4">
-          {believedSmartjects.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {isLoading ? (
+            <SkeletonGrid />
+          ) : believedSmartjects.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {believedSmartjects.map((smartject) => (
-                <SmartjectCard key={smartject.id} smartject={smartject} />
+                <SmartjectCard
+                  key={smartject.id}
+                  smartject={smartject}
+                  onVoted={refetch}
+                  userVotes={smartject.userVotes}
+                />
               ))}
             </div>
           ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <p className="text-muted-foreground mb-4">You haven't shown interest in any smartjects yet.</p>
-                <Button asChild>
-                  <a href="/explore">Explore Smartjects</a>
-                </Button>
-              </CardContent>
-            </Card>
+            <EmptyState
+              message="You haven’t believed in any Smartjects yet."
+              href="/hub"
+              buttonText="Browse Smartjects"
+            />
           )}
         </TabsContent>
 
         <TabsContent value="need" className="space-y-4">
-          {user?.accountType === "paid" ? (
+          {isLoading ? (
+            <SkeletonGrid />
+          ) : user?.accountType === "paid" ? (
             needSmartjects.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {needSmartjects.map((smartject) => (
-                  <SmartjectCard key={smartject.id} smartject={smartject} />
+                  <SmartjectCard
+                    key={smartject.id}
+                    smartject={smartject}
+                    onVoted={refetch}
+                    userVotes={smartject.userVotes}
+                  />
                 ))}
               </div>
             ) : (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <p className="text-muted-foreground mb-4">You haven't indicated need for any smartjects yet.</p>
-                  <Button asChild>
-                    <a href="/explore">Explore Smartjects</a>
-                  </Button>
-                </CardContent>
-              </Card>
+              <EmptyState
+                message="You haven't indicated need for any smartjects yet."
+                href="/explore"
+                buttonText="Explore Smartjects"
+              />
             )
           ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <p className="text-muted-foreground mb-4">Upgrade to a paid account to indicate need for smartjects.</p>
-                <Button asChild>
-                  <a href="/upgrade">Upgrade Now</a>
-                </Button>
-              </CardContent>
-            </Card>
+            <EmptyState
+              message="Upgrade to a paid account to indicate need for smartjects."
+              href="/upgrade"
+              buttonText="Upgrade Now"
+            />
           )}
         </TabsContent>
 
         <TabsContent value="provide" className="space-y-4">
-          {user?.accountType === "paid" ? (
+          {isLoading ? (
+            <SkeletonGrid />
+          ) : user?.accountType === "paid" ? (
             provideSmartjects.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {provideSmartjects.map((smartject) => (
-                  <SmartjectCard key={smartject.id} smartject={smartject} />
+                  <SmartjectCard
+                    key={smartject.id}
+                    smartject={smartject}
+                    onVoted={refetch}
+                    userVotes={smartject.userVotes}
+                  />
                 ))}
               </div>
             ) : (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <p className="text-muted-foreground mb-4">
-                    You haven't indicated ability to provide any smartjects yet.
-                  </p>
-                  <Button asChild>
-                    <a href="/explore">Explore Smartjects</a>
-                  </Button>
-                </CardContent>
-              </Card>
+              <EmptyState
+                message="You haven't indicated ability to provide any smartjects yet."
+                href="/explore"
+                buttonText="Explore Smartjects"
+              />
             )
           ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <p className="text-muted-foreground mb-4">
-                  Upgrade to a paid account to indicate you can provide smartjects.
-                </p>
-                <Button asChild>
-                  <a href="/upgrade">Upgrade Now</a>
-                </Button>
-              </CardContent>
-            </Card>
+            <EmptyState
+              message="Upgrade to a paid account to indicate you can provide smartjects."
+              href="/upgrade"
+              buttonText="Upgrade Now"
+            />
           )}
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
+
+const SkeletonGrid = () => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {Array(6)
+      .fill(0)
+      .map((_, i) => (
+        <Card key={i} className="h-[400px]">
+          <div className="h-40 relative">
+            <Skeleton className="h-full w-full" />
+          </div>
+          <div className="p-5 space-y-4">
+            <Skeleton className="h-6 w-3/4" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-8 w-20" />
+            </div>
+          </div>
+        </Card>
+      ))}
+  </div>
+);
+
+const EmptyState = ({
+  message,
+  href,
+  buttonText,
+}: {
+  message: string;
+  href: string;
+  buttonText: string;
+}) => (
+  <Card className="col-span-3">
+    <CardContent className="py-8 flex flex-col items-center justify-center">
+      <p className="text-muted-foreground mb-4">{message}</p>
+      <Button asChild>
+        <a href={href}>{buttonText}</a>
+      </Button>
+    </CardContent>
+  </Card>
+);

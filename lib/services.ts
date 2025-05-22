@@ -215,6 +215,110 @@ export const smartjectService = {
     };
   },
 
+
+  async getUserSmartjects(userId: string): Promise<SmartjectType[]> {
+  const supabase = getSupabaseBrowserClient();
+
+  // Получаем все голоса пользователя с привязкой к smartject_id и типу голоса
+  const { data: userVotes, error: voteError } = await supabase
+    .from("votes")
+    .select("smartject_id, vote_type")
+    .eq("user_id", userId);
+
+  if (voteError || !userVotes) {
+    console.error("Error fetching user votes:", voteError);
+    return [];
+  }
+
+  // Строим мапу голосов по smartject_id
+  const userVotesMap: Record<string, string[]> = {};
+  const smartjectIds = new Set<string>();
+
+  for (const vote of userVotes) {
+    smartjectIds.add(vote.smartject_id);
+    if (!userVotesMap[vote.smartject_id]) {
+      userVotesMap[vote.smartject_id] = [];
+    }
+    userVotesMap[vote.smartject_id].push(vote.vote_type);
+  }
+
+  // Получаем smartjects, по которым были голоса
+  const { data, error } = await supabase
+    .from("smartjects")
+    .select(
+      `
+      *,
+      smartject_industries (
+        industries (name)
+      ),
+      smartject_business_functions (
+        business_functions (name)
+      ),
+      smartject_technologies (
+        technologies (name)
+      ),
+      votes (vote_type)
+    `
+    )
+    .in("id", Array.from(smartjectIds));
+
+  if (error || !data) {
+    console.error("Error fetching voted smartjects:", error);
+    return [];
+  }
+
+  return data.map((item) => {
+    const voteCount = {
+      believe: 0,
+      need: 0,
+      provide: 0,
+    };
+
+    item.votes?.forEach((vote: any) => {
+      voteCount[vote.vote_type]++;
+    });
+
+    const userVotes = {
+      believe: false,
+      need: false,
+      provide: false,
+    };
+
+    if (userVotesMap[item.id]) {
+      for (const voteType of userVotesMap[item.id]) {
+        userVotes[voteType] = true;
+      }
+    }
+
+    const industries = item.smartject_industries.map((i: any) => i.industries.name);
+    const businessFunctions = item.smartject_business_functions.map((f: any) => f.business_functions.name);
+    const technologies = item.smartject_technologies.map((t: any) => t.technologies.name);
+
+    return {
+      id: item.id,
+      title: item.title,
+      votes: voteCount,
+      userVotes,
+      comments: 0,
+      createdAt: item.created_at,
+      mission: item.mission || "",
+      problematics: item.problematics || "",
+      scope: item.scope || "",
+      audience: item.audience || "",
+      howItWorks: item.how_it_works || "",
+      architecture: item.architecture || "",
+      innovation: item.innovation || "",
+      useCase: item.use_case || "",
+      industries,
+      businessFunctions,
+      technologies,
+      relevantLinks: [],
+      image: item.image_url,
+    };
+  });
+},
+
+
   async getAvailableFilters(): Promise<{
     industries: string[];
     technologies: string[];
@@ -227,7 +331,7 @@ export const smartjectService = {
       supabase.from("technologies").select("name"),
       supabase.from("business_functions").select("name"),
     ]);
-    
+
     const industries =
       industriesRes.error || !industriesRes.data
         ? []
