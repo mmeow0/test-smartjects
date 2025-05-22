@@ -34,30 +34,40 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import type { SmartjectType } from "@/lib/types";
+import { voteService } from "@/lib/services";
 
 interface SmartjectCardProps {
   smartject: SmartjectType;
+  userVotes?: {
+    believe?: boolean;
+    need?: boolean;
+    provide?: boolean;
+  };
+  onVoted: () => void;
 }
 
-export function SmartjectCard({ smartject }: SmartjectCardProps) {
+export function SmartjectCard({ smartject, userVotes, onVoted }: SmartjectCardProps) {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
-  const [votes, setVotes] = useState(smartject.votes);
 
   // Constants for limiting displayed items
   const MAX_INDUSTRIES = 3;
   const MAX_BUSINESS_FUNCTIONS = 3;
 
-  const handleVote = (type: "believe" | "need" | "provide") => {
-    if (!isAuthenticated) {
-      // Redirect to login or show login modal
+  const handleVote = async (type: "believe" | "need" | "provide") => {
+    if (!isAuthenticated || !user) {
       return;
     }
 
-    setVotes((prev) => ({
-      ...prev,
-      [type]: prev[type] + 1,
-    }));
+    const hasVoted = await voteService.vote({
+      userId: user.id,
+      smartjectId: smartject.id,
+      voteType: type,
+    });
+
+    console.log(hasVoted);
+
+    if (hasVoted) onVoted?.();
   };
 
   // Determine which industries to show directly
@@ -72,57 +82,60 @@ export function SmartjectCard({ smartject }: SmartjectCardProps) {
   const hiddenBusinessFunctionsCount =
     (smartject.businessFunctions?.length || 0) - MAX_BUSINESS_FUNCTIONS;
 
-const renderClampedText = (
-  icon: JSX.Element,
-  label: string,
-  text: string
-) => {
-  const textRef = useRef<HTMLParagraphElement>(null);
-  const [isClamped, setIsClamped] = useState(false);
+  const renderClampedText = (
+    icon: JSX.Element,
+    label: string,
+    text: string
+  ) => {
+    const textRef = useRef<HTMLParagraphElement>(null);
+    const [isClamped, setIsClamped] = useState(false);
 
-  useEffect(() => {
-    const el = textRef.current;
-    if (el) {
-      const lineHeight = parseFloat(getComputedStyle(el).lineHeight || "0");
-      const maxLines = 2;
-      const maxHeight = lineHeight * maxLines;
-      if (el.scrollHeight > maxHeight) {
-        setIsClamped(true);
+    useEffect(() => {
+      const el = textRef.current;
+      if (el) {
+        const lineHeight = parseFloat(getComputedStyle(el).lineHeight || "0");
+        const maxLines = 2;
+        const maxHeight = lineHeight * maxLines;
+        if (el.scrollHeight > maxHeight) {
+          setIsClamped(true);
+        }
       }
-    }
-  }, [text]);
+    }, [text]);
 
-  const content = (
-    <p
-      ref={textRef}
-       className={`text-sm line-clamp-2 ${
-        isClamped ? "cursor-help" : ""
-      }`}
-      style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
-    >
-      {text}
-    </p>
-  );
+    const content = (
+      <p
+        ref={textRef}
+        className={`text-sm line-clamp-2 ${isClamped ? "cursor-help" : ""}`}
+        style={{
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}
+      >
+        {text}
+      </p>
+    );
 
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-1.5 text-sm font-medium">
-        {icon}
-        <span className="text-muted-foreground">{label}</span>
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center gap-1.5 text-sm font-medium">
+          {icon}
+          <span className="text-muted-foreground">{label}</span>
+        </div>
+        <TooltipProvider delayDuration={500}>
+          {isClamped ? (
+            <Tooltip>
+              <TooltipTrigger asChild>{content}</TooltipTrigger>
+              <TooltipContent className="max-w-xs p-2">{text}</TooltipContent>
+            </Tooltip>
+          ) : (
+            content
+          )}
+        </TooltipProvider>
       </div>
-      <TooltipProvider delayDuration={500}>
-        {isClamped ? (
-          <Tooltip>
-            <TooltipTrigger asChild>{content}</TooltipTrigger>
-            <TooltipContent className="max-w-xs p-2">{text}</TooltipContent>
-          </Tooltip>
-        ) : (
-          content
-        )}
-      </TooltipProvider>
-    </div>
-  );
-};
+    );
+  };
   return (
     <Card className="h-full flex flex-col overflow-hidden transition-all duration-200 hover:shadow-md">
       {/* Card Image */}
@@ -275,11 +288,13 @@ const renderClampedText = (
                   disabled={!isAuthenticated}
                   variant="ghost"
                   size="sm"
-                  className="flex gap-1 h-8 px-2"
+                  className={`flex gap-1 h-8 px-2 ${
+                    userVotes?.believe ? "bg-primary/10 text-primary" : ""
+                  }`}
                   onClick={() => handleVote("believe")}
                 >
                   <Heart className="h-4 w-4" />
-                  <span>{votes.believe}</span>
+                  <span>{smartject.votes.believe}</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -295,12 +310,14 @@ const renderClampedText = (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex gap-1 h-8 px-2"
+                  className={`flex gap-1 h-8 px-2 ${
+                    userVotes?.need ? "bg-primary/10 text-primary" : ""
+                  }`}
                   onClick={() => handleVote("need")}
                   disabled={!isAuthenticated || user?.accountType === "free"}
                 >
                   <Briefcase className="h-4 w-4" />
-                  <span>{votes.need}</span>
+                  <span>{smartject.votes.need}</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -316,12 +333,14 @@ const renderClampedText = (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="flex gap-1 h-8 px-2"
+                  className={`flex gap-1 h-8 px-2 ${
+                    userVotes?.provide ? "bg-primary/10 text-primary" : ""
+                  }`}
                   onClick={() => handleVote("provide")}
                   disabled={!isAuthenticated || user?.accountType === "free"}
                 >
                   <Wrench className="h-4 w-4" />
-                  <span>{votes.provide}</span>
+                  <span>{smartject.votes.provide}</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>

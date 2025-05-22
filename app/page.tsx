@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,39 +15,36 @@ import { HeroSection } from "@/components/hero-section";
 import { SearchBar } from "@/components/search-bar";
 import { CompanyLogos } from "@/components/company-logos";
 import { NewsletterSignup } from "@/components/newsletter-signup";
-import { useEffect, useState } from "react";
-import { SmartjectType } from "@/lib/types";
-import { smartjectService } from "@/lib/services";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/components/auth-provider";
+import { useSmartjects } from "@/hooks/use-smartjects";
+import { useState } from "react";
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [smartjects, setSmartjects] = useState<SmartjectType[]>([]);
+  const { user } = useAuth();
+  const { smartjects, isLoading, filters, setFilter, refetch } = useSmartjects(
+    user?.id
+  );
+
+  const [query, setQuery] = useState("");
+
+  const filteredSmartjects = smartjects.filter((s) => {
+    const matchesQuery =
+      s.title?.toLowerCase().includes(query.toLowerCase()) ||
+      s.mission?.toLowerCase().includes(query.toLowerCase()) ||
+      s.problematics?.toLowerCase().includes(query.toLowerCase()) ||
+      s.scope?.toLowerCase().includes(query.toLowerCase());
+
+    return matchesQuery;
+  });
 
   // Sort smartjects for different tabs
-  const recentSmartjects = [...smartjects]
+  const recentSmartjects = [...filteredSmartjects]
     .sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
     .slice(0, 6);
-
-  // Fetch smartjects and filter options from Supabase
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const smartjectsData = await smartjectService.getSmartjects();
-        setSmartjects(smartjectsData);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
 
   const mostNeededSmartjects = [...smartjects]
     .sort((a, b) => b.votes.need - a.votes.need)
@@ -70,7 +67,7 @@ export default function Home() {
       <div className="my-12">
         <div className="flex flex-col md:flex-row justify-between items-center mb-6">
           <h2 className="text-3xl font-bold">Discover Smartjects</h2>
-          <SearchBar />
+          <SearchBar onChange={setQuery} />
         </div>
 
         <Tabs defaultValue="recent">
@@ -109,7 +106,12 @@ export default function Home() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {recentSmartjects.map((smartject) => (
-                  <SmartjectCard key={smartject.id} smartject={smartject} />
+                  <SmartjectCard
+                    key={smartject.id}
+                    smartject={smartject}
+                    onVoted={refetch}
+                    userVotes={smartject.userVotes}
+                  />
                 ))}
               </div>
             )}
@@ -148,7 +150,12 @@ export default function Home() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {mostNeededSmartjects.map((smartject) => (
-                  <SmartjectCard key={smartject.id} smartject={smartject} />
+                  <SmartjectCard
+                    key={smartject.id}
+                    smartject={smartject}
+                    onVoted={refetch}
+                    userVotes={smartject.userVotes}
+                  />
                 ))}
               </div>
             )}
@@ -187,7 +194,12 @@ export default function Home() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {mostProvidedSmartjects.map((smartject) => (
-                  <SmartjectCard key={smartject.id} smartject={smartject} />
+                  <SmartjectCard
+                    key={smartject.id}
+                    smartject={smartject}
+                    onVoted={refetch}
+                    userVotes={smartject.userVotes}
+                  />
                 ))}
               </div>
             )}
@@ -226,7 +238,12 @@ export default function Home() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {mostBelievedSmartjects.map((smartject) => (
-                  <SmartjectCard key={smartject.id} smartject={smartject} />
+                  <SmartjectCard
+                    key={smartject.id}
+                    smartject={smartject}
+                    onVoted={refetch}
+                    userVotes={smartject.userVotes}
+                  />
                 ))}
               </div>
             )}

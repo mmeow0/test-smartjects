@@ -6,6 +6,11 @@ export type SmartjectType = {
     need: number
     provide: number
   }
+  userVotes: {
+    believe: boolean
+    need: boolean
+    provide: boolean
+  }
   comments: number
   createdAt: string
   mission: string

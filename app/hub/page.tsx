@@ -1,110 +1,136 @@
-"use client"
+"use client";
 
-import type React from "react"
+import { useState, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SmartjectCard } from "@/components/smartject-card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  ChevronDown,
+  ChevronUp,
+  Filter,
+  Search,
+  X,
+  Building2,
+  Cpu,
+  Workflow,
+} from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/components/auth-provider";
+import { useSmartjects } from "@/hooks/use-smartjects";
+import { FilterCategory } from "./filter-category";
 
-import { useState, useEffect } from "react"
-import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { SmartjectCard } from "@/components/smartject-card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { ChevronDown, ChevronUp, Filter, Search, X, Building2, Cpu, Workflow } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { smartjectService } from "@/lib/services"
-import type { SmartjectType } from "@/lib/types"
-import { Skeleton } from "@/components/ui/skeleton"
+const toggleItem = (list: string[], item: string): string[] => {
+  return list.includes(item) ? list.filter((i) => i !== item) : [...list, item];
+};
 
 export default function SmartjectsHubPage() {
-  const [query, setQuery] = useState("")
-  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
-  const [selectedTechnologies, setSelectedTechnologies] = useState<string[]>([])
-  const [selectedFunctions, setSelectedFunctions] = useState<string[]>([])
-  const [isFilterOpen, setIsFilterOpen] = useState(true)
-  const [smartjects, setSmartjects] = useState<SmartjectType[]>([])
-  const [industries, setIndustries] = useState<string[]>([])
-  const [technologies, setTechnologies] = useState<string[]>([])
-  const [functions, setFunctions] = useState<string[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [query, setQuery] = useState("");
+  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
+  const [selectedTechnologies, setSelectedTechnologies] = useState<string[]>(
+    []
+  );
+  const [selectedFunctions, setSelectedFunctions] = useState<string[]>([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(true);
 
-  // Fetch smartjects and filter options from Supabase
+  const { user } = useAuth();
+  const {
+    smartjects,
+    isLoading,
+    filters,
+    setFilter,
+    refetch,
+  } = useSmartjects(user?.id);
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true)
-        const smartjectsData = await smartjectService.getSmartjects()
-        setSmartjects(smartjectsData)
+    console.log("availableFilters updated", filters);
+  }, [
+    filters.businessFunctions?.length,
+    filters.industries?.length,
+    filters.technologies?.length,
+  ]);
 
-        // Extract unique industries, technologies, and functions
-        const uniqueIndustries = Array.from(new Set(smartjectsData.flatMap((s) => s.industries || [])))
-        const uniqueTechnologies = Array.from(new Set(smartjectsData.flatMap((s) => s.technologies || [])))
-        const uniqueFunctions = Array.from(new Set(smartjectsData.flatMap((s) => s.businessFunctions || [])))
+  const handleToggleIndustry = (industry: string) => {
+    setSelectedIndustries((prev) => toggleItem(prev, industry));
+    const updated = toggleItem(filters.industries || [], industry);
+    setFilter("industries", updated);
+  };
 
-        setIndustries(uniqueIndustries)
-        setTechnologies(uniqueTechnologies)
-        setFunctions(uniqueFunctions)
-      } catch (error) {
-        console.error("Error fetching data:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
+  const handleToggleTechnology = (tech: string) => {
+    setSelectedTechnologies((prev) => toggleItem(prev, tech));
+    const updated = toggleItem(filters.technologies || [], tech);
+    setFilter("technologies", updated);
+  };
 
-    fetchData()
-  }, [])
+  const handleToggleFunction = (fn: string) => {
+    setSelectedFunctions((prev) => toggleItem(prev, fn));
+    const updated = toggleItem(filters.businessFunctions || [], fn);
+    setFilter("businessFunctions", updated);
+  };
 
-  const handleToggleFilter = (value: string, selected: string[], setSelected: (v: string[]) => void) => {
-    if (selected.includes(value)) {
-      setSelected(selected.filter((v) => v !== value))
-    } else {
-      setSelected([...selected, value])
-    }
-  }
-
-  const clearAllFilters = () => {
-    setSelectedIndustries([])
-    setSelectedTechnologies([])
-    setSelectedFunctions([])
-  }
-
-  const totalFiltersCount = selectedIndustries.length + selectedTechnologies.length + selectedFunctions.length
+  const totalFiltersCount =
+    selectedIndustries.length +
+    selectedTechnologies.length +
+    selectedFunctions.length;
 
   const filteredSmartjects = smartjects.filter((s) => {
     const matchesQuery =
       s.title?.toLowerCase().includes(query.toLowerCase()) ||
       s.mission?.toLowerCase().includes(query.toLowerCase()) ||
       s.problematics?.toLowerCase().includes(query.toLowerCase()) ||
-      s.scope?.toLowerCase().includes(query.toLowerCase())
+      s.scope?.toLowerCase().includes(query.toLowerCase());
 
     const matchesIndustries =
-      selectedIndustries.length === 0 || selectedIndustries.some((i) => s.industries?.includes(i))
+      selectedIndustries.length === 0 ||
+      selectedIndustries.some((i) => s.industries?.includes(i));
 
     const matchesTechnologies =
-      selectedTechnologies.length === 0 || selectedTechnologies.some((t) => s.technologies?.includes(t))
+      selectedTechnologies.length === 0 ||
+      selectedTechnologies.some((t) => s.technologies?.includes(t));
 
     const matchesFunctions =
-      selectedFunctions.length === 0 || selectedFunctions.some((f) => s.businessFunctions?.includes(f))
+      selectedFunctions.length === 0 ||
+      selectedFunctions.some((f) => s.businessFunctions?.includes(f));
 
-    return matchesQuery && matchesIndustries && matchesTechnologies && matchesFunctions
-  })
+    return (
+      matchesQuery &&
+      matchesIndustries &&
+      matchesTechnologies &&
+      matchesFunctions
+    );
+  });
 
   // Sort smartjects for different tabs
   const recentSmartjects = [...filteredSmartjects].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  )
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 
-  const mostNeededSmartjects = [...filteredSmartjects].sort((a, b) => b.votes.need - a.votes.need)
+  const mostNeededSmartjects = [...filteredSmartjects].sort(
+    (a, b) => b.votes.need - a.votes.need
+  );
 
-  const mostProvidedSmartjects = [...filteredSmartjects].sort((a, b) => b.votes.provide - a.votes.provide)
+  const mostProvidedSmartjects = [...filteredSmartjects].sort(
+    (a, b) => b.votes.provide - a.votes.provide
+  );
 
-  const mostBelievedSmartjects = [...filteredSmartjects].sort((a, b) => b.votes.believe - a.votes.believe)
+  const mostBelievedSmartjects = [...filteredSmartjects].sort(
+    (a, b) => b.votes.believe - a.votes.believe
+  );
 
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Smartjects Hub</h1>
-        <p className="text-muted-foreground mb-4">Explore all available AI implementation projects</p>
+        <p className="text-muted-foreground mb-4">
+          Explore all available AI implementation projects
+        </p>
 
         {/* Search and Filter Bar */}
         <Card className="p-4 bg-muted/30">
@@ -123,38 +149,61 @@ export default function SmartjectsHubPage() {
             {/* Active Filters Display */}
             {totalFiltersCount > 0 && (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">Active filters:</span>
+                <span className="text-sm text-muted-foreground">
+                  Active filters:
+                </span>
                 {selectedIndustries.map((industry) => (
-                  <Badge key={industry} variant="secondary" className="flex items-center gap-1">
+                  <Badge
+                    key={industry}
+                    variant="secondary"
+                    className="flex items-center gap-1"
+                  >
                     <Building2 className="h-3 w-3 mr-1" />
                     {industry}
                     <X
                       className="h-3 w-3 cursor-pointer ml-1"
-                      onClick={() => handleToggleFilter(industry, selectedIndustries, setSelectedIndustries)}
+                      onClick={() => handleToggleIndustry(industry)}
                     />
                   </Badge>
                 ))}
                 {selectedTechnologies.map((tech) => (
-                  <Badge key={tech} variant="secondary" className="flex items-center gap-1">
+                  <Badge
+                    key={tech}
+                    variant="secondary"
+                    className="flex items-center gap-1"
+                  >
                     <Cpu className="h-3 w-3 mr-1" />
                     {tech}
                     <X
                       className="h-3 w-3 cursor-pointer ml-1"
-                      onClick={() => handleToggleFilter(tech, selectedTechnologies, setSelectedTechnologies)}
+                      onClick={() => handleToggleTechnology(tech)}
                     />
                   </Badge>
                 ))}
                 {selectedFunctions.map((func) => (
-                  <Badge key={func} variant="secondary" className="flex items-center gap-1">
+                  <Badge
+                    key={func}
+                    variant="secondary"
+                    className="flex items-center gap-1"
+                  >
                     <Workflow className="h-3 w-3 mr-1" />
                     {func}
                     <X
                       className="h-3 w-3 cursor-pointer ml-1"
-                      onClick={() => handleToggleFilter(func, selectedFunctions, setSelectedFunctions)}
+                      onClick={() => handleToggleFunction(func)}
                     />
                   </Badge>
                 ))}
-                <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-xs h-7 px-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedIndustries([])
+                    setSelectedFunctions([])
+                    setSelectedTechnologies([])
+                  }}
+                  className="text-xs h-7 px-2"
+                >
                   Clear all
                 </Button>
               </div>
@@ -174,7 +223,11 @@ export default function SmartjectsHubPage() {
                 </div>
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    {isFilterOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    {isFilterOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
                   </Button>
                 </CollapsibleTrigger>
               </div>
@@ -185,27 +238,27 @@ export default function SmartjectsHubPage() {
                   <FilterCategory
                     title="Industries"
                     icon={<Building2 className="h-4 w-4 mr-2" />}
-                    options={industries}
+                    options={filters.industries ?? []}
                     selected={selectedIndustries}
-                    onToggle={(value) => handleToggleFilter(value, selectedIndustries, setSelectedIndustries)}
+                    onToggle={(value) => handleToggleIndustry(value)}
                   />
 
                   {/* Technologies Filter */}
                   <FilterCategory
                     title="Technologies"
                     icon={<Cpu className="h-4 w-4 mr-2" />}
-                    options={technologies}
+                    options={filters.technologies ?? []}
                     selected={selectedTechnologies}
-                    onToggle={(value) => handleToggleFilter(value, selectedTechnologies, setSelectedTechnologies)}
+                    onToggle={(value) => handleToggleTechnology(value)}
                   />
 
                   {/* Functions Filter */}
                   <FilterCategory
                     title="Functions"
                     icon={<Workflow className="h-4 w-4 mr-2" />}
-                    options={functions}
+                    options={filters.businessFunctions ?? []}
                     selected={selectedFunctions}
-                    onToggle={(value) => handleToggleFilter(value, selectedFunctions, setSelectedFunctions)}
+                    onToggle={(value) => handleToggleFunction(value)}
                   />
                 </div>
               </CollapsibleContent>
@@ -250,7 +303,12 @@ export default function SmartjectsHubPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recentSmartjects.map((smartject) => (
-                <SmartjectCard key={smartject.id} smartject={smartject} />
+                <SmartjectCard
+                  key={smartject.id}
+                  smartject={smartject}
+                  onVoted={refetch}
+                  userVotes={smartject.userVotes}
+                />
               ))}
             </div>
           )}
@@ -284,7 +342,12 @@ export default function SmartjectsHubPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {mostNeededSmartjects.map((smartject) => (
-                <SmartjectCard key={smartject.id} smartject={smartject} />
+                <SmartjectCard
+                  key={smartject.id}
+                  smartject={smartject}
+                  onVoted={refetch}
+                   userVotes={smartject.userVotes}
+                />
               ))}
             </div>
           )}
@@ -318,7 +381,12 @@ export default function SmartjectsHubPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {mostProvidedSmartjects.map((smartject) => (
-                <SmartjectCard key={smartject.id} smartject={smartject} />
+                <SmartjectCard
+                  key={smartject.id}
+                  smartject={smartject}
+                  onVoted={refetch}
+                  userVotes={smartject.userVotes}
+                />
               ))}
             </div>
           )}
@@ -352,66 +420,17 @@ export default function SmartjectsHubPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {mostBelievedSmartjects.map((smartject) => (
-                <SmartjectCard key={smartject.id} smartject={smartject} />
+                <SmartjectCard
+                  key={smartject.id}
+                  smartject={smartject}
+                  onVoted={refetch}
+                   userVotes={smartject.userVotes}
+                />
               ))}
             </div>
           )}
         </TabsContent>
       </Tabs>
     </div>
-  )
-}
-
-// Filter Category Component
-function FilterCategory({
-  title,
-  icon,
-  options,
-  selected,
-  onToggle,
-}: {
-  title: string
-  icon: React.ReactNode
-  options: string[]
-  selected: string[]
-  onToggle: (value: string) => void
-}) {
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full justify-between" aria-expanded={selected.length > 0}>
-          <div className="flex items-center">
-            {icon}
-            <span>{title}</span>
-          </div>
-          {selected.length > 0 && (
-            <Badge variant="secondary" className="ml-2">
-              {selected.length}
-            </Badge>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-56 p-0" align="start">
-        <div className="p-2">
-          {options.map((option) => (
-            <div
-              key={option}
-              className={`
-                flex items-center justify-between p-2 rounded-md cursor-pointer text-sm
-                ${selected.includes(option) ? "bg-primary/10" : "hover:bg-muted"}
-              `}
-              onClick={() => onToggle(option)}
-            >
-              <span>{option}</span>
-              {selected.includes(option) && (
-                <Badge variant="secondary" className="h-5 px-1.5">
-                  <X className="h-3 w-3" />
-                </Badge>
-              )}
-            </div>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
-  )
+  );
 }
