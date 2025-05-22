@@ -19,9 +19,6 @@ export const smartjectService = {
       .from("smartjects")
       .select(`
         *,
-        smartject_tags!inner (
-          tags (name)
-        ),
         smartject_industries!inner (
           industries (name)
         ),
@@ -48,9 +45,6 @@ export const smartjectService = {
         provide: 0,
       }
 
-      // Extract tags
-      const tags = item.smartject_tags.map((tag: any) => tag.tags.name)
-
       // Extract industries
       const industries = item.smartject_industries.map((industry: any) => industry.industries.name)
 
@@ -63,7 +57,6 @@ export const smartjectService = {
       return {
         id: item.id,
         title: item.title,
-        tags,
         votes: voteCount,
         comments: 0, // We'll fetch this separately
         createdAt: item.created_at,
@@ -92,9 +85,6 @@ export const smartjectService = {
       .from("smartjects")
       .select(`
         *,
-        smartject_tags!inner (
-          tags (name)
-        ),
         smartject_industries!inner (
           industries (name)
         ),
@@ -143,10 +133,6 @@ export const smartjectService = {
     if (commentError) {
       console.error(`Error counting comments for smartject ${id}:`, commentError)
     }
-
-    // Extract tags
-    const tags = data.smartject_tags.map((tag: any) => tag.tags.name)
-
     // Extract industries
     const industries = data.smartject_industries.map((industry: any) => industry.industries.name)
 
@@ -159,7 +145,6 @@ export const smartjectService = {
     return {
       id: data.id,
       title: data.title,
-      tags,
       votes: voteCount,
       comments: count || 0,
       createdAt: data.created_at,
@@ -208,7 +193,7 @@ export const smartjectService = {
 
     const smartjectId = data.id
 
-    // Now handle tags, industries, business functions, and technologies
+    // Now handle industries, business functions, and technologies
     // This would involve checking if they exist, creating them if they don't,
     // and then creating the junction table entries
 

@@ -340,11 +340,11 @@ export default function SmartjectDetailPage({ params }: { params: { id: string }
           <Card>
             <CardHeader>
               <div className="flex flex-wrap gap-2 mb-2">
-                {smartject.tags.map((tag, index) => (
+                {/* {smartject.tags.map((tag, index) => (
                   <Badge key={index} variant="outline">
                     {tag}
                   </Badge>
-                ))}
+                ))} */}
               </div>
               <CardTitle className="text-2xl">{smartject.title}</CardTitle>
               <CardDescription>Created on {new Date(smartject.createdAt).toLocaleDateString()}</CardDescription>

@@ -1,7 +1,6 @@
 export type SmartjectType = {
   id: string
   title: string
-  tags: string[]
   votes: {
     believe: number
     need: number
