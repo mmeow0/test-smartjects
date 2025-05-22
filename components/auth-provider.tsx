@@ -156,48 +156,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeAuth();
 
-    let subscription = supabase?.auth.onAuthStateChange((event, newSession) => {
-      if (supabase) {
-        console.log("Setting up auth state change listener");
-        const authListener = supabase.auth.onAuthStateChange(
-          async (event, newSession) => {
-            console.log(
-              "Auth state changed:",
-              event,
-              newSession ? "Session exists" : "No session"
-            );
+    let subscription:
+      | ReturnType<
+          typeof supabase.auth.onAuthStateChange
+        >["data"]["subscription"]
+      | undefined;
 
-            if (!isMounted) return;
+    if (supabase) {
+      console.log("Setting up auth state change listener");
 
-            // Always update the session
-            setSession(newSession);
+      const {
+        data: { subscription: sub },
+      } = supabase.auth.onAuthStateChange((event, newSession) => {
+        // ⏱ Обернули весь колбэк в setTimeout, чтобы избежать deadlock
+        setTimeout(async () => {
+          console.log(
+            "Auth state changed:",
+            event,
+            newSession ? "Session exists" : "No session"
+          );
 
-            if (event === "SIGNED_IN" && newSession) {
-              // Set loading to true while we fetch the user profile
-              setIsLoading(true);
-              try {
-                console.log("SIGNED_IN event, fetching user profile");
-                await fetchUserProfile(newSession.user);
-              } catch (error) {
-                console.error("Error fetching profile after sign in:", error);
-              } finally {
-                if (isMounted) setIsLoading(false);
-              }
-            } else if (event === "SIGNED_OUT") {
-              console.log("SIGNED_OUT event, clearing user state");
-              setUser(null);
-              setIsAuthenticated(false);
-              setIsLoading(false);
-            } else if (event === "TOKEN_REFRESHED" && newSession) {
-              console.log("TOKEN_REFRESHED event, updating session");
-              // Just update the session, no need to refetch the profile
-            }
+          if (!newSession) {
+            setSession(null);
+            setUser(null);
+            setIsAuthenticated(false);
+            setIsLoading(false);
+            return;
           }
-        );
 
-        subscription = authListener.data.subscription;
-      }
-    }).data.subscription;
+          setSession(newSession);
+
+          if (event === "SIGNED_IN") {
+            setIsLoading(true);
+            try {
+              await fetchUserProfile(newSession.user);
+            } catch (error) {
+              console.error("Error fetching profile after sign in:", error);
+            } finally {
+              setIsLoading(false);
+            }
+          } else if (event === "SIGNED_OUT") {
+            setUser(null);
+            setIsAuthenticated(false);
+            setIsLoading(false);
+          } else if (event === "TOKEN_REFRESHED") {
+            // Nothing special: session is already updated above
+          }
+        }, 0);
+      });
+
+      subscription = sub;
+    }
 
     return () => {
       isMounted = false;
