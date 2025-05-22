@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { use, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,7 +26,9 @@ import {
   XCircle,
 } from "lucide-react"
 
-export default function ProposalDetailPage({ params }: { params: { id: string } }) {
+export default function ProposalDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  
   const router = useRouter()
   const { user, isAuthenticated } = useAuth()
   const { toast } = useToast()
@@ -52,7 +54,7 @@ export default function ProposalDetailPage({ params }: { params: { id: string } 
 
   // Mock proposal data
   const proposal = {
-    id: params.id,
+    id: id,
     title: "AI-Powered Supply Chain Optimization Implementation",
     type: "provide",
     status: "submitted",
@@ -189,7 +191,7 @@ export default function ProposalDetailPage({ params }: { params: { id: string } 
   }
 
   const handleEdit = () => {
-    router.push(`/proposals/edit/${params.id}`)
+    router.push(`/proposals/edit/${id}`)
   }
 
   return (

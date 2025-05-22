@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, use } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,7 +30,9 @@ import {
 } from "lucide-react"
 import { ContractDocumentPreview } from "@/components/contract-document-preview"
 
-export default function ContractDetailsPage({ params }: { params: { id: string } }) {
+export default function ContractDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const { toast } = useToast()
@@ -57,7 +59,7 @@ export default function ContractDetailsPage({ params }: { params: { id: string }
 
   // Mock contract data
   const contract = {
-    id: params.id,
+    id,
     title: "AI-Powered Supply Chain Optimization Implementation",
     smartjectId: "smartject-1",
     smartjectTitle: "AI-Powered Supply Chain Optimization",
@@ -279,15 +281,15 @@ export default function ContractDetailsPage({ params }: { params: { id: string }
   }
 
   const handleSendMessage = () => {
-    router.push(`/contracts/${params.id}/messages`)
+    router.push(`/contracts/${id}/messages`)
   }
 
   const handleUploadDocument = () => {
-    router.push(`/contracts/${params.id}/upload`)
+    router.push(`/contracts/${id}/upload`)
   }
 
   const handleReportIssue = () => {
-    router.push(`/contracts/${params.id}/issue`)
+    router.push(`/contracts/${id}/issue`)
   }
 
   const getStatusBadge = (status: string) => {
@@ -524,7 +526,7 @@ export default function ContractDetailsPage({ params }: { params: { id: string }
           <CardContent className="space-y-4">
             {contract.status === "active" && nextMilestone?.status === "in_progress" && isProvider && (
               <Button className="w-full justify-between" asChild>
-                <a href={`/contracts/${params.id}/milestone/${nextMilestone.id}/complete`}>
+                <a href={`/contracts/${id}/milestone/${nextMilestone.id}/complete`}>
                   Mark Current Milestone Complete
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </a>
@@ -533,7 +535,7 @@ export default function ContractDetailsPage({ params }: { params: { id: string }
 
             {contract.status === "active" && nextMilestone?.status === "in_progress" && !isProvider && (
               <Button className="w-full justify-between" asChild>
-                <a href={`/contracts/${params.id}/milestone/${nextMilestone.id}/review`}>
+                <a href={`/contracts/${id}/milestone/${nextMilestone.id}/review`}>
                   Review Current Milestone
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </a>
@@ -542,7 +544,7 @@ export default function ContractDetailsPage({ params }: { params: { id: string }
 
             {contract.status === "active" && (
               <Button variant="outline" className="w-full justify-between" asChild>
-                <a href={`/contracts/${params.id}/messages`}>
+                <a href={`/contracts/${id}/messages`}>
                   View Messages
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </a>
@@ -550,7 +552,7 @@ export default function ContractDetailsPage({ params }: { params: { id: string }
             )}
 
             <Button variant="outline" className="w-full justify-between" asChild>
-              <a href={`/contracts/${params.id}/documents`}>
+              <a href={`/contracts/${id}/documents`}>
                 View All Documents
                 <ChevronRight className="h-4 w-4 ml-2" />
               </a>
@@ -558,7 +560,7 @@ export default function ContractDetailsPage({ params }: { params: { id: string }
 
             {contract.status === "active" && (
               <Button variant="outline" className="w-full justify-between" asChild>
-                <a href={`/contracts/${params.id}/schedule-meeting`}>
+                <a href={`/contracts/${id}/schedule-meeting`}>
                   Schedule Meeting
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </a>
@@ -683,13 +685,13 @@ export default function ContractDetailsPage({ params }: { params: { id: string }
                               <>
                                 {isProvider ? (
                                   <Button size="sm" asChild>
-                                    <a href={`/contracts/${params.id}/milestone/${milestone.id}/complete`}>
+                                    <a href={`/contracts/${id}/milestone/${milestone.id}/complete`}>
                                       Mark as Complete
                                     </a>
                                   </Button>
                                 ) : (
                                   <Button size="sm" asChild>
-                                    <a href={`/contracts/${params.id}/milestone/${milestone.id}/review`}>
+                                    <a href={`/contracts/${id}/milestone/${milestone.id}/review`}>
                                       Review Milestone
                                     </a>
                                   </Button>
@@ -697,7 +699,7 @@ export default function ContractDetailsPage({ params }: { params: { id: string }
                               </>
                             )}
                             <Button variant="outline" size="sm" asChild>
-                              <a href={`/contracts/${params.id}/milestone/${milestone.id}`}>View Details</a>
+                              <a href={`/contracts/${id}/milestone/${milestone.id}`}>View Details</a>
                             </Button>
                           </div>
                         </div>
@@ -815,19 +817,19 @@ export default function ContractDetailsPage({ params }: { params: { id: string }
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Button variant="outline" className="justify-start" asChild>
-                <a href={`/contracts/${params.id}/extend`}>
+                <a href={`/contracts/${id}/extend`}>
                   <Calendar className="h-4 w-4 mr-2" />
                   Request Timeline Extension
                 </a>
               </Button>
               <Button variant="outline" className="justify-start" asChild>
-                <a href={`/contracts/${params.id}/modify`}>
+                <a href={`/contracts/${id}/modify`}>
                   <FileText className="h-4 w-4 mr-2" />
                   Request Contract Modification
                 </a>
               </Button>
               <Button variant="outline" className="justify-start" asChild>
-                <a href={`/contracts/${params.id}/dispute`}>
+                <a href={`/contracts/${id}/dispute`}>
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   Initiate Dispute Resolution
                 </a>

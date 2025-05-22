@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,7 +15,9 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { ArrowLeft, AlertTriangle } from "lucide-react"
 
-export default function ContractModificationPage({ params }: { params: { id: string } }) {
+export default function ContractModificationPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const { toast } = useToast()
@@ -42,7 +44,7 @@ export default function ContractModificationPage({ params }: { params: { id: str
         // Simulate loading data
         setTimeout(() => {
           setContract({
-            id: params.id,
+            id: id,
             title: "AI-Powered Supply Chain Optimization Implementation",
             status: "active",
             provider: {
@@ -58,7 +60,7 @@ export default function ContractModificationPage({ params }: { params: { id: str
     }, 500)
 
     return () => clearTimeout(checkAuth)
-  }, [isAuthenticated, user, params.id])
+  }, [isAuthenticated, user, id])
 
   // Add a separate effect for redirects that only runs after auth is checked
   useEffect(() => {
@@ -107,7 +109,7 @@ export default function ContractModificationPage({ params }: { params: { id: str
         description: "Your contract modification request has been sent to the other party for review.",
       })
       setIsSubmitting(false)
-      router.push(`/contracts/${params.id}`)
+      router.push(`/contracts/${id}`)
     }, 1500)
   }
 

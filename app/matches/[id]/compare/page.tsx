@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { use, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +9,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/components/auth-provider"
 import { ArrowLeft, Calendar, Check, DollarSign, FileText, MessageSquare, Star, Users } from "lucide-react"
 
-export default function CompareProposalsPage({ params }: { params: { id: string } }) {
+export default function CompareProposalsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
@@ -34,7 +36,7 @@ export default function CompareProposalsPage({ params }: { params: { id: string 
 
   // Mock data for the match
   const match = {
-    id: params.id,
+    id: id,
     smartjectId: "smartject-1",
     smartjectTitle: "AI-Powered Supply Chain Optimization",
     matchedDate: "2023-12-05",
@@ -246,7 +248,7 @@ export default function CompareProposalsPage({ params }: { params: { id: string 
       </Card>
 
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={() => router.push(`/matches/${params.id}`)}>
+        <Button variant="outline" onClick={() => router.push(`/matches/${id}`)}>
           Back to Match Details
         </Button>
       </div>

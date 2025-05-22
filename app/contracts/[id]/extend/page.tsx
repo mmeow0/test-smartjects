@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,7 +17,9 @@ import { format } from "date-fns"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-export default function TimelineExtensionPage({ params }: { params: { id: string } }) {
+export default function TimelineExtensionPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const { toast } = useToast()
@@ -47,7 +49,7 @@ export default function TimelineExtensionPage({ params }: { params: { id: string
           mockEndDate.setMonth(mockEndDate.getMonth() + 2)
 
           setContract({
-            id: params.id,
+            id,
             title: "AI-Powered Supply Chain Optimization Implementation",
             status: "active",
             endDate: mockEndDate.toISOString(),
@@ -71,7 +73,7 @@ export default function TimelineExtensionPage({ params }: { params: { id: string
     }, 500)
 
     return () => clearTimeout(checkAuth)
-  }, [isAuthenticated, user, params.id])
+  }, [isAuthenticated, user, id])
 
   // Add a separate effect for redirects that only runs after auth is checked
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function TimelineExtensionPage({ params }: { params: { id: string
         description: "Your timeline extension request has been sent to the other party for review.",
       })
       setIsSubmitting(false)
-      router.push(`/contracts/${params.id}`)
+      router.push(`/contracts/${id}`)
     }, 1500)
   }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { use, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -68,7 +68,9 @@ type Contract = {
   }
 }
 
-export default function MilestoneReviewPage({ params }: { params: { id: string; milestoneId: string } }) {
+export default function MilestoneReviewPage({ params }: { params: Promise<{ id: string; milestoneId: string }> }) {
+   const { id, milestoneId } = use(params);
+   
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const { toast } = useToast()
@@ -102,8 +104,8 @@ export default function MilestoneReviewPage({ params }: { params: { id: string; 
 
     // Mock milestone data
     const mockMilestone: Milestone = {
-      id: params.milestoneId,
-      contractId: params.id,
+      id: milestoneId,
+      contractId: id,
       name: "Midpoint Delivery",
       description: "Data integration and initial model development",
       percentage: 30,
@@ -153,7 +155,7 @@ export default function MilestoneReviewPage({ params }: { params: { id: string; 
 
     // Contract info
     const mockContract: Contract = {
-      id: params.id,
+      id: id,
       title: "AI-Powered Supply Chain Optimization Implementation",
       provider: {
         id: "user-101",
@@ -179,7 +181,7 @@ export default function MilestoneReviewPage({ params }: { params: { id: string; 
     setTimeout(() => {
       setIsLoading(false)
     }, 1000)
-  }, [authChecked, isAuthenticated, user, params.id, params.milestoneId])
+  }, [authChecked, isAuthenticated, user, id, milestoneId])
 
   // Handle redirects after auth check
   useEffect(() => {
@@ -233,7 +235,7 @@ export default function MilestoneReviewPage({ params }: { params: { id: string; 
 
   // If provider is viewing this page, redirect to milestone details
   if (isProvider) {
-    router.push(`/contracts/${params.id}/milestone/${params.milestoneId}`)
+    router.push(`/contracts/${id}/milestone/${milestoneId}`)
     return null
   }
 
@@ -265,7 +267,7 @@ export default function MilestoneReviewPage({ params }: { params: { id: string; 
         description: "The milestone has been approved and payment will be processed.",
       })
 
-      router.push(`/contracts/${params.id}`)
+      router.push(`/contracts/${id}`)
     }, 1500)
   }
 
@@ -288,7 +290,7 @@ export default function MilestoneReviewPage({ params }: { params: { id: string; 
         description: "The milestone has been rejected with your feedback.",
       })
 
-      router.push(`/contracts/${params.id}`)
+      router.push(`/contracts/${id}`)
     }, 1500)
   }
 
@@ -311,7 +313,7 @@ export default function MilestoneReviewPage({ params }: { params: { id: string; 
         description: "Your feedback has been sent to the provider.",
       })
 
-      router.push(`/contracts/${params.id}`)
+      router.push(`/contracts/${id}`)
     }, 1500)
   }
 
@@ -560,7 +562,7 @@ export default function MilestoneReviewPage({ params }: { params: { id: string; 
               <Button
                 variant="outline"
                 className="w-full justify-start"
-                onClick={() => router.push(`/contracts/${params.id}`)}
+                onClick={() => router.push(`/contracts/${id}`)}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Contract

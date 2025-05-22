@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { use, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,7 +10,9 @@ import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, Paperclip, Send } from "lucide-react"
 
-export default function ContractMessagesPage({ params }: { params: { id: string } }) {
+export default function ContractMessagesPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const { toast } = useToast()
@@ -126,7 +128,7 @@ export default function ContractMessagesPage({ params }: { params: { id: string 
 
   // Contract info
   const contract = {
-    id: params.id,
+    id,
     title: "AI-Powered Supply Chain Optimization Implementation",
     provider: {
       id: "user-101",

@@ -4,7 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, use } from "react"
 import { useRouter } from "next/navigation"
 import {
   ArrowLeft,
@@ -39,7 +39,9 @@ import { smartjectService, commentService, voteService, proposalService } from "
 import type { SmartjectType, CommentType, ProposalType } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 
-export default function SmartjectDetailPage({ params }: { params: { id: string } }) {
+export default function SmartjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const { toast } = useToast()
@@ -58,7 +60,7 @@ export default function SmartjectDetailPage({ params }: { params: { id: string }
     const fetchSmartject = async () => {
       try {
         setIsLoading(true)
-        const data = await smartjectService.getSmartjectById(params.id)
+        const data = await smartjectService.getSmartjectById(id)
         if (data) {
           setSmartject(data)
         } else {
@@ -83,7 +85,7 @@ export default function SmartjectDetailPage({ params }: { params: { id: string }
 
     const fetchComments = async () => {
       try {
-        const data = await commentService.getCommentsBySmartjectId(params.id)
+        const data = await commentService.getCommentsBySmartjectId(id)
         setComments(data)
       } catch (error) {
         console.error("Error fetching comments:", error)
@@ -96,7 +98,7 @@ export default function SmartjectDetailPage({ params }: { params: { id: string }
       try {
         // In a real app, we would have an API endpoint to fetch proposals by smartject ID
         // For now, we'll use a mock implementation
-        const allProposals = await proposalService.getProposalsBySmartjectId(params.id)
+        const allProposals = await proposalService.getProposalsBySmartjectId(id)
 
         setNeedProposals(allProposals.filter((p) => p.type === "need"))
         setProvideProposals(allProposals.filter((p) => p.type === "provide"))
@@ -108,7 +110,7 @@ export default function SmartjectDetailPage({ params }: { params: { id: string }
     fetchSmartject()
     fetchComments()
     fetchProposals()
-  }, [params.id, router, toast, isAuthenticated, user?.accountType])
+  }, [id, router, toast, isAuthenticated, user?.accountType])
 
   useEffect(() => {
     // Check if the URL has a hash fragment
@@ -207,7 +209,7 @@ export default function SmartjectDetailPage({ params }: { params: { id: string }
 
       const newComment = await commentService.addComment({
         userId: user!.id,
-        smartjectId: params.id,
+        smartjectId: id,
         content: comment,
       })
 
@@ -242,7 +244,7 @@ export default function SmartjectDetailPage({ params }: { params: { id: string }
   }
 
   const handleCreateProposal = () => {
-    router.push(`/proposals/create?smartjectId=${params.id}`)
+    router.push(`/proposals/create?smartjectId=${id}`)
   }
 
   const handleRespondToProposal = (proposalId: string) => {
@@ -898,7 +900,7 @@ export default function SmartjectDetailPage({ params }: { params: { id: string }
                   : "Paid accounts can create detailed proposals for smartjects they need or can provide."}
               </p>
               {isAuthenticated && user?.accountType === "paid" ? (
-                <Button className="w-full" onClick={() => router.push(`/proposals/create?smartjectId=${params.id}`)}>
+                <Button className="w-full" onClick={() => router.push(`/proposals/create?smartjectId=${id}`)}>
                   Create Proposal
                 </Button>
               ) : (

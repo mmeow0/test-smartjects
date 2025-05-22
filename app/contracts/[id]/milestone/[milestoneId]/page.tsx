@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { use, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,7 +21,9 @@ import {
   XCircle,
 } from "lucide-react"
 
-export default function MilestoneDetailsPage({ params }: { params: { id: string; milestoneId: string } }) {
+export default function MilestoneDetailsPage({ params }: { params: Promise<{ id: string; milestoneId: string }> }) {
+   const { id, milestoneId } = use(params);
+   
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const { toast } = useToast()
@@ -69,8 +71,8 @@ export default function MilestoneDetailsPage({ params }: { params: { id: string;
 
   // Mock milestone data
   const milestone = {
-    id: params.milestoneId,
-    contractId: params.id,
+    id: milestoneId,
+    contractId: id,
     name: "Midpoint Delivery",
     description: "Data integration and initial model development",
     percentage: 30,
@@ -129,7 +131,7 @@ export default function MilestoneDetailsPage({ params }: { params: { id: string;
 
   // Contract info
   const contract = {
-    id: params.id,
+    id: id,
     title: "AI-Powered Supply Chain Optimization Implementation",
     provider: {
       id: "user-101",
@@ -165,7 +167,7 @@ export default function MilestoneDetailsPage({ params }: { params: { id: string;
     })
 
     // Update to redirect to the contract details page
-    router.push(`/contracts/${params.id}`)
+    router.push(`/contracts/${id}`)
   }
 
   const handleApprove = () => {
@@ -175,7 +177,7 @@ export default function MilestoneDetailsPage({ params }: { params: { id: string;
       description: "The milestone has been approved and payment will be processed.",
     })
 
-    router.push(`/contracts/${params.id}`)
+    router.push(`/contracts/${id}`)
   }
 
   const handleReject = () => {
@@ -185,7 +187,7 @@ export default function MilestoneDetailsPage({ params }: { params: { id: string;
       description: "The milestone has been rejected. Please provide feedback.",
     })
 
-    router.push(`/contracts/${params.id}/milestone/${params.milestoneId}/reject`)
+    router.push(`/contracts/${id}/milestone/${milestoneId}/reject`)
   }
 
   const getMilestoneStatusBadge = (status: string) => {
@@ -346,7 +348,7 @@ export default function MilestoneDetailsPage({ params }: { params: { id: string;
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button variant="outline" asChild>
-                <a href={`/contracts/${params.id}/milestone/${params.milestoneId}/upload`}>
+                <a href={`/contracts/${id}/milestone/${milestoneId}/upload`}>
                   <FileText className="h-4 w-4 mr-2" />
                   Upload Document
                 </a>
@@ -373,7 +375,7 @@ export default function MilestoneDetailsPage({ params }: { params: { id: string;
                 </>
               )}
               {milestone.status === "pending_review" && !isProvider && (
-                <Button onClick={() => router.push(`/contracts/${params.id}/milestone/${params.milestoneId}/review`)}>
+                <Button onClick={() => router.push(`/contracts/${id}/milestone/${milestoneId}/review`)}>
                   <Check className="h-4 w-4 mr-2" />
                   Review Milestone
                 </Button>
@@ -471,7 +473,7 @@ export default function MilestoneDetailsPage({ params }: { params: { id: string;
             </CardHeader>
             <CardContent className="space-y-2">
               <Button variant="outline" className="w-full justify-start" asChild>
-                <a href={`/contracts/${params.id}/milestone/${params.milestoneId}/upload`}>
+                <a href={`/contracts/${id}/milestone/${milestoneId}/upload`}>
                   <FileText className="h-4 w-4 mr-2" />
                   Upload Document
                 </a>
@@ -504,7 +506,7 @@ export default function MilestoneDetailsPage({ params }: { params: { id: string;
               {milestone.status === "pending_review" && !isProvider && (
                 <Button
                   className="w-full justify-start"
-                  onClick={() => router.push(`/contracts/${params.id}/milestone/${params.milestoneId}/review`)}
+                  onClick={() => router.push(`/contracts/${id}/milestone/${milestoneId}/review`)}
                 >
                   <Check className="h-4 w-4 mr-2" />
                   Review Milestone

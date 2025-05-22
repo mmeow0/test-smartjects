@@ -1,50 +1,66 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Separator } from "@/components/ui/separator"
-import { useAuth } from "@/components/auth-provider"
-import { useToast } from "@/hooks/use-toast"
-import { ArrowLeft, Calendar, Download, Mail, Shield, FilePenLineIcon as Signature } from "lucide-react"
+import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/components/auth-provider";
+import { useToast } from "@/hooks/use-toast";
+import {
+  ArrowLeft,
+  Calendar,
+  Download,
+  Mail,
+  Shield,
+  FilePenLineIcon as Signature,
+} from "lucide-react";
 
 export default function ContractPage({
   params,
 }: {
-  params: { id: string; proposalId: string }
+  params: Promise<{ id: string; proposalId: string }>;
 }) {
-  const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(true)
-  const [termsAccepted, setTermsAccepted] = useState(false)
-  const [isSigning, setIsSigning] = useState(false)
+  const { id, proposalId } = use(params);
+
+  const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isSigning, setIsSigning] = useState(false);
 
   // Redirect if not authenticated or not a paid user
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push("/auth/login")
+      router.push("/auth/login");
     } else if (user?.accountType !== "paid") {
-      router.push("/upgrade")
+      router.push("/upgrade");
     } else {
       // Simulate loading data
       setTimeout(() => {
-        setIsLoading(false)
-      }, 1000)
+        setIsLoading(false);
+      }, 1000);
     }
-  }, [isAuthenticated, router, user])
+  }, [isAuthenticated, router, user]);
 
   if (!isAuthenticated || user?.accountType !== "paid" || isLoading) {
-    return null
+    return null;
   }
 
   // Mock contract data
   const contract = {
-    id: `contract-${params.proposalId}`,
-    matchId: params.id,
-    proposalId: params.proposalId,
+    id: `contract-${proposalId}`,
+    matchId: id,
+    proposalId: proposalId,
     smartjectTitle: "AI-Powered Supply Chain Optimization",
     provider: {
       id: "user-101",
@@ -62,9 +78,24 @@ export default function ContractPage({
       startDate: "2024-01-15",
       endDate: "2024-03-31",
       paymentSchedule: [
-        { milestone: "Project Kickoff", percentage: 30, amount: "$5,250", dueDate: "2024-01-15" },
-        { milestone: "Midpoint Delivery", percentage: 30, amount: "$5,250", dueDate: "2024-02-28" },
-        { milestone: "Final Delivery", percentage: 40, amount: "$7,000", dueDate: "2024-03-31" },
+        {
+          milestone: "Project Kickoff",
+          percentage: 30,
+          amount: "$5,250",
+          dueDate: "2024-01-15",
+        },
+        {
+          milestone: "Midpoint Delivery",
+          percentage: 30,
+          amount: "$5,250",
+          dueDate: "2024-02-28",
+        },
+        {
+          milestone: "Final Delivery",
+          percentage: 40,
+          amount: "$7,000",
+          dueDate: "2024-03-31",
+        },
       ],
       scope:
         "The project will include data integration from existing systems, machine learning model development, dashboard creation, and staff training.",
@@ -85,7 +116,7 @@ export default function ContractPage({
         "Upon signing this contract, both parties agree to an exclusivity period for this specific smartject implementation. The provider agrees not to offer similar implementation services for this smartject to other parties, and the needer agrees not to engage other providers for this smartject implementation, for the duration of this contract plus 30 days after completion.",
       duration: "Contract period + 30 days",
     },
-  }
+  };
 
   const handleSignContract = () => {
     if (!termsAccepted) {
@@ -93,38 +124,40 @@ export default function ContractPage({
         title: "Terms not accepted",
         description: "Please accept the terms and conditions before signing.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    setIsSigning(true)
+    setIsSigning(true);
 
     // In a real app, we would call an API to sign the contract
     setTimeout(() => {
       toast({
         title: "Contract signed",
-        description: "You have successfully signed the contract. A copy has been sent to your email.",
-      })
-      setIsSigning(false)
+        description:
+          "You have successfully signed the contract. A copy has been sent to your email.",
+      });
+      setIsSigning(false);
 
       // Simulate email notification
       toast({
         title: "Email sent",
-        description: "A copy of the signed contract has been sent to your email.",
-      })
+        description:
+          "A copy of the signed contract has been sent to your email.",
+      });
 
       // Redirect to the contracts page
-      router.push("/contracts")
-    }, 2000)
-  }
+      router.push("/contracts");
+    }, 2000);
+  };
 
   const handleDownloadContract = () => {
     // In a real app, we would generate and download a PDF
     toast({
       title: "Contract downloaded",
       description: "The contract has been downloaded as a PDF.",
-    })
-  }
+    });
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -136,7 +169,8 @@ export default function ContractPage({
         <div>
           <h1 className="text-2xl font-bold">Smart Contract</h1>
           <p className="text-muted-foreground">
-            For smartject: <span className="font-medium">{contract.smartjectTitle}</span>
+            For smartject:{" "}
+            <span className="font-medium">{contract.smartjectTitle}</span>
           </p>
         </div>
       </div>
@@ -153,7 +187,9 @@ export default function ContractPage({
                 <h3 className="text-lg font-medium mb-2">Parties</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 border rounded-md">
-                    <p className="text-sm text-muted-foreground mb-1">Provider</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Provider
+                    </p>
                     <p className="font-medium">{contract.provider.name}</p>
                     <p className="text-sm">{contract.provider.email}</p>
                   </div>
@@ -175,18 +211,28 @@ export default function ContractPage({
                     <p className="font-medium">{contract.terms.budget}</p>
                   </div>
                   <div className="p-4 border rounded-md">
-                    <p className="text-sm text-muted-foreground mb-1">Timeline</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Timeline
+                    </p>
                     <p className="font-medium">{contract.terms.timeline}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 border rounded-md">
-                    <p className="text-sm text-muted-foreground mb-1">Start Date</p>
-                    <p className="font-medium">{new Date(contract.terms.startDate).toLocaleDateString()}</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Start Date
+                    </p>
+                    <p className="font-medium">
+                      {new Date(contract.terms.startDate).toLocaleDateString()}
+                    </p>
                   </div>
                   <div className="p-4 border rounded-md">
-                    <p className="text-sm text-muted-foreground mb-1">End Date</p>
-                    <p className="font-medium">{new Date(contract.terms.endDate).toLocaleDateString()}</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      End Date
+                    </p>
+                    <p className="font-medium">
+                      {new Date(contract.terms.endDate).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -207,11 +253,18 @@ export default function ContractPage({
                     </thead>
                     <tbody>
                       {contract.terms.paymentSchedule.map((payment, index) => (
-                        <tr key={index} className={index % 2 === 0 ? "bg-muted/50" : ""}>
+                        <tr
+                          key={index}
+                          className={index % 2 === 0 ? "bg-muted/50" : ""}
+                        >
                           <td className="p-3">{payment.milestone}</td>
-                          <td className="p-3 text-right">{payment.percentage}%</td>
+                          <td className="p-3 text-right">
+                            {payment.percentage}%
+                          </td>
                           <td className="p-3 text-right">{payment.amount}</td>
-                          <td className="p-3 text-right">{new Date(payment.dueDate).toLocaleDateString()}</td>
+                          <td className="p-3 text-right">
+                            {new Date(payment.dueDate).toLocaleDateString()}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -222,13 +275,19 @@ export default function ContractPage({
               <Separator />
 
               <div>
-                <h3 className="text-lg font-medium mb-2">Scope & Deliverables</h3>
+                <h3 className="text-lg font-medium mb-2">
+                  Scope & Deliverables
+                </h3>
                 <div className="p-4 border rounded-md mb-4">
-                  <p className="text-sm text-muted-foreground mb-1">Project Scope</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Project Scope
+                  </p>
                   <p>{contract.terms.scope}</p>
                 </div>
                 <div className="p-4 border rounded-md">
-                  <p className="text-sm text-muted-foreground mb-1">Deliverables</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Deliverables
+                  </p>
                   <ul className="list-disc pl-5">
                     {contract.terms.deliverables.map((item, index) => (
                       <li key={index}>{item}</li>
@@ -247,7 +306,8 @@ export default function ContractPage({
                     <p className="text-sm">{contract.exclusivity.clause}</p>
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">
-                    <span className="font-medium">Duration:</span> {contract.exclusivity.duration}
+                    <span className="font-medium">Duration:</span>{" "}
+                    {contract.exclusivity.duration}
                   </p>
                 </div>
               </div>
@@ -269,7 +329,11 @@ export default function ContractPage({
                     <span className="text-sm">Provider Signature</span>
                   </div>
                   <span
-                    className={`text-sm font-medium ${contract.status.providerSigned ? "text-green-600" : "text-amber-600"}`}
+                    className={`text-sm font-medium ${
+                      contract.status.providerSigned
+                        ? "text-green-600"
+                        : "text-amber-600"
+                    }`}
                   >
                     {contract.status.providerSigned ? "Signed" : "Pending"}
                   </span>
@@ -280,7 +344,11 @@ export default function ContractPage({
                     <span className="text-sm">Needer Signature</span>
                   </div>
                   <span
-                    className={`text-sm font-medium ${contract.status.neederSigned ? "text-green-600" : "text-amber-600"}`}
+                    className={`text-sm font-medium ${
+                      contract.status.neederSigned
+                        ? "text-green-600"
+                        : "text-amber-600"
+                    }`}
                   >
                     {contract.status.neederSigned ? "Signed" : "Pending"}
                   </span>
@@ -291,9 +359,15 @@ export default function ContractPage({
                     <span className="text-sm">Contract Status</span>
                   </div>
                   <span
-                    className={`text-sm font-medium ${contract.status.contractActive ? "text-green-600" : "text-amber-600"}`}
+                    className={`text-sm font-medium ${
+                      contract.status.contractActive
+                        ? "text-green-600"
+                        : "text-amber-600"
+                    }`}
                   >
-                    {contract.status.contractActive ? "Active" : "Pending Activation"}
+                    {contract.status.contractActive
+                      ? "Active"
+                      : "Pending Activation"}
                   </span>
                 </div>
               </div>
@@ -320,7 +394,8 @@ export default function ContractPage({
                     I have read and agree to the terms and conditions
                   </label>
                   <p className="text-sm text-muted-foreground">
-                    By checking this box, you agree to be bound by the terms of this contract.
+                    By checking this box, you agree to be bound by the terms of
+                    this contract.
                   </p>
                 </div>
               </div>
@@ -330,11 +405,19 @@ export default function ContractPage({
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-2">
-              <Button className="w-full" onClick={handleSignContract} disabled={!termsAccepted || isSigning}>
+              <Button
+                className="w-full"
+                onClick={handleSignContract}
+                disabled={!termsAccepted || isSigning}
+              >
                 <Signature className="h-4 w-4 mr-2" />
                 {isSigning ? "Signing..." : "Sign Contract"}
               </Button>
-              <Button variant="outline" className="w-full" onClick={handleDownloadContract}>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleDownloadContract}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
               </Button>
@@ -343,5 +426,5 @@ export default function ContractPage({
         </div>
       </div>
     </div>
-  )
+  );
 }

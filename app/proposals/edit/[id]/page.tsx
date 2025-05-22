@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { use, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -49,7 +49,9 @@ interface Milestone {
   deliverables: Deliverable[]
 }
 
-export default function EditProposalPage({ params }: { params: { id: string } }) {
+export default function EditProposalPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  
   const router = useRouter()
   const { toast } = useToast()
   const { user, isAuthenticated } = useAuth()
@@ -113,7 +115,7 @@ export default function EditProposalPage({ params }: { params: { id: string } })
       // Fetch proposal data
       fetchProposalData()
     }
-  }, [isAuthenticated, router, user, params.id])
+  }, [isAuthenticated, router, user, id])
 
   // Calculate total percentage whenever milestones change
   useEffect(() => {
@@ -127,7 +129,7 @@ export default function EditProposalPage({ params }: { params: { id: string } })
     setTimeout(() => {
       // Mock proposal data
       const proposal = {
-        id: params.id,
+        id: id,
         title: "AI-Powered Supply Chain Optimization Implementation",
         type: "provide",
         status: "submitted",
@@ -362,7 +364,7 @@ export default function EditProposalPage({ params }: { params: { id: string } })
         description: "Your proposal has been updated successfully.",
       })
       setIsSubmitting(false)
-      router.push(`/proposals/${params.id}`)
+      router.push(`/proposals/${id}`)
     }, 1500)
   }
 
@@ -959,7 +961,7 @@ export default function EditProposalPage({ params }: { params: { id: string } })
 
             <div className="flex justify-center mt-6">
               <ProposalDocumentPreview
-                proposalId={params.id}
+                proposalId={id}
                 title={formData.title}
                 smartjectTitle={formData.smartjectTitle}
                 type={proposalType || "need"}

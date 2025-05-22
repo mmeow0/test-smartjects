@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, use } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -192,14 +192,16 @@ const getMockData = (matchId: string, proposalId: string) => ({
 export default function NegotiatePage({
   params,
 }: {
-  params: { id: string; proposalId: string }
+  params: Promise<{ id: string; proposalId: string }>;
 }) {
+  const { id, proposalId } = use(params);
+  
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const { toast } = useToast()
 
   // Use useMemo to prevent recreation of the negotiation object on each render
-  const negotiation = useMemo(() => getMockData(params.id, params.proposalId), [params.id, params.proposalId])
+  const negotiation = useMemo(() => getMockData(id, proposalId), [id, proposalId])
 
   const [isLoading, setIsLoading] = useState(true)
   const [message, setMessage] = useState("")
@@ -332,7 +334,7 @@ export default function NegotiatePage({
     })
 
     // Redirect to the contract page
-    router.push(`/matches/${params.id}/contract/${params.proposalId}`)
+    router.push(`/matches/${id}/contract/${proposalId}`)
   }
 
   const formatDate = (dateString: string) => {
