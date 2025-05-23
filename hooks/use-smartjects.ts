@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { smartjectService } from "@/lib/services";
 import type { SmartjectType } from "@/lib/types";
-import { toast } from "@/components/ui/use-toast"; // подкорректируйте путь
+import { useToast } from "@/hooks/use-toast";
 
 type Filters = {
   query?: string;
@@ -17,6 +17,8 @@ type AvailableFilters = {
 };
 
 export function useSmartjects(userId?: string) {
+  const { toast } = useToast();
+
   const [smartjects, setSmartjects] = useState<SmartjectType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>({

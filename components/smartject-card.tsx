@@ -17,7 +17,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useToast } from "@/components/ui/use-toast";
 import {
   Heart,
   Briefcase,
@@ -36,6 +35,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import type { SmartjectType } from "@/lib/types";
 import { voteService } from "@/lib/services";
+import { useToast } from "@/hooks/use-toast";
 
 interface SmartjectCardProps {
   smartject: SmartjectType;
