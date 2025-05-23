@@ -646,46 +646,84 @@ export const proposalService = {
 
   // Get a proposal by ID
   async getProposalById(id: string): Promise<ProposalType | null> {
-    const supabase = getSupabaseBrowserClient();
+  const supabase = getSupabaseBrowserClient();
 
-    const { data, error } = await supabase
-      .from("proposals")
-      .select(
-        `
-        *,
-        smartjects (
-          title
-        )
-      `
+const { data, error } = await supabase
+  .from("proposals")
+  .select(
+    `
+    *,
+    smartjects (
+      title
+    ),
+    proposal_files (
+      id,
+      name,
+      size,
+      type
+    ),
+    proposal_comments (
+      id,
+      content,
+      created_at,
+      users (
+        id,
+        name,
+        avatar_url
       )
-      .eq("id", id)
-      .single();
+    )
+  `
+  )
+  .eq("id", id)
+  .single();
 
-    if (error) {
-      console.error(`Error fetching proposal with ID ${id}:`, error);
-      return null;
-    }
 
-    return {
-      id: data.id,
-      smartjectId: data.smartject_id,
-      userId: data.user_id,
-      type: data.type,
-      title: data.title,
-      description: data.description || "",
-      budget: data.budget,
-      timeline: data.timeline,
-      scope: data.scope,
-      deliverables: data.deliverables,
-      requirements: data.requirements,
-      expertise: data.expertise,
-      approach: data.approach,
-      team: data.team,
-      additionalInfo: data.additional_info,
-      status: data.status,
-      createdAt: data.created_at,
-    };
-  },
+  if (error) {
+    console.error(`Error fetching proposal with ID ${id}:`, error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    smartjectId: data.smartject_id,
+    userId: data.user_id,
+    type: data.type,
+    title: data.title,
+    description: data.description || "",
+    budget: data.budget,
+    timeline: data.timeline,
+    scope: data.scope,
+    deliverables: data.deliverables,
+    requirements: data.requirements,
+    expertise: data.expertise,
+    approach: data.approach,
+    team: data.team,
+    additionalInfo: data.additional_info,
+    status: data.status,
+    createdAt: data.created_at,
+
+    // Новые поля:
+    smartjectTitle: data.smartjects?.title ?? null,
+
+    files: data.proposal_files?.map((file: any) => ({
+      id: file.id,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    })) ?? [],
+
+    comments: data.proposal_comments?.map((comment: any) => ({
+      id: comment.id,
+      content: comment.content,
+      createdAt: comment.created_at,
+      user: {
+        id: comment.users?.id,
+        name: comment.users?.name,
+        avatar: comment.users?.avatar_url,
+      },
+    })) ?? [],
+  };
+},
 
   // Create a new proposal
   async createProposal(

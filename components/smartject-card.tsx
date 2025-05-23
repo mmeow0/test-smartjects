@@ -17,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Heart,
   Briefcase,
@@ -46,9 +47,14 @@ interface SmartjectCardProps {
   onVoted: () => void;
 }
 
-export function SmartjectCard({ smartject, userVotes, onVoted }: SmartjectCardProps) {
+export function SmartjectCard({
+  smartject,
+  userVotes,
+  onVoted,
+}: SmartjectCardProps) {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   // Constants for limiting displayed items
   const MAX_INDUSTRIES = 3;
@@ -56,18 +62,40 @@ export function SmartjectCard({ smartject, userVotes, onVoted }: SmartjectCardPr
 
   const handleVote = async (type: "believe" | "need" | "provide") => {
     if (!isAuthenticated || !user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to vote.",
+        variant: "destructive",
+      });
       return;
     }
 
-    const hasVoted = await voteService.vote({
-      userId: user.id,
-      smartjectId: smartject.id,
-      voteType: type,
-    });
+    try {
+      const hasVoted = await voteService.vote({
+        userId: user.id,
+        smartjectId: smartject.id,
+        voteType: type,
+      });
 
-    console.log(hasVoted);
-
-    if (hasVoted) onVoted?.();
+      if (hasVoted) {
+        toast({
+          title: "Vote Recorded",
+          description: `You voted '${type}' for this smartject.`,
+        });
+        onVoted?.();
+      } else {
+        toast({
+          title: "Already Voted",
+          description: `You have already voted '${type}' for this smartject.`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong while voting. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Determine which industries to show directly
@@ -313,7 +341,7 @@ export function SmartjectCard({ smartject, userVotes, onVoted }: SmartjectCardPr
                   className={`flex gap-1 h-8 px-2 ${
                     userVotes?.need ? "bg-primary/10 text-primary" : ""
                   }`}
-                  onClick={() => handleVote("need")}
+                  onClick={() => router.push(`/proposals/create?smartjectId=${smartject.id}&voteType=need`)}
                   disabled={!isAuthenticated || user?.accountType === "free"}
                 >
                   <Briefcase className="h-4 w-4" />
@@ -336,7 +364,7 @@ export function SmartjectCard({ smartject, userVotes, onVoted }: SmartjectCardPr
                   className={`flex gap-1 h-8 px-2 ${
                     userVotes?.provide ? "bg-primary/10 text-primary" : ""
                   }`}
-                  onClick={() => handleVote("provide")}
+                  onClick={() => router.push(`/proposals/create?smartjectId=${smartject.id}&voteType=provide`)}
                   disabled={!isAuthenticated || user?.accountType === "free"}
                 >
                   <Wrench className="h-4 w-4" />

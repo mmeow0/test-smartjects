@@ -75,6 +75,13 @@ export default function CreateProposalPage() {
   const { user, isAuthenticated } = useAuth()
   const smartjectId = searchParams.get("smartjectId")
 
+  useEffect(() => {
+  const voteType = searchParams.get("voteType")
+  if (voteType === "need" || voteType === "provide") {
+    setProposalType(voteType)
+  }
+}, [searchParams])
+
   // State for loading smartject
   const [loadingSmartject, setLoadingSmartject] = useState(false)
   const [smartject, setSmartject] = useState<SmartjectType | null>(null)

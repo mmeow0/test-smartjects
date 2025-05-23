@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { smartjectService } from "@/lib/services";
 import type { SmartjectType } from "@/lib/types";
+import { toast } from "@/components/ui/use-toast";
 
 type GroupedSmartjects = {
   believe: SmartjectType[];
@@ -20,7 +21,6 @@ export function useUserSmartjects(userId?: string) {
   const fetchSmartjects = useCallback(async (refetch = false) => {
     if (!userId) return;
 
-    // Показываем спиннер только если это не ручной refetch
     setIsLoading(!refetch);
 
     try {
@@ -41,6 +41,11 @@ export function useUserSmartjects(userId?: string) {
       setSmartjects(grouped);
     } catch (error) {
       console.error("Error fetching voted smartjects:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load your smartjects",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }

@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import Image from "next/image"
-import type React from "react"
+import Link from "next/link";
+import Image from "next/image";
+import type React from "react";
 
-import { useState, useEffect, useRef, use } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useRef, use } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Heart,
@@ -26,105 +26,140 @@ import {
   LinkIcon,
   FileText,
   Loader2,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
-import { useAuth } from "@/components/auth-provider"
-import { smartjectService, commentService, voteService, proposalService } from "@/lib/services"
-import type { SmartjectType, CommentType, ProposalType } from "@/lib/types"
-import { useToast } from "@/hooks/use-toast"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/components/auth-provider";
+import {
+  smartjectService,
+  commentService,
+  voteService,
+  proposalService,
+} from "@/lib/services";
+import type { SmartjectType, CommentType, ProposalType } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 
-export default function SmartjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function SmartjectDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
-  
-  const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
-  const { toast } = useToast()
-  const [comment, setComment] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isVoting, setIsVoting] = useState(false)
-  const [smartject, setSmartject] = useState<SmartjectType | null>(null)
-  const [comments, setComments] = useState<CommentType[]>([])
-  const [needProposals, setNeedProposals] = useState<ProposalType[]>([])
-  const [provideProposals, setProvideProposals] = useState<ProposalType[]>([])
-  const [isLoading, setIsLoading] = useState(true)
 
-  const commentsRef = useRef<HTMLDivElement>(null)
+  const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
+  const { toast } = useToast();
+  const [comment, setComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVoting, setIsVoting] = useState(false);
+  const [smartject, setSmartject] = useState<SmartjectType | null>(null);
+  const [comments, setComments] = useState<CommentType[]>([]);
+  const [needProposals, setNeedProposals] = useState<ProposalType[]>([]);
+  const [provideProposals, setProvideProposals] = useState<ProposalType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const commentsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchSmartject = async () => {
       try {
-        setIsLoading(true)
-        const data = await smartjectService.getSmartjectById(id)
+        setIsLoading(true);
+        const data = await smartjectService.getSmartjectById(id);
         if (data) {
-          setSmartject(data)
+          setSmartject(data);
         } else {
           toast({
             title: "Error",
             description: "Smartject not found",
             variant: "destructive",
-          })
-          router.push("/hub")
+          });
+          router.push("/hub");
         }
       } catch (error) {
-        console.error("Error fetching smartject:", error)
+        console.error("Error fetching smartject:", error);
         toast({
           title: "Error",
           description: "Failed to load smartject details",
           variant: "destructive",
-        })
+        });
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
     const fetchComments = async () => {
       try {
-        const data = await commentService.getCommentsBySmartjectId(id)
-        setComments(data)
+        const data = await commentService.getCommentsBySmartjectId(id);
+        setComments(data);
       } catch (error) {
-        console.error("Error fetching comments:", error)
+        console.error("Error fetching comments:", error);
       }
-    }
+    };
 
     const fetchProposals = async () => {
-      if (!isAuthenticated || user?.accountType !== "paid") return
+      if (!isAuthenticated || user?.accountType !== "paid") return;
 
       try {
-        // In a real app, we would have an API endpoint to fetch proposals by smartject ID
-        // For now, we'll use a mock implementation
-        const allProposals = await proposalService.getProposalsBySmartjectId(id)
+        const allProposals = await proposalService.getProposalsBySmartjectId(
+          id
+        );
 
-        setNeedProposals(allProposals.filter((p) => p.type === "need"))
-        setProvideProposals(allProposals.filter((p) => p.type === "provide"))
+        setNeedProposals(allProposals.filter((p) => p.type === "need"));
+        setProvideProposals(allProposals.filter((p) => p.type === "provide"));
       } catch (error) {
-        console.error("Error fetching proposals:", error)
+        console.error("Error fetching proposals:", error);
       }
-    }
+    };
 
-    fetchSmartject()
-    fetchComments()
-    fetchProposals()
-  }, [id, router, toast, isAuthenticated, user?.accountType])
+    fetchSmartject();
+    fetchComments();
+    fetchProposals();
+  }, [id, router, toast, isAuthenticated, user?.accountType]);
 
   useEffect(() => {
     // Check if the URL has a hash fragment
     if (typeof window !== "undefined" && window.location.hash === "#comments") {
       // Scroll to the comments section
       setTimeout(() => {
-        commentsRef.current?.scrollIntoView({ behavior: "smooth" })
-      }, 500) // Small delay to ensure the page is fully loaded
+        commentsRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 500); // Small delay to ensure the page is fully loaded
     }
-  }, [])
+  }, []);
 
   const handleBack = () => {
-    router.back()
-  }
+    router.back();
+  };
+
+  const handleShare = () => {
+    const url = window.location.href;
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        toast({
+          title: "Link copied",
+          description: "Smartject link has been copied to clipboard",
+        });
+      })
+      .catch(() => {
+        toast({
+          title: "Error",
+          description: "Failed to copy link",
+          variant: "destructive",
+        });
+      });
+  };
 
   const handleVote = async (type: "believe" | "need" | "provide") => {
     if (!isAuthenticated) {
@@ -132,191 +167,136 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
         title: "Authentication required",
         description: "Please log in to vote for smartjects",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    if (user?.accountType !== "paid" && (type === "need" || type === "provide")) {
+    if (
+      user?.accountType !== "paid" &&
+      (type === "need" || type === "provide")
+    ) {
       toast({
         title: "Paid account required",
         description: `Only paid accounts can vote "${type}" for smartjects`,
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    if (!smartject) return
+    if (!smartject) return;
 
     try {
-      setIsVoting(true)
+      setIsVoting(true);
 
       // Check if user has already voted
-      const hasVoted = await voteService.hasUserVoted(user!.id, smartject.id, type)
+      const hasVoted = await voteService.hasUserVoted(
+        user!.id,
+        smartject.id,
+        type
+      );
 
       // Toggle vote
       await voteService.vote({
         userId: user!.id,
         smartjectId: smartject.id,
         voteType: type,
-      })
+      });
 
       // Update local state
       setSmartject((prev) => {
-        if (!prev) return prev
+        if (!prev) return prev;
         return {
           ...prev,
           votes: {
             ...prev.votes,
             [type]: hasVoted ? prev.votes[type] - 1 : prev.votes[type] + 1,
           },
-        }
-      })
+        };
+      });
 
       toast({
         title: hasVoted ? "Vote removed" : "Vote added",
         description: hasVoted
           ? `You've removed your "${type}" vote for this smartject`
           : `You've voted "${type}" for this smartject`,
-      })
+      });
     } catch (error) {
-      console.error("Error voting:", error)
+      console.error("Error voting:", error);
       toast({
         title: "Error",
         description: "There was an error processing your vote",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsVoting(false)
+      setIsVoting(false);
     }
-  }
+  };
 
   const handleSubmitComment = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!isAuthenticated) {
       toast({
         title: "Authentication required",
         description: "Please log in to comment",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    if (!comment.trim()) return
+    if (!comment.trim()) return;
 
     try {
-      setIsSubmitting(true)
+      setIsSubmitting(true);
 
       const newComment = await commentService.addComment({
         userId: user!.id,
         smartjectId: id,
         content: comment,
-      })
+      });
 
       if (newComment) {
-        setComments((prev) => [newComment, ...prev])
-        setComment("")
+        setComments((prev) => [newComment, ...prev]);
+        setComment("");
 
         // Update comment count in smartject
         setSmartject((prev) => {
-          if (!prev) return prev
+          if (!prev) return prev;
           return {
             ...prev,
             comments: prev.comments + 1,
-          }
-        })
+          };
+        });
 
         toast({
           title: "Comment added",
           description: "Your comment has been added successfully",
-        })
+        });
       }
     } catch (error) {
-      console.error("Error submitting comment:", error)
+      console.error("Error submitting comment:", error);
       toast({
         title: "Error",
         description: "There was an error submitting your comment",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const handleCreateProposal = () => {
-    router.push(`/proposals/create?smartjectId=${id}`)
-  }
+    router.push(`/proposals/create?smartjectId=${id}`);
+  };
 
   const handleRespondToProposal = (proposalId: string) => {
-    router.push(`/proposals/${proposalId}`)
-  }
+    router.push(`/proposals/${proposalId}`);
+  };
 
   const handleNegotiate = (proposalId: string) => {
     // In a real app, this would navigate to a negotiation page
-    router.push(`/matches/new/negotiate/${proposalId}`)
-  }
-
-  // Mock research papers
-  const researchPapers = [
-    {
-      title: "Advancements in AI for Business Process Optimization",
-      authors: "Smith, J., Johnson, A.",
-      journal: "Journal of AI Research",
-      year: 2023,
-      url: "#",
-    },
-    {
-      title: "Machine Learning Applications in Industry 4.0",
-      authors: "Chen, L., Williams, P.",
-      journal: "International Journal of Intelligent Systems",
-      year: 2022,
-      url: "#",
-    },
-  ]
-
-  // Mock related documents
-  const relatedDocuments = [
-    {
-      id: "doc-1",
-      title: "System Architecture Diagram",
-      type: "PDF",
-      size: "2.4 MB",
-      uploadedBy: "John Smith",
-      uploadedAt: "2023-11-15",
-      description: "Detailed system architecture diagram showing all components and their interactions.",
-      url: "#",
-    },
-    {
-      id: "doc-2",
-      title: "Technical Specifications",
-      type: "DOCX",
-      size: "1.8 MB",
-      uploadedBy: "Maria Garcia",
-      uploadedAt: "2023-11-20",
-      description: "Complete technical specifications including API documentation and data models.",
-      url: "#",
-    },
-    {
-      id: "doc-3",
-      title: "Implementation Guide",
-      type: "PDF",
-      size: "3.5 MB",
-      uploadedBy: "Alex Johnson",
-      uploadedAt: "2023-12-05",
-      description: "Step-by-step guide for implementing this smartject in various environments.",
-      url: "#",
-    },
-    {
-      id: "doc-4",
-      title: "Market Analysis Report",
-      type: "XLSX",
-      size: "1.2 MB",
-      uploadedBy: "Sarah Williams",
-      uploadedAt: "2023-12-10",
-      description: "Analysis of market potential and competitive landscape for this smartject.",
-      url: "#",
-    },
-  ]
+    router.push(`/matches/new/negotiate/${proposalId}`);
+  };
 
   // If loading, show loading state
   if (isLoading || !smartject) {
@@ -327,7 +307,7 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
           <p className="text-muted-foreground">Loading smartject details...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -349,7 +329,9 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                 ))} */}
               </div>
               <CardTitle className="text-2xl">{smartject.title}</CardTitle>
-              <CardDescription>Created on {new Date(smartject.createdAt).toLocaleDateString()}</CardDescription>
+              <CardDescription>
+                Created on {new Date(smartject.createdAt).toLocaleDateString()}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {/* Featured Image */}
@@ -386,7 +368,9 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                         <Target className="h-5 w-5 text-primary" />
                         Mission
                       </h3>
-                      <p className="text-muted-foreground">{smartject.mission}</p>
+                      <p className="text-muted-foreground">
+                        {smartject.mission}
+                      </p>
                     </div>
 
                     <Separator />
@@ -397,7 +381,9 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                         <Lightbulb className="h-5 w-5 text-amber-500" />
                         Problem it Solves
                       </h3>
-                      <p className="text-muted-foreground">{smartject.problematics}</p>
+                      <p className="text-muted-foreground">
+                        {smartject.problematics}
+                      </p>
                     </div>
 
                     <Separator />
@@ -419,7 +405,9 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                         <Users className="h-5 w-5 text-indigo-500" />
                         Target Audience
                       </h3>
-                      <p className="text-muted-foreground">{smartject.audience}</p>
+                      <p className="text-muted-foreground">
+                        {smartject.audience}
+                      </p>
                     </div>
 
                     <Separator />
@@ -430,7 +418,9 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                         <Cpu className="h-5 w-5 text-green-500" />
                         How it Works
                       </h3>
-                      <p className="text-muted-foreground">{smartject.howItWorks}</p>
+                      <p className="text-muted-foreground">
+                        {smartject.howItWorks}
+                      </p>
                     </div>
 
                     <Separator />
@@ -441,7 +431,9 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                         <Cpu className="h-5 w-5 text-purple-500" />
                         High-Level System Architecture
                       </h3>
-                      <p className="text-muted-foreground">{smartject.architecture}</p>
+                      <p className="text-muted-foreground">
+                        {smartject.architecture}
+                      </p>
                     </div>
 
                     <Separator />
@@ -452,7 +444,9 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                         <Zap className="h-5 w-5 text-yellow-500" />
                         Key Differentiators and Innovations
                       </h3>
-                      <p className="text-muted-foreground">{smartject.innovation}</p>
+                      <p className="text-muted-foreground">
+                        {smartject.innovation}
+                      </p>
                     </div>
 
                     <Separator />
@@ -463,7 +457,9 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                         <Building className="h-5 w-5 text-cyan-500" />
                         Use Cases
                       </h3>
-                      <p className="text-muted-foreground">{smartject.useCase}</p>
+                      <p className="text-muted-foreground">
+                        {smartject.useCase}
+                      </p>
                     </div>
 
                     <Separator />
@@ -501,51 +497,53 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                     </div>
 
                     {/* Technologies */}
-                    {smartject.technologies && smartject.technologies.length > 0 && (
-                      <>
-                        <Separator />
-                        <div>
-                          <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
-                            <Cpu className="h-5 w-5 text-blue-500" />
-                            Technologies
-                          </h3>
-                          <div className="flex flex-wrap gap-2">
-                            {smartject.technologies.map((tech, index) => (
-                              <Badge key={index} variant="secondary">
-                                {tech}
-                              </Badge>
-                            ))}
+                    {smartject.technologies &&
+                      smartject.technologies.length > 0 && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
+                              <Cpu className="h-5 w-5 text-blue-500" />
+                              Technologies
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                              {smartject.technologies.map((tech, index) => (
+                                <Badge key={index} variant="secondary">
+                                  {tech}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      </>
-                    )}
+                        </>
+                      )}
 
                     {/* Relevant Links */}
-                    {smartject.relevantLinks && smartject.relevantLinks.length > 0 && (
-                      <>
-                        <Separator />
-                        <div>
-                          <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
-                            <LinkIcon className="h-5 w-5 text-blue-500" />
-                            Relevant Links
-                          </h3>
-                          <ul className="list-disc pl-5 space-y-1">
-                            {smartject.relevantLinks.map((link, index) => (
-                              <li key={index}>
-                                <a
-                                  href={link.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-primary hover:underline"
-                                >
-                                  {link.title}
-                                </a>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </>
-                    )}
+                    {smartject.relevantLinks &&
+                      smartject.relevantLinks.length > 0 && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
+                              <LinkIcon className="h-5 w-5 text-blue-500" />
+                              Relevant Links
+                            </h3>
+                            <ul className="list-disc pl-5 space-y-1">
+                              {smartject.relevantLinks.map((link, index) => (
+                                <li key={index}>
+                                  <a
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:underline"
+                                  >
+                                    {link.title}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </>
+                      )}
                   </div>
                 </TabsContent>
 
@@ -554,35 +552,51 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                     needProposals.length > 0 ? (
                       <div className="space-y-4">
                         {needProposals.map((proposal) => (
-                          <div key={proposal.id} className="border rounded-md p-4">
+                          <div
+                            key={proposal.id}
+                            className="border rounded-md p-4"
+                          >
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex items-center">
                                 <Avatar className="h-8 w-8 mr-2">
-                                  <AvatarFallback>{proposal.title.charAt(0)}</AvatarFallback>
+                                  <AvatarFallback>
+                                    {proposal.title.charAt(0)}
+                                  </AvatarFallback>
                                 </Avatar>
-                                <span className="font-medium">{proposal.title}</span>
+                                <span className="font-medium">
+                                  {proposal.title}
+                                </span>
                               </div>
                               <Badge variant="outline">{proposal.status}</Badge>
                             </div>
                             <div className="grid grid-cols-2 gap-4 mb-4">
                               <div className="flex items-center">
                                 <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
-                                <span>{proposal.budget || "Not specified"}</span>
+                                <span>
+                                  {proposal.budget || "Not specified"}
+                                </span>
                               </div>
                               <div className="flex items-center">
                                 <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
-                                <span>{proposal.timeline || "Not specified"}</span>
+                                <span>
+                                  {proposal.timeline || "Not specified"}
+                                </span>
                               </div>
                             </div>
                             <div className="flex gap-2">
                               <Button
                                 variant="outline"
                                 className="flex-1"
-                                onClick={() => handleRespondToProposal(proposal.id)}
+                                onClick={() =>
+                                  handleRespondToProposal(proposal.id)
+                                }
                               >
                                 View Details
                               </Button>
-                              <Button className="flex-1" onClick={() => handleNegotiate(proposal.id)}>
+                              <Button
+                                className="flex-1"
+                                onClick={() => handleNegotiate(proposal.id)}
+                              >
                                 Negotiate
                               </Button>
                             </div>
@@ -591,8 +605,12 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                       </div>
                     ) : (
                       <div className="text-center py-6">
-                        <p className="text-muted-foreground mb-4">No proposals yet</p>
-                        <Button onClick={handleCreateProposal}>Create Proposal</Button>
+                        <p className="text-muted-foreground mb-4">
+                          No proposals yet
+                        </p>
+                        <Button onClick={handleCreateProposal}>
+                          Create Proposal
+                        </Button>
                       </div>
                     )
                   ) : (
@@ -603,7 +621,9 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                           : "Upgrade to a paid account to view proposals"}
                       </p>
                       <Button asChild>
-                        <Link href={!isAuthenticated ? "/auth/login" : "/upgrade"}>
+                        <Link
+                          href={!isAuthenticated ? "/auth/login" : "/upgrade"}
+                        >
                           {!isAuthenticated ? "Log In" : "Upgrade"}
                         </Link>
                       </Button>
@@ -616,35 +636,51 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                     provideProposals.length > 0 ? (
                       <div className="space-y-4">
                         {provideProposals.map((proposal) => (
-                          <div key={proposal.id} className="border rounded-md p-4">
+                          <div
+                            key={proposal.id}
+                            className="border rounded-md p-4"
+                          >
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex items-center">
                                 <Avatar className="h-8 w-8 mr-2">
-                                  <AvatarFallback>{proposal.title.charAt(0)}</AvatarFallback>
+                                  <AvatarFallback>
+                                    {proposal.title.charAt(0)}
+                                  </AvatarFallback>
                                 </Avatar>
-                                <span className="font-medium">{proposal.title}</span>
+                                <span className="font-medium">
+                                  {proposal.title}
+                                </span>
                               </div>
                               <Badge variant="outline">{proposal.status}</Badge>
                             </div>
                             <div className="grid grid-cols-2 gap-4 mb-4">
                               <div className="flex items-center">
                                 <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
-                                <span>{proposal.budget || "Not specified"}</span>
+                                <span>
+                                  {proposal.budget || "Not specified"}
+                                </span>
                               </div>
                               <div className="flex items-center">
                                 <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
-                                <span>{proposal.timeline || "Not specified"}</span>
+                                <span>
+                                  {proposal.timeline || "Not specified"}
+                                </span>
                               </div>
                             </div>
                             <div className="flex gap-2">
                               <Button
                                 variant="outline"
                                 className="flex-1"
-                                onClick={() => handleRespondToProposal(proposal.id)}
+                                onClick={() =>
+                                  handleRespondToProposal(proposal.id)
+                                }
                               >
                                 View Details
                               </Button>
-                              <Button className="flex-1" onClick={() => handleNegotiate(proposal.id)}>
+                              <Button
+                                className="flex-1"
+                                onClick={() => handleNegotiate(proposal.id)}
+                              >
                                 Negotiate
                               </Button>
                             </div>
@@ -653,8 +689,12 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                       </div>
                     ) : (
                       <div className="text-center py-6">
-                        <p className="text-muted-foreground mb-4">No proposals yet</p>
-                        <Button onClick={handleCreateProposal}>Create Proposal</Button>
+                        <p className="text-muted-foreground mb-4">
+                          No proposals yet
+                        </p>
+                        <Button onClick={handleCreateProposal}>
+                          Create Proposal
+                        </Button>
                       </div>
                     )
                   ) : (
@@ -665,7 +705,9 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                           : "Upgrade to a paid account to view proposals"}
                       </p>
                       <Button asChild>
-                        <Link href={!isAuthenticated ? "/auth/login" : "/upgrade"}>
+                        <Link
+                          href={!isAuthenticated ? "/auth/login" : "/upgrade"}
+                        >
                           {!isAuthenticated ? "Log In" : "Upgrade"}
                         </Link>
                       </Button>
@@ -692,7 +734,9 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                   size="sm"
                   className="flex gap-2"
                   onClick={() => handleVote("need")}
-                  disabled={!isAuthenticated || user?.accountType === "free" || isVoting}
+                  disabled={
+                    !isAuthenticated || user?.accountType === "free" || isVoting
+                  }
                 >
                   <Briefcase className="h-4 w-4" />
                   <span>I Need ({smartject.votes.need})</span>
@@ -703,14 +747,21 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                   size="sm"
                   className="flex gap-2"
                   onClick={() => handleVote("provide")}
-                  disabled={!isAuthenticated || user?.accountType === "free" || isVoting}
+                  disabled={
+                    !isAuthenticated || user?.accountType === "free" || isVoting
+                  }
                 >
                   <Wrench className="h-4 w-4" />
                   <span>I Provide ({smartject.votes.provide})</span>
                 </Button>
               </div>
 
-              <Button variant="ghost" size="sm" className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex gap-2"
+                onClick={handleShare}
+              >
                 <Share2 className="h-4 w-4" />
                 <span>Share</span>
               </Button>
@@ -724,17 +775,19 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                 Comments ({comments.length})
               </TabsTrigger>
               <TabsTrigger value="research">Research Papers</TabsTrigger>
-              <TabsTrigger value="documents">
+              {/* <TabsTrigger value="documents">
                 <FileText className="h-4 w-4 mr-2" />
                 Related Documents
-              </TabsTrigger>
+              </TabsTrigger> */}
             </TabsList>
 
             <TabsContent value="comments" ref={commentsRef}>
               <Card>
                 <CardHeader>
                   <CardTitle>Discussion</CardTitle>
-                  <CardDescription>Share your thoughts and insights about this smartject</CardDescription>
+                  <CardDescription>
+                    Share your thoughts and insights about this smartject
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {isAuthenticated ? (
@@ -747,7 +800,10 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                           className="min-h-[100px]"
                         />
                         <div className="flex justify-end">
-                          <Button type="submit" disabled={!comment.trim() || isSubmitting}>
+                          <Button
+                            type="submit"
+                            disabled={!comment.trim() || isSubmitting}
+                          >
                             {isSubmitting ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -763,7 +819,9 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                   ) : (
                     <Card className="bg-muted/50">
                       <CardContent className="flex flex-col items-center justify-center py-6">
-                        <p className="text-muted-foreground mb-4">Please log in to join the discussion</p>
+                        <p className="text-muted-foreground mb-4">
+                          Please log in to join the discussion
+                        </p>
                         <Button asChild>
                           <a href="/auth/login">Log In</a>
                         </Button>
@@ -774,16 +832,27 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                   <div className="space-y-4 mt-6">
                     {comments.length > 0 ? (
                       comments.map((comment) => (
-                        <div key={comment.id} className="flex gap-4 p-4 border rounded-lg">
+                        <div
+                          key={comment.id}
+                          className="flex gap-4 p-4 border rounded-lg"
+                        >
                           <Avatar>
-                            <AvatarImage src={comment.user?.avatar || "/placeholder.svg"} />
-                            <AvatarFallback>{comment.user?.name.charAt(0) || "U"}</AvatarFallback>
+                            <AvatarImage
+                              src={comment.user?.avatar || "/placeholder.svg"}
+                            />
+                            <AvatarFallback>
+                              {comment.user?.name.charAt(0) || "U"}
+                            </AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
                             <div className="flex justify-between items-center mb-2">
-                              <h4 className="font-semibold">{comment.user?.name || "Anonymous"}</h4>
+                              <h4 className="font-semibold">
+                                {comment.user?.name || "Anonymous"}
+                              </h4>
                               <span className="text-xs text-muted-foreground">
-                                {new Date(comment.createdAt).toLocaleDateString()}
+                                {new Date(
+                                  comment.createdAt
+                                ).toLocaleDateString()}
                               </span>
                             </div>
                             <p>{comment.content}</p>
@@ -792,40 +861,50 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                       ))
                     ) : (
                       <div className="text-center py-4">
-                        <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
+                        <p className="text-muted-foreground">
+                          No comments yet. Be the first to comment!
+                        </p>
                       </div>
                     )}
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
-
             <TabsContent value="research">
               <Card>
                 <CardHeader>
                   <CardTitle>Research Papers</CardTitle>
-                  <CardDescription>Academic research that inspired this smartject</CardDescription>
+                  <CardDescription>
+                    Academic research that inspired this smartject
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {researchPapers.map((paper, index) => (
-                      <div key={index} className="p-4 border rounded-lg">
-                        <h4 className="font-semibold mb-2">
-                          <a href={paper.url} className="hover:underline">
-                            {paper.title}
-                          </a>
-                        </h4>
-                        <p className="text-sm text-muted-foreground">{paper.authors}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {paper.journal}, {paper.year}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                  {smartject.relevantLinks.length === 0 ? (
+                    <p className="text-muted-foreground italic">
+                      No research papers available for this smartject.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {smartject.relevantLinks.map((paper, index) => (
+                        <div key={index} className="p-4 border rounded-lg">
+                          <h4 className="font-semibold mb-2">
+                            <a
+                              href={paper.url}
+                              className="hover:underline"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {paper.title}
+                            </a>
+                          </h4>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent value="documents">
+            {/* <TabsContent value="documents">
               <Card>
                 <CardHeader>
                   <CardTitle>Related Documents</CardTitle>
@@ -879,7 +958,7 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                   </CardFooter>
                 )}
               </Card>
-            </TabsContent>
+            </TabsContent> */}
           </Tabs>
         </div>
 
@@ -900,7 +979,12 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                   : "Paid accounts can create detailed proposals for smartjects they need or can provide."}
               </p>
               {isAuthenticated && user?.accountType === "paid" ? (
-                <Button className="w-full" onClick={() => router.push(`/proposals/create?smartjectId=${id}`)}>
+                <Button
+                  className="w-full"
+                  onClick={() =>
+                    router.push(`/proposals/create?smartjectId=${id}`)
+                  }
+                >
                   Create Proposal
                 </Button>
               ) : (
@@ -910,7 +994,9 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
                   disabled={!isAuthenticated} // Only disable if not authenticated
                 >
                   <Link href={isAuthenticated ? "/upgrade" : "/auth/login"}>
-                    {isAuthenticated ? "Upgrade to Paid Account" : "Log In to Create Proposal"}
+                    {isAuthenticated
+                      ? "Upgrade to Paid Account"
+                      : "Log In to Create Proposal"}
                   </Link>
                 </Button>
               )}
@@ -925,7 +1011,9 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
               <div className="space-y-4">
                 {/* In a real app, we would fetch similar smartjects from the API */}
                 <div className="text-center py-4">
-                  <p className="text-muted-foreground">Loading similar smartjects...</p>
+                  <p className="text-muted-foreground">
+                    Loading similar smartjects...
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -933,5 +1021,5 @@ export default function SmartjectDetailPage({ params }: { params: Promise<{ id: 
         </div>
       </div>
     </div>
-  )
+  );
 }

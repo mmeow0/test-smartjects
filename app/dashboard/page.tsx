@@ -25,6 +25,9 @@ import {
 } from "lucide-react";
 import { useUserSmartjects } from "@/hooks/use-user-smartjects";
 import { Skeleton } from "@/components/ui/skeleton";
+import { proposalService } from "@/lib/services";
+import { ProposalType } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 
 // Update the dashboard page to include proposals, matches, and contracts
 export default function DashboardPage() {
@@ -34,6 +37,8 @@ export default function DashboardPage() {
   const { smartjects, isLoading, refetch } = useUserSmartjects(user?.id);
 
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const [proposals, setProposals] = useState<ProposalType[]>([]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -42,6 +47,27 @@ export default function DashboardPage() {
     } else {
       setLoading(false);
     }
+
+    const fetchProposals = async () => {
+      if (!isAuthenticated || user?.accountType !== "paid") return;
+
+      try {
+        const allProposals = await proposalService.getProposalsByUserId(
+          user.id
+        );
+
+        setProposals(allProposals);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load proposals",
+          variant: "destructive",
+        });
+        console.error("Error fetching proposals:", error);
+      }
+    };
+
+    fetchProposals();
   }, [isAuthenticated, router]);
 
   if (!isAuthenticated || loading) {
@@ -53,26 +79,6 @@ export default function DashboardPage() {
   const needSmartjects = user?.accountType === "paid" ? smartjects.need : [];
   const provideSmartjects =
     user?.accountType === "paid" ? smartjects.provide : [];
-
-  // Mock data for proposals
-  const recentProposals = [
-    {
-      id: "proposal-1",
-      title: "AI-Powered Supply Chain Optimization",
-      status: "submitted",
-      updatedAt: "2023-12-05",
-      budget: 15000,
-      type: "need",
-    },
-    {
-      id: "proposal-3",
-      title: "Automated Customer Support Chatbot Implementation",
-      status: "accepted",
-      updatedAt: "2023-11-20",
-      budget: 12000,
-      type: "provide",
-    },
-  ];
 
   // Mock data for matches
   const recentMatches = [
@@ -222,7 +228,7 @@ export default function DashboardPage() {
               </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {recentProposals.map((proposal) => (
+              {proposals.map((proposal) => (
                 <Card
                   key={proposal.id}
                   className="hover:bg-muted/50 transition-colors cursor-pointer"
@@ -235,8 +241,10 @@ export default function DashboardPage() {
                           {proposal.title}
                         </CardTitle>
                         <CardDescription>
-                          Last updated on{" "}
-                          {new Date(proposal.updatedAt).toLocaleDateString()} •{" "}
+                          {proposal.updatedAt
+                            ? ` Last updated on 
+                          ${new Date(proposal.updatedAt).toLocaleDateString()} • `
+                            : ""}
                           {proposal.type === "need" ? "I Need" : "I Provide"}
                         </CardDescription>
                       </div>
@@ -247,13 +255,13 @@ export default function DashboardPage() {
                     <div className="flex items-center">
                       <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
                       <span className="font-medium">
-                        ${proposal.budget.toLocaleString()}
+                        ${proposal.budget?.toLocaleString()}
                       </span>
                     </div>
                   </CardContent>
                 </Card>
               ))}
-              {recentProposals.length === 0 && (
+              {proposals.length === 0 && (
                 <Card className="col-span-2">
                   <CardContent className="flex flex-col items-center justify-center py-8">
                     <p className="text-muted-foreground mb-4">

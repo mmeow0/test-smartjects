@@ -17,7 +17,6 @@ import {
   Clock,
   DollarSign,
   FileText,
-  History,
   MessageSquare,
   Pencil,
   ThumbsUp,
@@ -25,6 +24,8 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react"
+import { ProposalType } from "@/lib/types"
+import { proposalService } from "@/lib/services"
 
 export default function ProposalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -34,115 +35,50 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
 
-  // Redirect if not authenticated or not a paid user
+   const [proposal, setProposal] = useState<ProposalType | null>(null);
+
+  
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push("/auth/login")
+      router.push("/auth/login");
     } else if (user?.accountType !== "paid") {
-      router.push("/upgrade")
+      router.push("/upgrade");
     } else {
-      // Simulate loading data
-      setTimeout(() => {
-        setIsLoading(false)
-      }, 1000)
+      const fetchProposal = async () => {
+        try {
+          const proposalData = await proposalService.getProposalById(id);
+          if (proposalData) {
+            setProposal(proposalData);
+          } else {
+            toast({
+              title: "Not found",
+              description: "Proposal not found.",
+              variant: "destructive",
+            });
+            router.push("/proposals");
+          }
+        } catch (error) {
+          console.error("Error fetching proposal:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load proposal",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      fetchProposal();
     }
-  }, [isAuthenticated, router, user])
+  }, [id, isAuthenticated, user?.accountType, router, toast]);
 
   if (!isAuthenticated || user?.accountType !== "paid" || isLoading) {
-    return null
+    return null;
   }
 
-  // Mock proposal data
-  const proposal = {
-    id: id,
-    title: "AI-Powered Supply Chain Optimization Implementation",
-    type: "provide",
-    status: "submitted",
-    createdAt: "2023-12-01",
-    updatedAt: "2023-12-05",
-    smartjectId: "smartject-1",
-    smartjectTitle: "AI-Powered Supply Chain Optimization",
-    description:
-      "This proposal outlines our approach to implementing an AI-powered supply chain optimization solution that will predict disruptions and optimize inventory management based on real-time data analysis.",
-    scope:
-      "The project will include data integration from existing systems, machine learning model development, dashboard creation, and staff training.",
-    timeline: "3 months",
-    budget: "$15,000",
-    deliverables: [
-      "Data integration framework",
-      "Machine learning prediction model",
-      "Real-time monitoring dashboard",
-      "Documentation and training materials",
-    ],
-    approach:
-      "We will use a phased approach, starting with data integration, followed by model development, dashboard creation, and finally deployment and training.",
-    expertise:
-      "Our team has 5+ years of experience implementing AI solutions for supply chain optimization across various industries.",
-    team: "1 Project Manager, 2 Data Scientists, 1 UI/UX Designer, 1 Integration Specialist",
-    files: [
-      { name: "implementation-plan.pdf", size: "2.4 MB", type: "pdf" },
-      { name: "team-credentials.docx", size: "1.8 MB", type: "docx" },
-      { name: "sample-dashboard.png", size: "3.2 MB", type: "image" },
-    ],
-    versions: [
-      {
-        version: 2,
-        date: "2023-12-05",
-        changes: "Updated budget and timeline based on additional requirements",
-      },
-      {
-        version: 1,
-        date: "2023-12-01",
-        changes: "Initial proposal submission",
-      },
-    ],
-    comments: [
-      {
-        id: "comment-1",
-        user: {
-          name: "John Smith",
-          avatar: "",
-        },
-        content: "Could you provide more details about the machine learning models you plan to use?",
-        createdAt: "2023-12-03",
-      },
-      {
-        id: "comment-2",
-        user: {
-          name: "Sarah Johnson",
-          avatar: "",
-        },
-        content: "I like the phased approach. Have you considered including a pilot phase before full deployment?",
-        createdAt: "2023-12-04",
-      },
-    ],
-    documentVersions: [
-      {
-        id: "version-3",
-        versionNumber: 3,
-        date: "2023-12-05",
-        author: "Tech Solutions Inc.",
-        changes: [
-          "Updated budget from $12,000 to $15,000",
-          "Extended timeline from 2 months to 3 months",
-          "Added additional deliverable: Training materials",
-        ],
-      },
-      {
-        id: "version-2",
-        versionNumber: 2,
-        date: "2023-12-03",
-        author: "Tech Solutions Inc.",
-        changes: ["Added detailed implementation approach", "Updated team composition"],
-      },
-      {
-        id: "version-1",
-        versionNumber: 1,
-        date: "2023-12-01",
-        author: "Tech Solutions Inc.",
-        changes: ["Initial proposal creation"],
-      },
-    ],
+  if (!proposal) {
+    return <div>Proposal not found.</div>;
   }
 
   const getStatusBadge = (status: string) => {
@@ -161,7 +97,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
         )
       case "accepted":
         return (
-          <Badge variant="success" className="bg-green-100 text-green-800 flex items-center gap-1">
+          <Badge variant='default' className="bg-green-100 text-green-800 flex items-center gap-1">
             <CheckCircle className="h-3 w-3" /> Accepted
           </Badge>
         )
@@ -258,7 +194,6 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
           <TabsList className="mb-6">
             <TabsTrigger value="details">Proposal Details</TabsTrigger>
             <TabsTrigger value="files">Files ({proposal.files.length})</TabsTrigger>
-            <TabsTrigger value="versions">Version History ({proposal.versions.length})</TabsTrigger>
             <TabsTrigger value="comments">Comments ({proposal.comments.length})</TabsTrigger>
           </TabsList>
 
@@ -283,9 +218,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                   <div>
                     <h3 className="text-lg font-medium mb-2">Deliverables</h3>
                     <ul className="list-disc pl-5 space-y-1">
-                      {proposal.deliverables.map((item, index) => (
-                        <li key={index}>{item}</li>
-                      ))}
+                      {proposal.deliverables}
                     </ul>
                   </div>
 
@@ -319,10 +252,10 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                   smartjectTitle={proposal.smartjectTitle}
                   type={proposal.type}
                   description={proposal.description}
-                  scope={proposal.scope}
-                  timeline={proposal.timeline}
-                  budget={proposal.budget}
-                  deliverables={proposal.deliverables.join("\n")}
+                  scope={proposal.scope || ''}
+                  timeline={proposal.timeline || ''}
+                  budget={proposal.budget || ''}
+                  deliverables={proposal.deliverables ?? ''}
                   requirements={proposal.type === "need" ? proposal.requirements : undefined}
                   expertise={proposal.type === "provide" ? proposal.expertise : undefined}
                   approach={proposal.type === "provide" ? proposal.approach : undefined}
@@ -331,7 +264,6 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                   userName={user?.name || "User Name"}
                   userEmail={user?.email || "user@example.com"}
                   createdAt={proposal.createdAt}
-                  versions={proposal.documentVersions}
                 />
                 <Button variant="outline" onClick={handleEdit}>
                   <Pencil className="h-4 w-4 mr-2" />
@@ -386,33 +318,6 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                 <CardTitle>Version History</CardTitle>
                 <CardDescription>Track changes to this proposal over time</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ul className="space-y-4">
-                  {proposal.versions.map((version, index) => (
-                    <li key={index} className="flex items-start">
-                      <div className="mr-4 mt-1">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          <History className="h-4 w-4 text-primary" />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex items-center">
-                          <h4 className="font-medium">Version {version.version}</h4>
-                          <span className="text-sm text-muted-foreground ml-2">
-                            {new Date(version.date).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <p className="text-sm mt-1">{version.changes}</p>
-                        {index !== proposal.versions.length - 1 && (
-                          <Button variant="link" className="p-0 h-auto text-sm mt-1">
-                            View this version
-                          </Button>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
             </Card>
           </TabsContent>
 

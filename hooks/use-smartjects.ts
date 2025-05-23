@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { smartjectService } from "@/lib/services";
 import type { SmartjectType } from "@/lib/types";
+import { toast } from "@/components/ui/use-toast"; // подкорректируйте путь
 
 type Filters = {
   query?: string;
@@ -39,6 +40,11 @@ export function useSmartjects(userId?: string) {
         setSmartjects(data);
       } catch (error) {
         console.error("Error fetching smartjects:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load smartjects",
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
@@ -46,14 +52,13 @@ export function useSmartjects(userId?: string) {
     [userId]
   );
 
-  const refetch = () => fetchSmartjects(true)
+  const refetch = () => fetchSmartjects(true);
 
   const fetchAvailableFilters = useCallback(async () => {
     try {
       const filters = await smartjectService.getAvailableFilters();
       setAvailableFilters(filters);
 
-      // Пример: автоустановка всех доступных фильтров как выбранные
       setFilters((prev) => ({
         ...prev,
         industries: filters.industries,
@@ -62,6 +67,11 @@ export function useSmartjects(userId?: string) {
       }));
     } catch (error) {
       console.error("Error fetching available filters:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load available filters",
+        variant: "destructive",
+      });
     }
   }, []);
 
@@ -126,6 +136,6 @@ export function useSmartjects(userId?: string) {
     setFilter,
     clearFilters,
     refetch,
-    meta: availableFilters, // 🔁 заменили вычисление на данные с бэка
+    meta: availableFilters,
   };
 }

@@ -41,13 +41,9 @@ export default function SmartjectsHubPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(true);
 
   const { user } = useAuth();
-  const {
-    smartjects,
-    isLoading,
-    filters,
-    setFilter,
-    refetch,
-  } = useSmartjects(user?.id);
+  const { smartjects, isLoading, filters, setFilter, refetch } = useSmartjects(
+    user?.id
+  );
 
   useEffect(() => {
     console.log("availableFilters updated", filters);
@@ -198,9 +194,9 @@ export default function SmartjectsHubPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    setSelectedIndustries([])
-                    setSelectedFunctions([])
-                    setSelectedTechnologies([])
+                    setSelectedIndustries([]);
+                    setSelectedFunctions([]);
+                    setSelectedTechnologies([]);
                   }}
                   className="text-xs h-7 px-2"
                 >
@@ -346,7 +342,7 @@ export default function SmartjectsHubPage() {
                   key={smartject.id}
                   smartject={smartject}
                   onVoted={refetch}
-                   userVotes={smartject.userVotes}
+                  userVotes={smartject.userVotes}
                 />
               ))}
             </div>
@@ -424,7 +420,7 @@ export default function SmartjectsHubPage() {
                   key={smartject.id}
                   smartject={smartject}
                   onVoted={refetch}
-                   userVotes={smartject.userVotes}
+                  userVotes={smartject.userVotes}
                 />
               ))}
             </div>
