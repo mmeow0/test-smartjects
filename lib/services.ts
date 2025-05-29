@@ -115,8 +115,10 @@ export const smartjectService = {
 },
 
   // Get a single smartject by ID
-  async getSmartjectById(id: string): Promise<SmartjectType | null> {
+  async getSmartjectById(id: string, userId?: string): Promise<SmartjectType | null> {
     const supabase = getSupabaseBrowserClient();
+
+    const userVotesMap = userId ? await this.getUserVotes(userId) : {}
 
     const { data, error } = await supabase
       .from("smartjects")
@@ -166,6 +168,18 @@ export const smartjectService = {
       });
     }
 
+     const userVotes = {
+      believe: false,
+      need: false,
+      provide: false,
+    }
+
+    if (userId && userVotesMap[data.id]) {
+      for (const voteType of userVotesMap[data.id]) {
+        userVotes[voteType] = true
+      }
+    }
+
     // Count comments
     const { count, error: commentError } = await supabase
       .from("comments")
@@ -197,6 +211,7 @@ export const smartjectService = {
       id: data.id,
       title: data.title,
       votes: voteCount,
+      userVotes,
       comments: count || 0,
       createdAt: data.created_at,
       mission: data.mission || "",
@@ -210,7 +225,7 @@ export const smartjectService = {
       industries,
       businessFunctions,
       technologies,
-      relevantLinks: [], // We'll need to add a table for this
+      researchPapers: data.research_papers || [],
       image: data.image_url,
     };
   },

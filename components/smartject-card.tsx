@@ -36,6 +36,17 @@ import { useAuth } from "@/components/auth-provider";
 import type { SmartjectType } from "@/lib/types";
 import { voteService } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./ui/alert-dialog";
 
 interface SmartjectCardProps {
   smartject: SmartjectType;
@@ -55,10 +66,16 @@ export function SmartjectCard({
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // Constants for limiting displayed items
   const MAX_INDUSTRIES = 3;
   const MAX_BUSINESS_FUNCTIONS = 3;
+
+  const handleCreateProposal = () => {
+    setShowConfirm(false);
+    router.push(`/proposals/create?smartjectId=${smartject.id}`);
+  };
 
   const handleVote = async (type: "believe" | "need" | "provide") => {
     if (!isAuthenticated || !user) {
@@ -341,7 +358,7 @@ export function SmartjectCard({
                   className={`flex gap-1 h-8 px-2 ${
                     userVotes?.need ? "bg-primary/10 text-primary" : ""
                   }`}
-                  onClick={() => router.push(`/proposals/create?smartjectId=${smartject.id}&voteType=need`)}
+                  onClick={() => handleVote("need")}
                   disabled={!isAuthenticated || user?.accountType === "free"}
                 >
                   <Briefcase className="h-4 w-4" />
@@ -364,7 +381,7 @@ export function SmartjectCard({
                   className={`flex gap-1 h-8 px-2 ${
                     userVotes?.provide ? "bg-primary/10 text-primary" : ""
                   }`}
-                  onClick={() => router.push(`/proposals/create?smartjectId=${smartject.id}&voteType=provide`)}
+                  onClick={() => handleVote("provide")}
                   disabled={!isAuthenticated || user?.accountType === "free"}
                 >
                   <Wrench className="h-4 w-4" />
@@ -407,6 +424,29 @@ export function SmartjectCard({
             <ChevronRight className="h-4 w-4 ml-2" />
           </Link>
         </Button>
+        {(isAuthenticated && user?.accountType === 'paid') && (
+          <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+            <AlertDialogTrigger asChild>
+              <Button className="w-full" variant="secondary">
+                Create Proposal
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Create a proposal?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Do you want to create a proposal for this smartject?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleCreateProposal}>
+                  Yes, proceed
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </CardFooter>
     </Card>
   );

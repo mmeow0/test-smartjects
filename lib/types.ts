@@ -24,7 +24,7 @@ export type SmartjectType = {
   industries: string[];
   businessFunctions: string[];
   technologies?: string[];
-  relevantLinks: { title: string; url: string }[];
+  researchPapers: { title: string; url: string }[];
   image?: string;
 };
 

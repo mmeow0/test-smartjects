@@ -24,7 +24,6 @@ import {
   Factory,
   BriefcaseIcon,
   LinkIcon,
-  FileText,
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,6 +49,7 @@ import {
 } from "@/lib/services";
 import type { SmartjectType, CommentType, ProposalType } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { useSmartjectById } from "@/hooks/use-smartject-by-id";
 
 export default function SmartjectDetailPage({
   params,
@@ -61,72 +61,22 @@ export default function SmartjectDetailPage({
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
-  const [comment, setComment] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isVoting, setIsVoting] = useState(false);
-  const [smartject, setSmartject] = useState<SmartjectType | null>(null);
-  const [comments, setComments] = useState<CommentType[]>([]);
-  const [needProposals, setNeedProposals] = useState<ProposalType[]>([]);
-  const [provideProposals, setProvideProposals] = useState<ProposalType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const commentsRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const fetchSmartject = async () => {
-      try {
-        setIsLoading(true);
-        const data = await smartjectService.getSmartjectById(id);
-        if (data) {
-          setSmartject(data);
-        } else {
-          toast({
-            title: "Error",
-            description: "Smartject not found",
-            variant: "destructive",
-          });
-          router.push("/hub");
-        }
-      } catch (error) {
-        console.error("Error fetching smartject:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load smartject details",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const fetchComments = async () => {
-      try {
-        const data = await commentService.getCommentsBySmartjectId(id);
-        setComments(data);
-      } catch (error) {
-        console.error("Error fetching comments:", error);
-      }
-    };
-
-    const fetchProposals = async () => {
-      if (!isAuthenticated || user?.accountType !== "paid") return;
-
-      try {
-        const allProposals = await proposalService.getProposalsBySmartjectId(
-          id
-        );
-
-        setNeedProposals(allProposals.filter((p) => p.type === "need"));
-        setProvideProposals(allProposals.filter((p) => p.type === "provide"));
-      } catch (error) {
-        console.error("Error fetching proposals:", error);
-      }
-    };
-
-    fetchSmartject();
-    fetchComments();
-    fetchProposals();
-  }, [id, router, toast, isAuthenticated, user?.accountType]);
+  const {
+    smartject,
+    comments,
+    comment,
+    setComment,
+    commentsRef,
+    needProposals,
+    provideProposals,
+    isLoading,
+    isSubmitting,
+    setIsSubmitting,
+    isVoting,
+    setIsVoting,
+    error,
+    refetch,
+  } = useSmartjectById(typeof id === "string" ? id : undefined);
 
   useEffect(() => {
     // Check if the URL has a hash fragment
@@ -202,17 +152,7 @@ export default function SmartjectDetailPage({
         voteType: type,
       });
 
-      // Update local state
-      setSmartject((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          votes: {
-            ...prev.votes,
-            [type]: hasVoted ? prev.votes[type] - 1 : prev.votes[type] + 1,
-          },
-        };
-      });
+      refetch();
 
       toast({
         title: hasVoted ? "Vote removed" : "Vote added",
@@ -256,17 +196,8 @@ export default function SmartjectDetailPage({
       });
 
       if (newComment) {
-        setComments((prev) => [newComment, ...prev]);
+        refetch();
         setComment("");
-
-        // Update comment count in smartject
-        setSmartject((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            comments: prev.comments + 1,
-          };
-        });
 
         toast({
           title: "Comment added",
@@ -353,10 +284,10 @@ export default function SmartjectDetailPage({
                     Details
                   </TabsTrigger>
                   <TabsTrigger value="need" className="flex-1">
-                    I Need ({needProposals.length})
+                    Need Proposals ({needProposals.length})
                   </TabsTrigger>
                   <TabsTrigger value="provide" className="flex-1">
-                    I Provide ({provideProposals.length})
+                    Provide Proposals ({provideProposals.length})
                   </TabsTrigger>
                 </TabsList>
 
@@ -518,8 +449,8 @@ export default function SmartjectDetailPage({
                       )}
 
                     {/* Relevant Links */}
-                    {smartject.relevantLinks &&
-                      smartject.relevantLinks.length > 0 && (
+                    {smartject.researchPapers &&
+                      smartject.researchPapers.length > 0 && (
                         <>
                           <Separator />
                           <div>
@@ -528,7 +459,7 @@ export default function SmartjectDetailPage({
                               Relevant Links
                             </h3>
                             <ul className="list-disc pl-5 space-y-1">
-                              {smartject.relevantLinks.map((link, index) => (
+                              {smartject.researchPapers.map((link, index) => (
                                 <li key={index}>
                                   <a
                                     href={link.url}
@@ -566,6 +497,11 @@ export default function SmartjectDetailPage({
                                 <span className="font-medium">
                                   {proposal.title}
                                 </span>
+                                {proposal.userId === user.id && (
+                                  <Badge className="ml-2" variant="default">
+                                    My Proposal
+                                  </Badge>
+                                )}
                               </div>
                               <Badge variant="outline">{proposal.status}</Badge>
                             </div>
@@ -593,12 +529,14 @@ export default function SmartjectDetailPage({
                               >
                                 View Details
                               </Button>
-                              <Button
-                                className="flex-1"
-                                onClick={() => handleNegotiate(proposal.id)}
-                              >
-                                Negotiate
-                              </Button>
+                              {proposal.userId !== user.id && (
+                                <Button
+                                  className="flex-1"
+                                  onClick={() => handleNegotiate(proposal.id)}
+                                >
+                                  Negotiate
+                                </Button>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -722,7 +660,11 @@ export default function SmartjectDetailPage({
                   disabled={!isAuthenticated || isVoting}
                   variant="outline"
                   size="sm"
-                  className="flex gap-2"
+                  className={`flex gap-2  ${
+                    smartject.userVotes?.believe
+                      ? "bg-primary/10 text-primary"
+                      : ""
+                  }`}
                   onClick={() => handleVote("believe")}
                 >
                   <Heart className="h-4 w-4" />
@@ -732,7 +674,11 @@ export default function SmartjectDetailPage({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex gap-2"
+                  className={`flex gap-2  ${
+                    smartject.userVotes?.need
+                      ? "bg-primary/10 text-primary"
+                      : ""
+                  }`}
                   onClick={() => handleVote("need")}
                   disabled={
                     !isAuthenticated || user?.accountType === "free" || isVoting
@@ -745,7 +691,11 @@ export default function SmartjectDetailPage({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex gap-2"
+                  className={`flex gap-2  ${
+                    smartject.userVotes?.provide
+                      ? "bg-primary/10 text-primary"
+                      : ""
+                  }`}
                   onClick={() => handleVote("provide")}
                   disabled={
                     !isAuthenticated || user?.accountType === "free" || isVoting
@@ -774,11 +724,6 @@ export default function SmartjectDetailPage({
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Comments ({comments.length})
               </TabsTrigger>
-              <TabsTrigger value="research">Research Papers</TabsTrigger>
-              {/* <TabsTrigger value="documents">
-                <FileText className="h-4 w-4 mr-2" />
-                Related Documents
-              </TabsTrigger> */}
             </TabsList>
 
             <TabsContent value="comments" ref={commentsRef}>
@@ -870,95 +815,6 @@ export default function SmartjectDetailPage({
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent value="research">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Research Papers</CardTitle>
-                  <CardDescription>
-                    Academic research that inspired this smartject
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {smartject.relevantLinks.length === 0 ? (
-                    <p className="text-muted-foreground italic">
-                      No research papers available for this smartject.
-                    </p>
-                  ) : (
-                    <div className="space-y-4">
-                      {smartject.relevantLinks.map((paper, index) => (
-                        <div key={index} className="p-4 border rounded-lg">
-                          <h4 className="font-semibold mb-2">
-                            <a
-                              href={paper.url}
-                              className="hover:underline"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {paper.title}
-                            </a>
-                          </h4>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-            {/* <TabsContent value="documents">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Related Documents</CardTitle>
-                  <CardDescription>Documents and files related to this smartject</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {relatedDocuments.map((document) => (
-                      <div key={document.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex items-start gap-3">
-                            <div className="bg-primary/10 p-2 rounded">
-                              <FileText className="h-6 w-6 text-primary" />
-                            </div>
-                            <div>
-                              <h4 className="font-semibold">
-                                <a href={document.url} className="hover:underline">
-                                  {document.title}
-                                </a>
-                              </h4>
-                              <p className="text-sm text-muted-foreground">{document.description}</p>
-                            </div>
-                          </div>
-                          <Badge variant="outline">{document.type}</Badge>
-                        </div>
-                        <div className="flex flex-wrap gap-x-6 gap-y-2 mt-3 text-sm text-muted-foreground">
-                          <div>Size: {document.size}</div>
-                          <div>Uploaded by: {document.uploadedBy}</div>
-                          <div>Date: {new Date(document.uploadedAt).toLocaleDateString()}</div>
-                        </div>
-                        <div className="flex gap-2 mt-3">
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={document.url} download>
-                              Download
-                            </a>
-                          </Button>
-                          <Button variant="ghost" size="sm" asChild>
-                            <a href={document.url}>Preview</a>
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-                {isAuthenticated && user?.accountType === "paid" && (
-                  <CardFooter className="border-t pt-4">
-                    <Button className="w-full">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Upload New Document
-                    </Button>
-                  </CardFooter>
-                )}
-              </Card>
-            </TabsContent> */}
           </Tabs>
         </div>
 
@@ -1000,22 +856,6 @@ export default function SmartjectDetailPage({
                   </Link>
                 </Button>
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Similar Smartjects</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* In a real app, we would fetch similar smartjects from the API */}
-                <div className="text-center py-4">
-                  <p className="text-muted-foreground">
-                    Loading similar smartjects...
-                  </p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>

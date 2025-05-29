@@ -1,16 +1,23 @@
-"use client"
+"use client";
 
-import { use, useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
-import { useAuth } from "@/components/auth-provider"
-import { useToast } from "@/hooks/use-toast"
-import { ProposalDocumentPreview } from "@/components/proposal-document-preview"
+import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/components/auth-provider";
+import { useToast } from "@/hooks/use-toast";
+import { ProposalDocumentPreview } from "@/components/proposal-document-preview";
 import {
   ArrowLeft,
   Calendar,
@@ -23,21 +30,24 @@ import {
   ThumbsDown,
   CheckCircle,
   XCircle,
-} from "lucide-react"
-import { ProposalType } from "@/lib/types"
-import { proposalService } from "@/lib/services"
+} from "lucide-react";
+import { ProposalType } from "@/lib/types";
+import { proposalService } from "@/lib/services";
 
-export default function ProposalDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ProposalDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
-  
-  const router = useRouter()
-  const { user, isAuthenticated } = useAuth()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(true)
 
-   const [proposal, setProposal] = useState<ProposalType | null>(null);
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
 
-  
+  const [proposal, setProposal] = useState<ProposalType | null>(null);
+
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/auth/login");
@@ -88,53 +98,54 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
           <Badge variant="outline" className="flex items-center gap-1">
             <Clock className="h-3 w-3" /> Draft
           </Badge>
-        )
+        );
       case "submitted":
         return (
           <Badge variant="secondary" className="flex items-center gap-1">
             <FileText className="h-3 w-3" /> Submitted
           </Badge>
-        )
+        );
       case "accepted":
         return (
-          <Badge variant='default' className="bg-green-100 text-green-800 flex items-center gap-1">
+          <Badge
+            variant="default"
+            className="bg-green-100 text-green-800 flex items-center gap-1"
+          >
             <CheckCircle className="h-3 w-3" /> Accepted
           </Badge>
-        )
+        );
       case "rejected":
         return (
           <Badge variant="destructive" className="flex items-center gap-1">
             <XCircle className="h-3 w-3" /> Rejected
           </Badge>
-        )
+        );
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Badge variant="outline">{status}</Badge>;
     }
-  }
+  };
 
   const handleAccept = () => {
     toast({
       title: "Proposal accepted",
-      description: "You have accepted this proposal. A smart contract will be generated.",
-    })
-  }
-
-  const handleReject = () => {
-    toast({
-      title: "Proposal rejected",
-      description: "You have rejected this proposal.",
-    })
-  }
+      description:
+        "You have accepted this proposal. A smart contract will be generated.",
+    });
+  };
 
   const handleEdit = () => {
-    router.push(`/proposals/edit/${id}`)
-  }
+    router.push(`/proposals/edit/${id}`);
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center mb-6">
-          <Button variant="ghost" onClick={() => router.back()} className="mr-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="mr-4"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
@@ -144,8 +155,14 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
               {getStatusBadge(proposal.status)}
             </div>
             <p className="text-muted-foreground">
-              {proposal.type === "need" ? "Request for Implementation" : "Implementation Offer"} for{" "}
-              <a href={`/smartject/${proposal.smartjectId}`} className="text-primary hover:underline">
+              {proposal.type === "need"
+                ? "Request for Implementation"
+                : "Implementation Offer"}{" "}
+              for{" "}
+              <a
+                href={`/smartject/${proposal.smartjectId}`}
+                className="text-primary hover:underline"
+              >
                 {proposal.smartjectTitle}
               </a>
             </p>
@@ -193,8 +210,12 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
         <Tabs defaultValue="details">
           <TabsList className="mb-6">
             <TabsTrigger value="details">Proposal Details</TabsTrigger>
-            <TabsTrigger value="files">Files ({proposal.files.length})</TabsTrigger>
-            <TabsTrigger value="comments">Comments ({proposal.comments.length})</TabsTrigger>
+            <TabsTrigger value="files">
+              Files ({proposal.files.length})
+            </TabsTrigger>
+            <TabsTrigger value="comments">
+              Comments ({proposal.comments.length})
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="details">
@@ -252,35 +273,48 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                   smartjectTitle={proposal.smartjectTitle}
                   type={proposal.type}
                   description={proposal.description}
-                  scope={proposal.scope || ''}
-                  timeline={proposal.timeline || ''}
-                  budget={proposal.budget || ''}
-                  deliverables={proposal.deliverables ?? ''}
-                  requirements={proposal.type === "need" ? proposal.requirements : undefined}
-                  expertise={proposal.type === "provide" ? proposal.expertise : undefined}
-                  approach={proposal.type === "provide" ? proposal.approach : undefined}
+                  scope={proposal.scope || ""}
+                  timeline={proposal.timeline || ""}
+                  budget={proposal.budget || ""}
+                  deliverables={proposal.deliverables ?? ""}
+                  requirements={
+                    proposal.type === "need" ? proposal.requirements : undefined
+                  }
+                  expertise={
+                    proposal.type === "provide" ? proposal.expertise : undefined
+                  }
+                  approach={
+                    proposal.type === "provide" ? proposal.approach : undefined
+                  }
                   team={proposal.type === "provide" ? proposal.team : undefined}
                   additionalInfo={proposal.additionalInfo}
                   userName={user?.name || "User Name"}
                   userEmail={user?.email || "user@example.com"}
                   createdAt={proposal.createdAt}
                 />
-                <Button variant="outline" onClick={handleEdit}>
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Edit Proposal
-                </Button>
-                {proposal.status === "submitted" && proposal.type !== "provide" && (
-                  <div className="flex gap-2">
-                    <Button variant="destructive" onClick={handleReject}>
-                      <ThumbsDown className="h-4 w-4 mr-2" />
-                      Reject
-                    </Button>
-                    <Button variant="default" onClick={handleAccept}>
-                      <ThumbsUp className="h-4 w-4 mr-2" />
-                      Accept
-                    </Button>
-                  </div>
+                {proposal.userId === user.id && (
+                  <Button variant="outline" onClick={handleEdit}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit Proposal
+                  </Button>
                 )}
+                {proposal.userId !== user.id &&
+                  proposal.status === "submitted" &&
+                  proposal.type !== "provide" && (
+                    <div className="flex gap-2">
+                      <Button variant="secondary" onClick={handleAccept}>
+                        <ThumbsUp className="h-4 w-4 mr-2" />
+                        Accept
+                      </Button>
+                      <Button
+                        onClick={() =>
+                          router.push(`/matches/new/negotiate/${proposal.id}`)
+                        }
+                      >
+                        Negotiate
+                      </Button>
+                    </div>
+                  )}
               </CardFooter>
             </Card>
           </TabsContent>
@@ -289,18 +323,25 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
             <Card>
               <CardHeader>
                 <CardTitle>Supporting Documents</CardTitle>
-                <CardDescription>Files attached to this proposal</CardDescription>
+                <CardDescription>
+                  Files attached to this proposal
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
                   {proposal.files.map((file, index) => (
-                    <li key={index} className="flex items-center justify-between p-3 border rounded-md">
+                    <li
+                      key={index}
+                      className="flex items-center justify-between p-3 border rounded-md"
+                    >
                       <div className="flex items-center">
                         <FileText className="h-5 w-5 mr-2 text-blue-500" />
                         <span>{file.name}</span>
                       </div>
                       <div className="flex items-center">
-                        <span className="text-sm text-muted-foreground mr-4">{file.size}</span>
+                        <span className="text-sm text-muted-foreground mr-4">
+                          {file.size}
+                        </span>
                         <Button variant="ghost" size="sm">
                           Download
                         </Button>
@@ -316,7 +357,9 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
             <Card>
               <CardHeader>
                 <CardTitle>Version History</CardTitle>
-                <CardDescription>Track changes to this proposal over time</CardDescription>
+                <CardDescription>
+                  Track changes to this proposal over time
+                </CardDescription>
               </CardHeader>
             </Card>
           </TabsContent>
@@ -325,15 +368,24 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
             <Card>
               <CardHeader>
                 <CardTitle>Comments</CardTitle>
-                <CardDescription>Discussion about this proposal</CardDescription>
+                <CardDescription>
+                  Discussion about this proposal
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {proposal.comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-4 p-4 border rounded-lg">
+                    <div
+                      key={comment.id}
+                      className="flex gap-4 p-4 border rounded-lg"
+                    >
                       <Avatar>
-                        <AvatarImage src={comment.user.avatar || "/placeholder.svg"} />
-                        <AvatarFallback>{comment.user.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage
+                          src={comment.user.avatar || "/placeholder.svg"}
+                        />
+                        <AvatarFallback>
+                          {comment.user.name.charAt(0)}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <div className="flex justify-between items-center mb-2">
@@ -350,7 +402,9 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                   <div className="flex items-center gap-4 mt-6">
                     <Avatar>
                       <AvatarImage src={user?.avatar || "/placeholder.svg"} />
-                      <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
+                      <AvatarFallback>
+                        {user?.name?.charAt(0) || "U"}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <textarea
@@ -372,5 +426,5 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
         </Tabs>
       </div>
     </div>
-  )
+  );
 }

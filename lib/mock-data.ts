@@ -31,7 +31,7 @@ export const mockSmartjects: SmartjectType[] = [
       "Automated inventory ordering systems, dynamic route planning, risk forecasting.",
     industries: ["Logistics", "Manufacturing", "Retail"],
     businessFunctions: ["Supply Chain", "Operations", "IT"],
-    relevantLinks: [
+    researchPapers: [
       { title: "Case Study: DHL AI", url: "https://example.com/dhl-ai-case" },
       {
         title: "Whitepaper: AI in Logistics",
@@ -82,7 +82,7 @@ export const mockSmartjects: SmartjectType[] = [
       "Product Development",
       "Marketing",
     ],
-    relevantLinks: [
+    researchPapers: [
       {
         title: "RoPE-ND Research Article",
         url: "https://www.marktechpost.com/2025/04/14/transformers-gain-robust-multidimensional-positional-understanding-university-of-manchester-researchers-introduce-a-unified-lie-algebra-framework-for-n-dimensional-rotary-position-embedding-rope/",
@@ -116,7 +116,7 @@ export const mockSmartjects: SmartjectType[] = [
       "Real-time machine health monitoring, proactive alerts, scheduled interventions.",
     industries: ["Manufacturing", "Automotive", "Energy"],
     businessFunctions: ["Operations", "Maintenance", "Engineering"],
-    relevantLinks: [
+    researchPapers: [
       {
         title: "GE Predix for Predictive Maintenance",
         url: "https://example.com/ge-predix",
@@ -154,7 +154,7 @@ export const mockSmartjects: SmartjectType[] = [
       "Fraudulent transaction detection, suspicious activity alerts, risk scoring.",
     industries: ["Finance", "Insurance", "E-commerce"],
     businessFunctions: ["Risk Management", "Compliance", "Security"],
-    relevantLinks: [
+    researchPapers: [
       {
         title: "AI in Fraud Detection - McKinsey",
         url: "https://example.com/fraud-ai",
@@ -190,7 +190,7 @@ export const mockSmartjects: SmartjectType[] = [
       "Custom lesson paths, performance-based quizzes, AI learning assistants.",
     industries: ["Education", "Corporate Training"],
     businessFunctions: ["L&D", "HR", "Teaching"],
-    relevantLinks: [
+    researchPapers: [
       { title: "Khan Academy AI", url: "https://example.com/khan-ai" },
       { title: "EdTech Trends 2024", url: "https://example.com/edtech-trends" },
     ],
@@ -223,7 +223,7 @@ export const mockSmartjects: SmartjectType[] = [
       "Defect classification, anomaly detection, real-time inspection dashboards.",
     industries: ["Manufacturing", "Automotive", "Food & Beverage"],
     businessFunctions: ["Quality Assurance", "Operations", "Production"],
-    relevantLinks: [
+    researchPapers: [
       {
         title: "AI in Visual Inspection",
         url: "https://example.com/visual-inspection-ai",
@@ -266,7 +266,7 @@ export const mockSmartjects: SmartjectType[] = [
       "Sustainability",
       "Operations",
     ],
-    relevantLinks: [
+    researchPapers: [
       {
         title: "Siemens Desigo CC Overview",
         url: "https://example.com/siemens-energy",
@@ -302,7 +302,7 @@ export const mockSmartjects: SmartjectType[] = [
       "Crisis management alerts, brand sentiment dashboards, competitor tracking.",
     industries: ["Marketing", "Media", "Consumer Goods"],
     businessFunctions: ["Brand Management", "PR", "Market Research"],
-    relevantLinks: [
+    researchPapers: [
       {
         title: "Brandwatch Sentiment Report",
         url: "https://example.com/brandwatch",
@@ -340,7 +340,7 @@ export const mockSmartjects: SmartjectType[] = [
       "Automated stock auditing, inventory drones, real-time shelf tracking.",
     industries: ["Logistics", "Retail", "E-commerce"],
     businessFunctions: ["Inventory Management", "Logistics", "Warehousing"],
-    relevantLinks: [
+    researchPapers: [
       {
         title: "Amazon Robotics Case Study",
         url: "https://example.com/amazon-robots",
