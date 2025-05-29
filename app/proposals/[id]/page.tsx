@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { ProposalType } from "@/lib/types";
 import { proposalService } from "@/lib/services";
+import { useProposal } from "@/hooks/use-proposal";
 
 export default function ProposalDetailPage({
   params,
@@ -41,47 +42,45 @@ export default function ProposalDetailPage({
 }) {
   const { id } = use(params);
 
+  const [newComment, setNewComment] = useState("");
+  const [isPosting, setIsPosting] = useState(false);
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
 
-  const [proposal, setProposal] = useState<ProposalType | null>(null);
+  const [activeTab, setActiveTab] = useState("details");
+  const { proposal, isLoading, refetch } = useProposal(id);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login");
-    } else if (user?.accountType !== "paid") {
-      router.push("/upgrade");
-    } else {
-      const fetchProposal = async () => {
-        try {
-          const proposalData = await proposalService.getProposalById(id);
-          if (proposalData) {
-            setProposal(proposalData);
-          } else {
-            toast({
-              title: "Not found",
-              description: "Proposal not found.",
-              variant: "destructive",
-            });
-            router.push("/proposals");
-          }
-        } catch (error) {
-          console.error("Error fetching proposal:", error);
-          toast({
-            title: "Error",
-            description: "Failed to load proposal",
-            variant: "destructive",
-          });
-        } finally {
-          setIsLoading(false);
-        }
-      };
+  const handlePostComment = async () => {
+    if (!newComment.trim()) return;
 
-      fetchProposal();
+    setIsPosting(true);
+
+    try {
+      const createdComment = await proposalService.addCommentToProposal(
+        id,
+        user?.id as string,
+        newComment.trim()
+      );
+
+      // Обновляем локально список комментариев, чтобы отобразить сразу:
+      refetch();
+      setNewComment("");
+      toast({
+        title: "Comment posted",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Failed to post comment", error);
+      toast({
+        title: "Error",
+        description: "Failed to post comment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPosting(false);
     }
-  }, [id, isAuthenticated, user?.accountType, router, toast]);
+  };
 
   if (!isAuthenticated || user?.accountType !== "paid" || isLoading) {
     return null;
@@ -207,7 +206,7 @@ export default function ProposalDetailPage({
           </Card>
         </div>
 
-        <Tabs defaultValue="details">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
             <TabsTrigger value="details">Proposal Details</TabsTrigger>
             <TabsTrigger value="files">
@@ -220,52 +219,60 @@ export default function ProposalDetailPage({
 
           <TabsContent value="details">
             <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Description</h3>
-                    <p>{proposal.description}</p>
-                  </div>
+ <CardContent className="pt-6">
+      <div className="space-y-4">
 
-                  <Separator />
+  <DetailSection title="Submitted By">
+            <div>
+              <p>{user?.name || "Unknown User"}</p>
+              <p className="text-sm text-muted-foreground">{user?.email || "unknown@example.com"}</p>
+            </div>
+          </DetailSection>
 
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Project Scope</h3>
-                    <p>{proposal.scope}</p>
-                  </div>
+        {/* Grid for compact info */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {proposal.timeline && (
+            <DetailSection title="Timeline">{proposal.timeline}</DetailSection>
+          )}
+          {proposal.budget && (
+            <DetailSection title="Budget">{proposal.budget}</DetailSection>
+          )}
+          <DetailSection title="Submitted On">
+            {new Date(proposal.createdAt).toLocaleDateString()}
+          </DetailSection>
+        
+        </div>
 
-                  <Separator />
+        {/* Long Sections */}
+        <DetailSection title="Description">{proposal.description}</DetailSection>
+        <DetailSection title="Project Scope">{proposal.scope}</DetailSection>
+        <DetailSection title="Deliverables">
+          <ul className="list-disc pl-5 space-y-1">
+            {Array.isArray(proposal.deliverables) ? (
+              proposal.deliverables.map((item, i) => <li key={i}>{item}</li>)
+            ) : (
+              <li>{proposal.deliverables}</li>
+            )}
+          </ul>
+        </DetailSection>
 
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Deliverables</h3>
-                    <ul className="list-disc pl-5 space-y-1">
-                      {proposal.deliverables}
-                    </ul>
-                  </div>
+        {proposal.type === "need" && proposal.requirements && (
+          <DetailSection title="Requirements">{proposal.requirements}</DetailSection>
+        )}
 
-                  {proposal.type === "provide" && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h3 className="text-lg font-medium mb-2">Approach</h3>
-                        <p>{proposal.approach}</p>
-                      </div>
+        {proposal.type === "provide" && (
+          <>
+            <DetailSection title="Approach">{proposal.approach}</DetailSection>
+            <DetailSection title="Expertise">{proposal.expertise}</DetailSection>
+            <DetailSection title="Team">{proposal.team}</DetailSection>
+          </>
+        )}
 
-                      <Separator />
-                      <div>
-                        <h3 className="text-lg font-medium mb-2">Expertise</h3>
-                        <p>{proposal.expertise}</p>
-                      </div>
-
-                      <Separator />
-                      <div>
-                        <h3 className="text-lg font-medium mb-2">Team</h3>
-                        <p>{proposal.team}</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </CardContent>
+        {proposal.additionalInfo && (
+          <DetailSection title="Additional Info">{proposal.additionalInfo}</DetailSection>
+        )}
+      </div>
+    </CardContent>
               <CardFooter className="flex justify-between">
                 <ProposalDocumentPreview
                   proposalId={proposal.id}
@@ -410,11 +417,17 @@ export default function ProposalDetailPage({
                       <textarea
                         className="w-full border rounded-md p-2 min-h-[100px]"
                         placeholder="Add a comment..."
-                      ></textarea>
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        disabled={isPosting}
+                      />
                       <div className="flex justify-end mt-2">
-                        <Button>
+                        <Button
+                          onClick={handlePostComment}
+                          disabled={!newComment.trim() || isPosting}
+                        >
                           <MessageSquare className="h-4 w-4 mr-2" />
-                          Post Comment
+                          {isPosting ? "Posting..." : "Post Comment"}
                         </Button>
                       </div>
                     </div>
@@ -428,3 +441,16 @@ export default function ProposalDetailPage({
     </div>
   );
 }
+
+const DetailSection = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <div className="rounded-xl border p-4 bg-muted/40">
+    <h3 className="text-base font-semibold text-muted-foreground mb-2">{title}</h3>
+    <div className="text-sm text-foreground">{children}</div>
+  </div>
+);

@@ -603,6 +603,7 @@ export const proposalService = {
       additionalInfo: proposal.additional_info,
       status: proposal.status,
       createdAt: proposal.created_at,
+      updatedAt: proposal.updated_at,
     }));
   },
 
@@ -652,6 +653,7 @@ export const proposalService = {
       additionalInfo: proposal.additional_info,
       status: proposal.status,
       createdAt: proposal.created_at,
+      updatedAt: proposal.updated_at,
       user: {
         name: proposal.users.name,
         avatar: proposal.users.avatar_url,
@@ -716,6 +718,7 @@ const { data, error } = await supabase
     additionalInfo: data.additional_info,
     status: data.status,
     createdAt: data.created_at,
+    updatedAt: data.updated_at,
 
     // Новые поля:
     smartjectTitle: data.smartjects?.title ?? null,
@@ -808,6 +811,25 @@ const { data, error } = await supabase
 
     return true;
   },
+
+  async addCommentToProposal(proposalId: string, userId: string, content: string): Promise<boolean> {
+  const supabase = getSupabaseBrowserClient();
+
+  const { error } = await supabase
+    .from("proposal_comments")
+    .insert({
+      proposal_id: proposalId,
+      user_id: userId,
+      content: content,
+    });
+
+  if (error) {
+    console.error("Error adding comment to proposal:", error);
+    return false;
+  }
+
+  return true;
+},
 
   // Create milestones for a proposal
   async createMilestones(
