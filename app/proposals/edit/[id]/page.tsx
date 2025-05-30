@@ -348,13 +348,6 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
     })
   }
 
-  const handleMilestoneDateChange = (date: Date | undefined) => {
-    if (date) {
-      setCurrentMilestone({
-        ...currentMilestone,
-      })
-    }
-  }
 
   const handleMilestonePercentageChange = (percentage: number) => {
     const newPercentage = Math.max(0, Math.min(100, percentage))

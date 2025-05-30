@@ -219,60 +219,126 @@ export default function ProposalDetailPage({
 
           <TabsContent value="details">
             <Card>
- <CardContent className="pt-6">
-      <div className="space-y-4">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <DetailSection title="Submitted By">
+                    <div>
+                      <p>{user?.name || "Unknown User"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {user?.email || "unknown@example.com"}
+                      </p>
+                    </div>
+                  </DetailSection>
 
-  <DetailSection title="Submitted By">
-            <div>
-              <p>{user?.name || "Unknown User"}</p>
-              <p className="text-sm text-muted-foreground">{user?.email || "unknown@example.com"}</p>
-            </div>
-          </DetailSection>
+                  {/* Grid for compact info */}
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {proposal.timeline && (
+                      <DetailSection title="Timeline">
+                        {proposal.timeline}
+                      </DetailSection>
+                    )}
+                    {proposal.budget && (
+                      <DetailSection title="Budget">
+                        {proposal.budget}
+                      </DetailSection>
+                    )}
+                    <DetailSection title="Submitted On">
+                      {new Date(proposal.createdAt).toLocaleDateString()}
+                    </DetailSection>
+                  </div>
 
-        {/* Grid for compact info */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {proposal.timeline && (
-            <DetailSection title="Timeline">{proposal.timeline}</DetailSection>
-          )}
-          {proposal.budget && (
-            <DetailSection title="Budget">{proposal.budget}</DetailSection>
-          )}
-          <DetailSection title="Submitted On">
-            {new Date(proposal.createdAt).toLocaleDateString()}
-          </DetailSection>
-        
-        </div>
+                  {/* Long Sections */}
+                  <DetailSection title="Description">
+                    {proposal.description}
+                  </DetailSection>
+                  <DetailSection title="Project Scope">
+                    {proposal.scope}
+                  </DetailSection>
+                  <DetailSection title="Deliverables">
+                    <ul className="list-disc pl-5 space-y-1">
+                      {Array.isArray(proposal.deliverables) ? (
+                        proposal.deliverables.map((item, i) => (
+                          <li key={i}>{item}</li>
+                        ))
+                      ) : (
+                        <li>{proposal.deliverables}</li>
+                      )}
+                    </ul>
+                  </DetailSection>
 
-        {/* Long Sections */}
-        <DetailSection title="Description">{proposal.description}</DetailSection>
-        <DetailSection title="Project Scope">{proposal.scope}</DetailSection>
-        <DetailSection title="Deliverables">
-          <ul className="list-disc pl-5 space-y-1">
-            {Array.isArray(proposal.deliverables) ? (
-              proposal.deliverables.map((item, i) => <li key={i}>{item}</li>)
-            ) : (
-              <li>{proposal.deliverables}</li>
-            )}
-          </ul>
-        </DetailSection>
+                  {proposal.type === "need" && proposal.requirements && (
+                    <DetailSection title="Requirements">
+                      {proposal.requirements}
+                    </DetailSection>
+                  )}
 
-        {proposal.type === "need" && proposal.requirements && (
-          <DetailSection title="Requirements">{proposal.requirements}</DetailSection>
-        )}
+                  {proposal.type === "provide" && (
+                    <>
+                      <DetailSection title="Approach">
+                        {proposal.approach}
+                      </DetailSection>
+                      <DetailSection title="Expertise">
+                        {proposal.expertise}
+                      </DetailSection>
+                      <DetailSection title="Team">
+                        {proposal.team}
+                      </DetailSection>
+                    </>
+                  )}
 
-        {proposal.type === "provide" && (
-          <>
-            <DetailSection title="Approach">{proposal.approach}</DetailSection>
-            <DetailSection title="Expertise">{proposal.expertise}</DetailSection>
-            <DetailSection title="Team">{proposal.team}</DetailSection>
-          </>
-        )}
+                  {proposal.additionalInfo && (
+                    <DetailSection title="Additional Info">
+                      {proposal.additionalInfo}
+                    </DetailSection>
+                  )}
+                  {proposal.milestones?.length > 0 && (
+                    <DetailSection title="Milestones">
+                      <div className="space-y-6">
+                        {proposal.milestones.map((milestone, index) => (
+                          <div
+                            key={milestone.id}
+                            className="border rounded-lg p-4 shadow-sm"
+                          >
+                            <h4 className="font-semibold text-lg">
+                              {index + 1}. {milestone.name}
+                            </h4>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {milestone.description}
+                            </p>
+                            <div className="flex items-center gap-4 text-sm">
+                              <span>
+                                <strong>Percentage:</strong>{" "}
+                                {milestone.percentage}%
+                              </span>
+                              <span>
+                                <strong>Amount:</strong> {milestone.amount}
+                              </span>
+                            </div>
 
-        {proposal.additionalInfo && (
-          <DetailSection title="Additional Info">{proposal.additionalInfo}</DetailSection>
-        )}
-      </div>
-    </CardContent>
+                            {milestone.deliverables?.length > 0 && (
+                              <div className="mt-3">
+                                <p className="font-medium">Deliverables:</p>
+                                <ul className="list-disc pl-5 text-sm space-y-1">
+                                  {milestone.deliverables.map((d) => (
+                                    <li key={d.id}>
+                                      {d.description}
+                                      {d.completed && (
+                                        <span className="ml-2 text-green-600">
+                                          (Completed)
+                                        </span>
+                                      )}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </DetailSection>
+                  )}
+                </div>
+              </CardContent>
               <CardFooter className="flex justify-between">
                 <ProposalDocumentPreview
                   proposalId={proposal.id}
@@ -450,7 +516,9 @@ const DetailSection = ({
   children: React.ReactNode;
 }) => (
   <div className="rounded-xl border p-4 bg-muted/40">
-    <h3 className="text-base font-semibold text-muted-foreground mb-2">{title}</h3>
+    <h3 className="text-base font-semibold text-muted-foreground mb-2">
+      {title}
+    </h3>
     <div className="text-sm text-foreground">{children}</div>
   </div>
 );
