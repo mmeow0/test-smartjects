@@ -97,7 +97,6 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
         description: "Initial setup, requirements gathering, and project planning",
         percentage: 30,
         amount: "$5,250",
-        dueDate: "2024-01-15",
         status: "completed",
         completedDate: "2024-01-15",
         deliverables: ["Project plan", "Requirements document"],
@@ -120,7 +119,6 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
         description: "Data integration and initial model development",
         percentage: 30,
         amount: "$5,250",
-        dueDate: "2024-02-28",
         status: "in_progress",
         deliverables: ["Data integration framework", "Initial ML model prototype"],
         comments: [
@@ -137,7 +135,6 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
         description: "Complete system with dashboard and training",
         percentage: 40,
         amount: "$7,000",
-        dueDate: "2024-03-31",
         status: "pending",
         deliverables: ["Complete ML model", "Dashboard", "Documentation", "Training materials"],
       },
@@ -473,10 +470,7 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
                   {getMilestoneStatusBadge(nextMilestone.status)}
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Due Date:</span>{" "}
-                    <span className="font-medium">{new Date(nextMilestone.dueDate).toLocaleDateString()}</span>
-                  </div>
+                 
                   <div>
                     <span className="text-muted-foreground">Amount:</span>{" "}
                     <span className="font-medium">{nextMilestone.amount}</span>
@@ -626,10 +620,7 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
                           <span className="text-muted-foreground">Amount:</span>{" "}
                           <span className="font-medium">{milestone.amount}</span>
                         </div>
-                        <div>
-                          <span className="text-muted-foreground">Due Date:</span>{" "}
-                          <span className="font-medium">{new Date(milestone.dueDate).toLocaleDateString()}</span>
-                        </div>
+                      
                         <div>
                           <span className="text-muted-foreground">Percentage:</span>{" "}
                           <span className="font-medium">{milestone.percentage}%</span>

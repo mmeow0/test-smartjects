@@ -13,31 +13,33 @@ import type {
 export const smartjectService = {
   // Get all smartjects
 
-  async getUserVotes(userId: string): Promise<{ [smartjectId: string]: ("believe" | "need" | "provide")[] }> {
-  const supabase = getSupabaseBrowserClient()
-  const { data, error } = await supabase
-    .from("votes")
-    .select("smartject_id, vote_type")
-    .eq("user_id", userId)
+  async getUserVotes(
+    userId: string
+  ): Promise<{ [smartjectId: string]: ("believe" | "need" | "provide")[] }> {
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from("votes")
+      .select("smartject_id, vote_type")
+      .eq("user_id", userId);
 
-  if (error) {
-    console.error("Error fetching user votes:", error)
-    return {}
-  }
+    if (error) {
+      console.error("Error fetching user votes:", error);
+      return {};
+    }
 
-  const result: Record<string, string[]> = {}
-  data.forEach((vote: any) => {
-    if (!result[vote.smartject_id]) result[vote.smartject_id] = []
-    result[vote.smartject_id].push(vote.vote_type)
-  })
+    const result: Record<string, string[]> = {};
+    data.forEach((vote: any) => {
+      if (!result[vote.smartject_id]) result[vote.smartject_id] = [];
+      result[vote.smartject_id].push(vote.vote_type);
+    });
 
-  return result
-},
+    return result;
+  },
 
   async getSmartjects(userId?: string): Promise<SmartjectType[]> {
     const supabase = getSupabaseBrowserClient();
 
-    const userVotesMap = userId ? await this.getUserVotes(userId) : {}
+    const userVotesMap = userId ? await this.getUserVotes(userId) : {};
 
     const { data, error } = await supabase
       .from("smartjects")
@@ -63,62 +65,71 @@ export const smartjectService = {
       return [];
     }
 
-   return data.map((item) => {
-    const voteCount = {
-      believe: 0,
-      need: 0,
-      provide: 0,
-    }
+    return data.map((item) => {
+      const voteCount = {
+        believe: 0,
+        need: 0,
+        provide: 0,
+      };
 
-    item.votes?.forEach((vote: any) => {
-      voteCount[vote.vote_type]++
-    })
+      item.votes?.forEach((vote: any) => {
+        voteCount[vote.vote_type]++;
+      });
 
-    const userVotes = {
-      believe: false,
-      need: false,
-      provide: false,
-    }
+      const userVotes = {
+        believe: false,
+        need: false,
+        provide: false,
+      };
 
-    if (userId && userVotesMap[item.id]) {
-      for (const voteType of userVotesMap[item.id]) {
-        userVotes[voteType] = true
+      if (userId && userVotesMap[item.id]) {
+        for (const voteType of userVotesMap[item.id]) {
+          userVotes[voteType] = true;
+        }
       }
-    }
 
-    const industries = item.smartject_industries.map((i: any) => i.industries.name)
-    const businessFunctions = item.smartject_business_functions.map((f: any) => f.business_functions.name)
-    const technologies = item.smartject_technologies.map((t: any) => t.technologies.name)
+      const industries = item.smartject_industries.map(
+        (i: any) => i.industries.name
+      );
+      const businessFunctions = item.smartject_business_functions.map(
+        (f: any) => f.business_functions.name
+      );
+      const technologies = item.smartject_technologies.map(
+        (t: any) => t.technologies.name
+      );
 
-    return {
-      id: item.id,
-      title: item.title,
-      votes: voteCount,
-      userVotes,
-      comments: 0, // можно реализовать отдельно
-      createdAt: item.created_at,
-      mission: item.mission || "",
-      problematics: item.problematics || "",
-      scope: item.scope || "",
-      audience: item.audience || "",
-      howItWorks: item.how_it_works || "",
-      architecture: item.architecture || "",
-      innovation: item.innovation || "",
-      useCase: item.use_case || "",
-      industries,
-      businessFunctions,
-      technologies,
-      relevantLinks: [],
-      image: item.image_url,
-    }
-  })
-},
+      return {
+        id: item.id,
+        title: item.title,
+        votes: voteCount,
+        userVotes,
+        comments: 0, // можно реализовать отдельно
+        createdAt: item.created_at,
+        mission: item.mission || "",
+        problematics: item.problematics || "",
+        scope: item.scope || "",
+        audience: item.audience || "",
+        howItWorks: item.how_it_works || "",
+        architecture: item.architecture || "",
+        innovation: item.innovation || "",
+        useCase: item.use_case || "",
+        industries,
+        businessFunctions,
+        technologies,
+        relevantLinks: [],
+        image: item.image_url,
+      };
+    });
+  },
 
   // Get a single smartject by ID
-  async getSmartjectById(id: string, userId?: string): Promise<SmartjectType | null> {
+  async getSmartjectById(
+    id: string,
+    userId?: string
+  ): Promise<SmartjectType | null> {
     const supabase = getSupabaseBrowserClient();
 
-    const userVotesMap = userId ? await this.getUserVotes(userId) : {}
+    const userVotesMap = userId ? await this.getUserVotes(userId) : {};
 
     const { data, error } = await supabase
       .from("smartjects")
@@ -168,15 +179,15 @@ export const smartjectService = {
       });
     }
 
-     const userVotes = {
+    const userVotes = {
       believe: false,
       need: false,
       provide: false,
-    }
+    };
 
     if (userId && userVotesMap[data.id]) {
       for (const voteType of userVotesMap[data.id]) {
-        userVotes[voteType] = true
+        userVotes[voteType] = true;
       }
     }
 
@@ -230,38 +241,37 @@ export const smartjectService = {
     };
   },
 
-
   async getUserSmartjects(userId: string): Promise<SmartjectType[]> {
-  const supabase = getSupabaseBrowserClient();
+    const supabase = getSupabaseBrowserClient();
 
-  // Получаем все голоса пользователя с привязкой к smartject_id и типу голоса
-  const { data: userVotes, error: voteError } = await supabase
-    .from("votes")
-    .select("smartject_id, vote_type")
-    .eq("user_id", userId);
+    // Получаем все голоса пользователя с привязкой к smartject_id и типу голоса
+    const { data: userVotes, error: voteError } = await supabase
+      .from("votes")
+      .select("smartject_id, vote_type")
+      .eq("user_id", userId);
 
-  if (voteError || !userVotes) {
-    console.error("Error fetching user votes:", voteError);
-    return [];
-  }
-
-  // Строим мапу голосов по smartject_id
-  const userVotesMap: Record<string, string[]> = {};
-  const smartjectIds = new Set<string>();
-
-  for (const vote of userVotes) {
-    smartjectIds.add(vote.smartject_id);
-    if (!userVotesMap[vote.smartject_id]) {
-      userVotesMap[vote.smartject_id] = [];
+    if (voteError || !userVotes) {
+      console.error("Error fetching user votes:", voteError);
+      return [];
     }
-    userVotesMap[vote.smartject_id].push(vote.vote_type);
-  }
 
-  // Получаем smartjects, по которым были голоса
-  const { data, error } = await supabase
-    .from("smartjects")
-    .select(
-      `
+    // Строим мапу голосов по smartject_id
+    const userVotesMap: Record<string, string[]> = {};
+    const smartjectIds = new Set<string>();
+
+    for (const vote of userVotes) {
+      smartjectIds.add(vote.smartject_id);
+      if (!userVotesMap[vote.smartject_id]) {
+        userVotesMap[vote.smartject_id] = [];
+      }
+      userVotesMap[vote.smartject_id].push(vote.vote_type);
+    }
+
+    // Получаем smartjects, по которым были голоса
+    const { data, error } = await supabase
+      .from("smartjects")
+      .select(
+        `
       *,
       smartject_industries (
         industries (name)
@@ -274,65 +284,70 @@ export const smartjectService = {
       ),
       votes (vote_type)
     `
-    )
-    .in("id", Array.from(smartjectIds));
+      )
+      .in("id", Array.from(smartjectIds));
 
-  if (error || !data) {
-    console.error("Error fetching voted smartjects:", error);
-    return [];
-  }
-
-  return data.map((item) => {
-    const voteCount = {
-      believe: 0,
-      need: 0,
-      provide: 0,
-    };
-
-    item.votes?.forEach((vote: any) => {
-      voteCount[vote.vote_type]++;
-    });
-
-    const userVotes = {
-      believe: false,
-      need: false,
-      provide: false,
-    };
-
-    if (userVotesMap[item.id]) {
-      for (const voteType of userVotesMap[item.id]) {
-        userVotes[voteType] = true;
-      }
+    if (error || !data) {
+      console.error("Error fetching voted smartjects:", error);
+      return [];
     }
 
-    const industries = item.smartject_industries.map((i: any) => i.industries.name);
-    const businessFunctions = item.smartject_business_functions.map((f: any) => f.business_functions.name);
-    const technologies = item.smartject_technologies.map((t: any) => t.technologies.name);
+    return data.map((item) => {
+      const voteCount = {
+        believe: 0,
+        need: 0,
+        provide: 0,
+      };
 
-    return {
-      id: item.id,
-      title: item.title,
-      votes: voteCount,
-      userVotes,
-      comments: 0,
-      createdAt: item.created_at,
-      mission: item.mission || "",
-      problematics: item.problematics || "",
-      scope: item.scope || "",
-      audience: item.audience || "",
-      howItWorks: item.how_it_works || "",
-      architecture: item.architecture || "",
-      innovation: item.innovation || "",
-      useCase: item.use_case || "",
-      industries,
-      businessFunctions,
-      technologies,
-      relevantLinks: [],
-      image: item.image_url,
-    };
-  });
-},
+      item.votes?.forEach((vote: any) => {
+        voteCount[vote.vote_type]++;
+      });
 
+      const userVotes = {
+        believe: false,
+        need: false,
+        provide: false,
+      };
+
+      if (userVotesMap[item.id]) {
+        for (const voteType of userVotesMap[item.id]) {
+          userVotes[voteType] = true;
+        }
+      }
+
+      const industries = item.smartject_industries.map(
+        (i: any) => i.industries.name
+      );
+      const businessFunctions = item.smartject_business_functions.map(
+        (f: any) => f.business_functions.name
+      );
+      const technologies = item.smartject_technologies.map(
+        (t: any) => t.technologies.name
+      );
+
+      return {
+        id: item.id,
+        title: item.title,
+        votes: voteCount,
+        userVotes,
+        comments: 0,
+        createdAt: item.created_at,
+        mission: item.mission || "",
+        problematics: item.problematics || "",
+        scope: item.scope || "",
+        audience: item.audience || "",
+        howItWorks: item.how_it_works || "",
+        architecture: item.architecture || "",
+        innovation: item.innovation || "",
+        useCase: item.use_case || "",
+        industries,
+        businessFunctions,
+        technologies,
+        relevantLinks: [],
+        image: item.image_url,
+      };
+    });
+  },
 
   async getAvailableFilters(): Promise<{
     industries: string[];
@@ -361,7 +376,7 @@ export const smartjectService = {
       functionsRes.error || !functionsRes.data
         ? []
         : functionsRes.data.map((f: any) => f.name);
-        
+
     return {
       industries,
       technologies,
@@ -663,12 +678,12 @@ export const proposalService = {
 
   // Get a proposal by ID
   async getProposalById(id: string): Promise<ProposalType | null> {
-  const supabase = getSupabaseBrowserClient();
+    const supabase = getSupabaseBrowserClient();
 
-const { data, error } = await supabase
-  .from("proposals")
-  .select(
-    `
+    const { data, error } = await supabase
+      .from("proposals")
+      .select(
+        `
     *,
     smartjects (
       title
@@ -688,60 +703,88 @@ const { data, error } = await supabase
         name,
         avatar_url
       )
+    ),
+    proposal_milestones (
+    id,
+    name,
+    description,
+    percentage,
+    amount,
+    proposal_id,
+    proposal_deliverables (
+      id,
+      description,
+      completed
     )
-  `
   )
-  .eq("id", id)
-  .single();
+  `
+      )
+      .eq("id", id)
+      .single();
 
+    if (error) {
+      console.error(`Error fetching proposal with ID ${id}:`, error);
+      return null;
+    }
 
-  if (error) {
-    console.error(`Error fetching proposal with ID ${id}:`, error);
-    return null;
-  }
+    return {
+      id: data.id,
+      smartjectId: data.smartject_id,
+      userId: data.user_id,
+      type: data.type,
+      title: data.title,
+      description: data.description || "",
+      budget: data.budget,
+      timeline: data.timeline,
+      scope: data.scope,
+      deliverables: data.deliverables,
+      requirements: data.requirements,
+      expertise: data.expertise,
+      approach: data.approach,
+      team: data.team,
+      additionalInfo: data.additional_info,
+      status: data.status,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      milestones:
+        data.proposal_milestones?.map((milestone: any) => ({
+          id: milestone.id,
+          name: milestone.name,
+          description: milestone.description,
+          percentage: milestone.percentage,
+          amount: milestone.amount,
+          deliverables:
+            milestone.proposal_deliverables?.map((deliverable: any) => ({
+              id: deliverable.id,
+              description: deliverable.description,
+              completed: deliverable.completed,
+            })) ?? [],
+        })) ?? [],
 
-  return {
-    id: data.id,
-    smartjectId: data.smartject_id,
-    userId: data.user_id,
-    type: data.type,
-    title: data.title,
-    description: data.description || "",
-    budget: data.budget,
-    timeline: data.timeline,
-    scope: data.scope,
-    deliverables: data.deliverables,
-    requirements: data.requirements,
-    expertise: data.expertise,
-    approach: data.approach,
-    team: data.team,
-    additionalInfo: data.additional_info,
-    status: data.status,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
+      // Новые поля:
+      smartjectTitle: data.smartjects?.title ?? null,
 
-    // Новые поля:
-    smartjectTitle: data.smartjects?.title ?? null,
+      files:
+        data.proposal_files?.map((file: any) => ({
+          id: file.id,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        })) ?? [],
 
-    files: data.proposal_files?.map((file: any) => ({
-      id: file.id,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    })) ?? [],
-
-    comments: data.proposal_comments?.map((comment: any) => ({
-      id: comment.id,
-      content: comment.content,
-      createdAt: comment.created_at,
-      user: {
-        id: comment.users?.id,
-        name: comment.users?.name,
-        avatar: comment.users?.avatar_url,
-      },
-    })) ?? [],
-  };
-},
+      comments:
+        data.proposal_comments?.map((comment: any) => ({
+          id: comment.id,
+          content: comment.content,
+          createdAt: comment.created_at,
+          user: {
+            id: comment.users?.id,
+            name: comment.users?.name,
+            avatar: comment.users?.avatar_url,
+          },
+        })) ?? [],
+    };
+  },
 
   // Create a new proposal
   async createProposal(
@@ -812,52 +855,52 @@ const { data, error } = await supabase
     return true;
   },
 
-  async addCommentToProposal(proposalId: string, userId: string, content: string): Promise<boolean> {
-  const supabase = getSupabaseBrowserClient();
+  async addCommentToProposal(
+    proposalId: string,
+    userId: string,
+    content: string
+  ): Promise<boolean> {
+    const supabase = getSupabaseBrowserClient();
 
-  const { error } = await supabase
-    .from("proposal_comments")
-    .insert({
+    const { error } = await supabase.from("proposal_comments").insert({
       proposal_id: proposalId,
       user_id: userId,
       content: content,
     });
 
-  if (error) {
-    console.error("Error adding comment to proposal:", error);
-    return false;
-  }
+    if (error) {
+      console.error("Error adding comment to proposal:", error);
+      return false;
+    }
 
-  return true;
-},
+    return true;
+  },
 
-  // Create milestones for a proposal
   async createMilestones(
     proposalId: string,
     milestones: Partial<MilestoneType>[]
-  ): Promise<boolean> {
+  ): Promise<{ id: string; name: string }[] | null> {
     const supabase = getSupabaseBrowserClient();
 
-    // Prepare milestone data for insertion
     const milestonesData = milestones.map((milestone) => ({
       proposal_id: proposalId,
       name: milestone.name,
       description: milestone.description,
       percentage: milestone.percentage,
       amount: milestone.amount,
-      due_date: milestone.dueDate,
     }));
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("proposal_milestones")
-      .insert(milestonesData);
+      .insert(milestonesData)
+      .select("id, name");
 
-    if (error) {
+    if (error || !data) {
       console.error("Error creating milestones:", error);
-      return false;
+      return null;
     }
 
-    return true;
+    return data; // [{id, name}, ...]
   },
 
   // Create deliverables for a milestone

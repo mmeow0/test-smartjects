@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { use, useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { AlertCircle, Plus, Trash2, ListChecks, Circle, CheckCircle2, X } from "lucide-react"
+import { proposalService } from "@/lib/services"
 
 // Define deliverable type
 interface Deliverable {
@@ -45,7 +46,6 @@ interface Milestone {
   description: string
   percentage: number
   amount: string
-  dueDate: string
   deliverables: Deliverable[]
 }
 
@@ -56,6 +56,45 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
   const { toast } = useToast()
   const { user, isAuthenticated } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
+
+  const fetchProposalData = async () => {
+  try {
+    const proposal = await proposalService.getProposalById(id)
+
+    if (!proposal) {
+      toast({ title: "Proposal not found", variant: "destructive" })
+      router.push("/proposals")
+      return
+    }
+
+    setFormData({
+      title: proposal.title || "",
+      smartjectId: proposal.smartjectId || "",
+      smartjectTitle: proposal.smartjectTitle || "",
+      description: proposal.description || "",
+      scope: proposal.scope || "",
+      timeline: proposal.timeline || "",
+      budget: proposal.budget || "",
+      deliverables: proposal.deliverables || "",
+      requirements: proposal.type === "need" ? proposal.requirements || "" : "",
+      expertise: proposal.type === "provide" ? proposal.expertise || "" : "",
+      approach: proposal.type === "provide" ? proposal.approach || "" : "",
+      team: proposal.type === "provide" ? proposal.team || "" : "",
+      additionalInfo: proposal.additionalInfo || "",
+    })
+
+    setProposalType(proposal.type)
+    setMilestones(proposal.milestones || [])
+    setUseMilestones(proposal.milestones?.length > 0)
+
+    setIsLoading(false)
+  } catch (error) {
+    console.error("Error fetching proposal data:", error)
+    toast({ title: "Failed to load proposal", variant: "destructive" })
+    setIsLoading(false)
+  }
+}
+
 
   // Form state
   const [currentStep, setCurrentStep] = useState(1)
@@ -90,20 +129,11 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
     description: "",
     percentage: 0,
     amount: "",
-    dueDate: "",
     deliverables: [],
   })
   const [editingMilestoneId, setEditingMilestoneId] = useState<string | null>(null)
   const [totalPercentage, setTotalPercentage] = useState(0)
   const [newDeliverable, setNewDeliverable] = useState("")
-
-  // Project timeline dates
-  const [projectStartDate, setProjectStartDate] = useState<Date>(() => new Date())
-  const [projectEndDate, setProjectEndDate] = useState<Date>(() => {
-    const endDate = new Date()
-    endDate.setMonth(endDate.getMonth() + 3) // Default 3 months
-    return endDate
-  })
 
   // Redirect if not authenticated or not a paid user
   useEffect(() => {
@@ -122,171 +152,6 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
     const total = milestones.reduce((sum, milestone) => sum + milestone.percentage, 0)
     setTotalPercentage(total)
   }, [milestones])
-
-  const fetchProposalData = () => {
-    // In a real app, we would fetch the proposal data from an API
-    // For now, we'll use mock data
-    setTimeout(() => {
-      // Mock proposal data
-      const proposal = {
-        id: id,
-        title: "AI-Powered Supply Chain Optimization Implementation",
-        type: "provide",
-        status: "submitted",
-        createdAt: "2023-12-01",
-        updatedAt: "2023-12-05",
-        smartjectId: "smartject-1",
-        smartjectTitle: "AI-Powered Supply Chain Optimization",
-        description:
-          "This proposal outlines our approach to implementing an AI-powered supply chain optimization solution that will predict disruptions and optimize inventory management based on real-time data analysis.",
-        scope:
-          "The project will include data integration from existing systems, machine learning model development, dashboard creation, and staff training.",
-        timeline: "3 months",
-        budget: "$15,000",
-        deliverables: [
-          "Data integration framework",
-          "Machine learning prediction model",
-          "Real-time monitoring dashboard",
-          "Documentation and training materials",
-        ].join("\n"),
-        approach:
-          "We will use a phased approach, starting with data integration, followed by model development, dashboard creation, and finally deployment and training.",
-        expertise:
-          "Our team has 5+ years of experience implementing AI solutions for supply chain optimization across various industries.",
-        team: "1 Project Manager, 2 Data Scientists, 1 UI/UX Designer, 1 Integration Specialist",
-        additionalInfo: "We have successfully implemented similar solutions for 3 Fortune 500 companies.",
-        files: [
-          { name: "implementation-plan.pdf", size: "2.4 MB", type: "pdf" },
-          { name: "team-credentials.docx", size: "1.8 MB", type: "docx" },
-          { name: "sample-dashboard.png", size: "3.2 MB", type: "image" },
-        ],
-        documentVersions: [
-          {
-            id: "version-3",
-            versionNumber: 3,
-            date: "2023-12-05",
-            author: "Tech Solutions Inc.",
-            changes: [
-              "Updated budget from $12,000 to $15,000",
-              "Extended timeline from 2 months to 3 months",
-              "Added additional deliverable: Training materials",
-            ],
-          },
-          {
-            id: "version-2",
-            versionNumber: 2,
-            date: "2023-12-03",
-            author: "Tech Solutions Inc.",
-            changes: ["Added detailed implementation approach", "Updated team composition"],
-          },
-          {
-            id: "version-1",
-            versionNumber: 1,
-            date: "2023-12-01",
-            author: "Tech Solutions Inc.",
-            changes: ["Initial proposal creation"],
-          },
-        ],
-        milestones: [
-          {
-            id: "milestone-1",
-            name: "Project Kickoff",
-            description: "Initial setup and requirements gathering",
-            percentage: 20,
-            amount: "$3,000",
-            dueDate: "2023-12-15",
-            deliverables: [
-              {
-                id: "del-1",
-                description: "Requirements document",
-                completed: false,
-              },
-              {
-                id: "del-2",
-                description: "Project plan",
-                completed: false,
-              },
-            ],
-          },
-          {
-            id: "milestone-2",
-            name: "MVP Development",
-            description: "Development of core functionality",
-            percentage: 40,
-            amount: "$6,000",
-            dueDate: "2024-01-15",
-            deliverables: [
-              {
-                id: "del-3",
-                description: "Data integration framework",
-                completed: false,
-              },
-              {
-                id: "del-4",
-                description: "Basic prediction model",
-                completed: false,
-              },
-            ],
-          },
-          {
-            id: "milestone-3",
-            name: "Final Delivery",
-            description: "Complete system with documentation",
-            percentage: 40,
-            amount: "$6,000",
-            dueDate: "2024-03-01",
-            deliverables: [
-              {
-                id: "del-5",
-                description: "Complete dashboard",
-                completed: false,
-              },
-              {
-                id: "del-6",
-                description: "Documentation and training materials",
-                completed: false,
-              },
-            ],
-          },
-        ],
-      }
-
-      // Set form data
-      setFormData({
-        title: proposal.title,
-        smartjectId: proposal.smartjectId,
-        smartjectTitle: proposal.smartjectTitle,
-        description: proposal.description,
-        scope: proposal.scope,
-        timeline: proposal.timeline,
-        budget: proposal.budget,
-        deliverables: proposal.deliverables,
-        requirements: proposal.type === "need" ? proposal.requirements : "",
-        expertise: proposal.type === "provide" ? proposal.expertise : "",
-        approach: proposal.type === "provide" ? proposal.approach : "",
-        team: proposal.type === "provide" ? proposal.team : "",
-        additionalInfo: proposal.additionalInfo || "",
-      })
-
-      // Set proposal type
-      setProposalType(proposal.type as "need" | "provide")
-
-      // Set document versions
-      setDocumentVersions(proposal.documentVersions)
-
-      // Set milestones
-      setMilestones(proposal.milestones || [])
-      setUseMilestones(proposal.milestones && proposal.milestones.length > 0)
-
-      // Set project dates
-      setProjectStartDate(new Date("2023-12-01"))
-      const endDate = new Date("2023-12-01")
-      endDate.setMonth(endDate.getMonth() + 3) // 3 months
-      setProjectEndDate(endDate)
-
-      setIsLoading(false)
-    }, 1000)
-  }
 
   if (!isAuthenticated || user?.accountType !== "paid") {
     return null
@@ -391,7 +256,6 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
       description: "",
       percentage: 0,
       amount: "",
-      dueDate: "",
       deliverables: [],
     })
     setNewDeliverable("")
@@ -403,17 +267,6 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
     setCurrentMilestone({ ...milestone })
     setNewDeliverable("")
     setShowMilestoneDialog(true)
-  }
-
-  // Calculate suggested due date based on percentage
-  const calculateSuggestedDueDate = (percentage: number): Date => {
-    const projectDuration = projectEndDate.getTime() - projectStartDate.getTime()
-    const daysFromStart = (projectDuration * (percentage / 100)) / (1000 * 60 * 60 * 24)
-
-    const suggestedDate = new Date(projectStartDate)
-    suggestedDate.setDate(suggestedDate.getDate() + Math.round(daysFromStart))
-
-    return suggestedDate
   }
 
   const handleSaveMilestone = () => {
@@ -431,15 +284,6 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
       toast({
         title: "Invalid percentage",
         description: "Percentage must be greater than 0.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!currentMilestone.dueDate) {
-      toast({
-        title: "Missing information",
-        description: "Please provide a due date for the milestone.",
         variant: "destructive",
       })
       return
@@ -508,22 +352,15 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
     if (date) {
       setCurrentMilestone({
         ...currentMilestone,
-        dueDate: date.toISOString(),
       })
     }
   }
 
-  // Update milestone percentage and suggest a due date
   const handleMilestonePercentageChange = (percentage: number) => {
     const newPercentage = Math.max(0, Math.min(100, percentage))
-
-    // Calculate suggested due date based on percentage
-    const suggestedDate = calculateSuggestedDueDate(newPercentage)
-
     setCurrentMilestone({
       ...currentMilestone,
       percentage: newPercentage,
-      dueDate: currentMilestone.dueDate || suggestedDate.toISOString(),
     })
   }
 
@@ -805,7 +642,7 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                             <div className="mt-1 flex gap-3 text-sm">
                               <span>{milestone.percentage}%</span>
                               <span>{milestone.amount}</span>
-                              <span>Due: {new Date(milestone.dueDate).toLocaleDateString()}</span>
+                    
                             </div>
 
                             {/* Display deliverables if any */}
@@ -1142,49 +979,6 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="milestone-due-date">Due Date</Label>
-              <DatePicker
-                date={currentMilestone.dueDate ? new Date(currentMilestone.dueDate) : undefined}
-                onSelect={handleMilestoneDateChange}
-              />
-
-              {/* Timeline position indicator */}
-              {currentMilestone.dueDate && (
-                <div className="mt-2 pt-2 border-t">
-                  <p className="text-xs text-muted-foreground mb-1">Position in project timeline:</p>
-                  <div className="relative h-1 bg-muted rounded-full">
-                    {/* Project progress indicator */}
-                    <div className="absolute top-0 left-0 h-1 bg-primary/30 rounded-l-full" style={{ width: "100%" }} />
-
-                    {/* Milestone position */}
-                    {(() => {
-                      const milestoneDate = new Date(currentMilestone.dueDate)
-                      const position = Math.max(
-                        0,
-                        Math.min(
-                          ((milestoneDate.getTime() - projectStartDate.getTime()) /
-                            (projectEndDate.getTime() - projectStartDate.getTime())) *
-                            100,
-                          100,
-                        ),
-                      )
-
-                      return (
-                        <div
-                          className="absolute top-0 w-2 h-2 bg-primary rounded-full -translate-x-1 -translate-y-0.5"
-                          style={{ left: `${position}%` }}
-                        />
-                      )
-                    })()}
-                  </div>
-                  <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-                    <span>Start</span>
-                    <span>End</span>
-                  </div>
-                </div>
-              )}
-            </div>
 
             {/* Deliverables Section */}
             <div className="space-y-2 pt-2 border-t">

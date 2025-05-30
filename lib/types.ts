@@ -81,8 +81,6 @@ export type MilestoneType = {
   description: string;
   percentage: number;
   amount: string;
-  dueDate: string;
-  deliverables: DeliverableType[];
   status:
     | "pending"
     | "in_progress"
@@ -166,7 +164,6 @@ export type ContractMilestoneType = {
   description: string;
   percentage: number;
   amount: string;
-  dueDate: string;
   status:
     | "pending"
     | "in_progress"

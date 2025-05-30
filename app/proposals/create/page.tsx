@@ -1,22 +1,29 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/components/auth-provider"
-import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { FileUploader } from "@/components/file-uploader"
-import { smartjectService, proposalService } from "@/lib/services"
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/auth-provider";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { FileUploader } from "@/components/file-uploader";
+import { smartjectService, proposalService } from "@/lib/services";
 import {
   ArrowLeft,
   ArrowRight,
@@ -34,12 +41,11 @@ import {
   Check,
   AlertCircle,
   Loader2,
-} from "lucide-react"
-import { ProposalDocumentPreview } from "@/components/proposal-document-preview"
-import type { DocumentVersion } from "@/components/document-version-history"
-import type { SmartjectType } from "@/lib/types"
-import { DatePicker } from "@/components/ui/date-picker"
-import { Switch } from "@/components/ui/switch"
+} from "lucide-react";
+import { ProposalDocumentPreview } from "@/components/proposal-document-preview";
+import type { DocumentVersion } from "@/components/document-version-history";
+import type { SmartjectType } from "@/lib/types";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -47,48 +53,48 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { getSupabaseBrowserClient } from "@/lib/supabase"
+} from "@/components/ui/dialog";
 
 // Define deliverable type
 interface Deliverable {
-  id: string
-  description: string
-  completed: boolean
+  id: string;
+  description: string;
+  completed: boolean;
 }
 
 // Define milestone type
 interface Milestone {
-  id: string
-  name: string
-  description: string
-  percentage: number
-  amount: string
-  dueDate: string
-  deliverables: Deliverable[]
+  id: string;
+  name: string;
+  description: string;
+  percentage: number;
+  amount: string;
+  deliverables: Deliverable[];
 }
 
 export default function CreateProposalPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const { toast } = useToast()
-  const { user, isAuthenticated } = useAuth()
-  const smartjectId = searchParams.get("smartjectId")
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
+  const smartjectId = searchParams.get("smartjectId");
 
   useEffect(() => {
-  const voteType = searchParams.get("voteType")
-  if (voteType === "need" || voteType === "provide") {
-    setProposalType(voteType)
-  }
-}, [searchParams])
+    const voteType = searchParams.get("voteType");
+    if (voteType === "need" || voteType === "provide") {
+      setProposalType(voteType);
+    }
+  }, [searchParams]);
 
   // State for loading smartject
-  const [loadingSmartject, setLoadingSmartject] = useState(false)
-  const [smartject, setSmartject] = useState<SmartjectType | null>(null)
+  const [loadingSmartject, setLoadingSmartject] = useState(false);
+  const [smartject, setSmartject] = useState<SmartjectType | null>(null);
 
   // Form state
-  const [currentStep, setCurrentStep] = useState(1)
-  const [proposalType, setProposalType] = useState<"need" | "provide" | null>(null)
+  const [currentStep, setCurrentStep] = useState(1);
+  const [proposalType, setProposalType] = useState<"need" | "provide" | null>(
+    null
+  );
   const [formData, setFormData] = useState({
     title: "",
     smartjectId: smartjectId || "",
@@ -102,10 +108,10 @@ export default function CreateProposalPage() {
     approach: "",
     team: "",
     additionalInfo: "",
-  })
-  const [files, setFiles] = useState<File[]>([])
-  const [isSaving, setIsSaving] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  });
+  const [files, setFiles] = useState<File[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [draftVersions, setDraftVersions] = useState<DocumentVersion[]>([
     {
       id: "draft-1",
@@ -114,107 +120,116 @@ export default function CreateProposalPage() {
       author: user?.name || "User",
       changes: ["Initial draft creation"],
     },
-  ])
+  ]);
 
   // Milestone state
-  const [useMilestones, setUseMilestones] = useState(false)
-  const [milestones, setMilestones] = useState<Milestone[]>([])
-  const [showMilestoneDialog, setShowMilestoneDialog] = useState(false)
+  const [useMilestones, setUseMilestones] = useState(false);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [showMilestoneDialog, setShowMilestoneDialog] = useState(false);
   const [currentMilestone, setCurrentMilestone] = useState<Milestone>({
     id: "",
     name: "",
     description: "",
     percentage: 0,
     amount: "",
-    dueDate: "",
     deliverables: [],
-  })
-  const [editingMilestoneId, setEditingMilestoneId] = useState<string | null>(null)
-  const [totalPercentage, setTotalPercentage] = useState(0)
-  const [newDeliverable, setNewDeliverable] = useState("")
+  });
+  const [editingMilestoneId, setEditingMilestoneId] = useState<string | null>(
+    null
+  );
+  const [totalPercentage, setTotalPercentage] = useState(0);
+  const [newDeliverable, setNewDeliverable] = useState("");
 
   // Project timeline dates
-  const [projectStartDate, setProjectStartDate] = useState<Date>(() => new Date())
+  const [projectStartDate, setProjectStartDate] = useState<Date>(
+    () => new Date()
+  );
   const [projectEndDate, setProjectEndDate] = useState<Date>(() => {
-    const endDate = new Date()
-    endDate.setMonth(endDate.getMonth() + 3) // Default 3 months
-    return endDate
-  })
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + 3); // Default 3 months
+    return endDate;
+  });
 
   // Calculate total percentage whenever milestones change
   useEffect(() => {
-    const total = milestones.reduce((sum, milestone) => sum + milestone.percentage, 0)
-    setTotalPercentage(total)
-  }, [milestones])
+    const total = milestones.reduce(
+      (sum, milestone) => sum + milestone.percentage,
+      0
+    );
+    setTotalPercentage(total);
+  }, [milestones]);
 
   // Redirect if not authenticated or not a paid user
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push("/auth/login")
+      router.push("/auth/login");
     } else if (user?.accountType !== "paid") {
-      router.push("/upgrade")
+      router.push("/upgrade");
     }
-  }, [isAuthenticated, router, user])
+  }, [isAuthenticated, router, user]);
 
   // Load smartject data if ID is provided
   useEffect(() => {
     const fetchSmartject = async () => {
       if (smartjectId) {
-        setLoadingSmartject(true)
+        setLoadingSmartject(true);
         try {
-          const data = await smartjectService.getSmartjectById(smartjectId)
+          const data = await smartjectService.getSmartjectById(smartjectId);
           if (data) {
-            setSmartject(data)
+            setSmartject(data);
             setFormData((prev) => ({
               ...prev,
               title: `Proposal for: ${data.title}`,
               smartjectId: data.id,
-            }))
+            }));
           }
         } catch (error) {
-          console.error("Error fetching smartject:", error)
+          console.error("Error fetching smartject:", error);
           toast({
             title: "Error",
-            description: "Failed to load smartject data. Please try again later.",
+            description:
+              "Failed to load smartject data. Please try again later.",
             variant: "destructive",
-          })
+          });
         } finally {
-          setLoadingSmartject(false)
+          setLoadingSmartject(false);
         }
       }
-    }
+    };
 
-    fetchSmartject()
-  }, [smartjectId, toast])
+    fetchSmartject();
+  }, [smartjectId, toast]);
 
   // Update project end date when timeline changes
   useEffect(() => {
     if (formData.timeline) {
-      const durationMatch = formData.timeline.match(/(\d+(\.\d+)?)/)
+      const durationMatch = formData.timeline.match(/(\d+(\.\d+)?)/);
       if (durationMatch) {
-        const durationMonths = Number.parseFloat(durationMatch[1])
-        const end = new Date(projectStartDate)
-        end.setMonth(end.getMonth() + Math.floor(durationMonths))
+        const durationMonths = Number.parseFloat(durationMatch[1]);
+        const end = new Date(projectStartDate);
+        end.setMonth(end.getMonth() + Math.floor(durationMonths));
         // Handle partial months
-        const remainingDays = Math.round((durationMonths % 1) * 30)
-        end.setDate(end.getDate() + remainingDays)
-        setProjectEndDate(end)
+        const remainingDays = Math.round((durationMonths % 1) * 30);
+        end.setDate(end.getDate() + remainingDays);
+        setProjectEndDate(end);
       }
     }
-  }, [formData.timeline, projectStartDate])
+  }, [formData.timeline, projectStartDate]);
 
   if (!isAuthenticated || user?.accountType !== "paid") {
-    return null
+    return null;
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleFileChange = (uploadedFiles: File[]) => {
-    setFiles(uploadedFiles)
-  }
+    setFiles(uploadedFiles);
+  };
 
   const handleSaveDraft = async () => {
     if (!user) {
@@ -222,11 +237,11 @@ export default function CreateProposalPage() {
         title: "Authentication required",
         description: "You need to be logged in to save a draft.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
 
     try {
       // Save the proposal to Supabase
@@ -246,10 +261,10 @@ export default function CreateProposalPage() {
         team: formData.team,
         additionalInfo: formData.additionalInfo,
         status: "draft",
-      })
+      });
 
       if (!proposalId) {
-        throw new Error("Failed to create proposal draft")
+        throw new Error("Failed to create proposal draft");
       }
 
       // Create a new version entry
@@ -259,25 +274,25 @@ export default function CreateProposalPage() {
         date: new Date().toISOString(),
         author: user.name || "User",
         changes: ["Draft saved"],
-      }
+      };
 
-      setDraftVersions([newVersion, ...draftVersions])
+      setDraftVersions([newVersion, ...draftVersions]);
 
       toast({
         title: "Draft saved",
         description: "Your proposal draft has been saved successfully.",
-      })
+      });
     } catch (error) {
-      console.error("Error saving draft:", error)
+      console.error("Error saving draft:", error);
       toast({
         title: "Error",
         description: "Failed to save draft. Please try again later.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleSubmit = async () => {
     if (!user) {
@@ -285,8 +300,8 @@ export default function CreateProposalPage() {
         title: "Authentication required",
         description: "You need to be logged in to submit a proposal.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (!formData.smartjectId) {
@@ -294,8 +309,8 @@ export default function CreateProposalPage() {
         title: "Missing information",
         description: "Please select a smartject for this proposal.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (!formData.title) {
@@ -303,8 +318,8 @@ export default function CreateProposalPage() {
         title: "Missing information",
         description: "Please provide a title for the proposal.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     // Validate milestones if they're being used
@@ -313,11 +328,11 @@ export default function CreateProposalPage() {
         title: "Invalid milestone percentages",
         description: "The total percentage of all milestones must equal 100%.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
       // Save the proposal to Supabase
@@ -337,167 +352,122 @@ export default function CreateProposalPage() {
         team: formData.team,
         additionalInfo: formData.additionalInfo,
         status: "submitted",
-      })
+      });
 
       if (!proposalId) {
-        throw new Error("Failed to create proposal")
+        throw new Error("Failed to create proposal");
       }
 
-      // Save milestones if they're being used
       if (useMilestones && milestones.length > 0) {
-        const milestonesResult = await Promise.all(
-          milestones.map(async (milestone) => {
-            // First create the milestone
-            const milestoneData = {
-              proposal_id: proposalId,
-              name: milestone.name,
-              description: milestone.description,
-              percentage: milestone.percentage,
-              amount: milestone.amount,
-              due_date: milestone.dueDate,
+        // 1. Создаём все milestones и получаем их с id
+        const createdMilestones = await proposalService.createMilestones(
+          proposalId,
+          milestones
+        );
+        if (!createdMilestones) {
+          throw new Error("Failed to create milestones");
+        }
+
+        // 2. Для каждого созданного milestone создаём deliverables
+        for (const created of createdMilestones) {
+          // Ищем в исходных milestones объект с таким же именем (name)
+          const milestone = milestones.find((m) => m.name === created.name);
+          if (milestone?.deliverables?.length) {
+            const deliverablesCreated =
+              await proposalService.createDeliverables(
+                created.id,
+                milestone.deliverables
+              );
+            if (!deliverablesCreated) {
+              throw new Error("Failed to create deliverables");
             }
-
-            const { data: createdMilestone, error } = await getSupabaseBrowserClient()
-              .from("proposal_milestones")
-              .insert(milestoneData)
-              .select("id")
-              .single()
-
-            if (error || !createdMilestone) {
-              console.error("Error creating milestone:", error)
-              return false
-            }
-
-            // Then create any deliverables for this milestone
-            if (milestone.deliverables.length > 0) {
-              const deliverablesData = milestone.deliverables.map((deliverable) => ({
-                milestone_id: createdMilestone.id,
-                description: deliverable.description,
-                completed: deliverable.completed,
-              }))
-
-              const { error: deliverableError } = await getSupabaseBrowserClient()
-                .from("proposal_deliverables")
-                .insert(deliverablesData)
-
-              if (deliverableError) {
-                console.error("Error creating deliverables:", deliverableError)
-                return false
-              }
-            }
-
-            return true
-          }),
-        )
-
-        // Check if any milestone creation failed
-        if (milestonesResult.includes(false)) {
-          throw new Error("Failed to create some milestones")
+          }
         }
       }
 
-      // Upload any files
+      // 3. Загружаем файлы
       if (files.length > 0) {
-        await Promise.all(
-          files.map(async (file) => {
-            const fileName = `${Date.now()}-${file.name}`
-            const filePath = `proposals/${proposalId}/${fileName}`
+        for (const file of files) {
+          const filePath = `proposals/${proposalId}/${Date.now()}-${file.name}`;
 
-            // Upload the file to storage
-            const { error: uploadError } = await getSupabaseBrowserClient()
-              .storage.from("proposal-documents")
-              .upload(filePath, file)
+          // Загружаем файл в storage
+          const publicUrl = await proposalService.uploadFile(proposalId, file);
+          if (!publicUrl) {
+            throw new Error("Failed to upload file");
+          }
 
-            if (uploadError) {
-              console.error("Error uploading file:", uploadError)
-              return false
-            }
-
-            // Save the file reference in the database
-            const { error: fileRefError } = await getSupabaseBrowserClient().from("proposal_documents").insert({
-              proposal_id: proposalId,
-              name: file.name,
-              file_path: filePath,
-              file_type: file.type,
-              file_size: file.size,
-            })
-
-            if (fileRefError) {
-              console.error("Error saving file reference:", fileRefError)
-              return false
-            }
-
-            return true
-          }),
-        )
+          // Сохраняем информацию о файле в базе
+          const saved = await proposalService.saveFileReference(
+            proposalId,
+            file,
+            filePath
+          );
+          if (!saved) {
+            throw new Error("Failed to save file reference");
+          }
+        }
       }
+
+      // Показываем уведомление об успешной отправке
+      toast({
+        title: "Proposal submitted",
+        description: "Your proposal has been submitted successfully.",
+      });
 
       toast({
         title: "Proposal submitted",
         description: "Your proposal has been submitted successfully.",
-      })
+      });
 
       // Redirect to the proposals page
-      router.push("/proposals")
+      router.push("/proposals");
     } catch (error) {
-      console.error("Error submitting proposal:", error)
+      console.error("Error submitting proposal:", error);
       toast({
         title: "Error",
         description: "Failed to submit proposal. Please try again later.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const nextStep = () => {
     if (currentStep < 5) {
-      setCurrentStep(currentStep + 1)
-      window.scrollTo(0, 0)
+      setCurrentStep(currentStep + 1);
+      window.scrollTo(0, 0);
     }
-  }
+  };
 
   const prevStep = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
-      window.scrollTo(0, 0)
+      setCurrentStep(currentStep - 1);
+      window.scrollTo(0, 0);
     }
-  }
+  };
 
   // Milestone functions
   const openAddMilestoneDialog = () => {
-    setEditingMilestoneId(null)
+    setEditingMilestoneId(null);
     setCurrentMilestone({
       id: Date.now().toString(),
       name: "",
       description: "",
       percentage: 0,
       amount: "",
-      dueDate: "",
       deliverables: [],
-    })
-    setNewDeliverable("")
-    setShowMilestoneDialog(true)
-  }
+    });
+    setNewDeliverable("");
+    setShowMilestoneDialog(true);
+  };
 
   const openEditMilestoneDialog = (milestone: Milestone) => {
-    setEditingMilestoneId(milestone.id)
-    setCurrentMilestone({ ...milestone })
-    setNewDeliverable("")
-    setShowMilestoneDialog(true)
-  }
-
-  // Calculate suggested due date based on percentage
-  const calculateSuggestedDueDate = (percentage: number): Date => {
-    const projectDuration = projectEndDate.getTime() - projectStartDate.getTime()
-    const daysFromStart = (projectDuration * (percentage / 100)) / (1000 * 60 * 60 * 24)
-
-    const suggestedDate = new Date(projectStartDate)
-    suggestedDate.setDate(suggestedDate.getDate() + Math.round(daysFromStart))
-
-    return suggestedDate
-  }
+    setEditingMilestoneId(milestone.id);
+    setCurrentMilestone({ ...milestone });
+    setNewDeliverable("");
+    setShowMilestoneDialog(true);
+  };
 
   const handleSaveMilestone = () => {
     // Validate milestone data
@@ -506,8 +476,8 @@ export default function CreateProposalPage() {
         title: "Missing information",
         description: "Please provide a name for the milestone.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (currentMilestone.percentage <= 0) {
@@ -515,134 +485,117 @@ export default function CreateProposalPage() {
         title: "Invalid percentage",
         description: "Percentage must be greater than 0.",
         variant: "destructive",
-      })
-      return
-    }
-
-    if (!currentMilestone.dueDate) {
-      toast({
-        title: "Missing information",
-        description: "Please provide a due date for the milestone.",
-        variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     // Check if adding/updating this milestone would exceed 100%
     const otherMilestonesTotal = milestones
       .filter((m) => m.id !== currentMilestone.id)
-      .reduce((sum, m) => sum + m.percentage, 0)
+      .reduce((sum, m) => sum + m.percentage, 0);
 
     if (otherMilestonesTotal + currentMilestone.percentage > 100) {
       toast({
         title: "Percentage too high",
-        description: "The total percentage of all milestones cannot exceed 100%.",
+        description:
+          "The total percentage of all milestones cannot exceed 100%.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (editingMilestoneId) {
       // Update existing milestone
-      setMilestones(milestones.map((m) => (m.id === editingMilestoneId ? currentMilestone : m)))
+      setMilestones(
+        milestones.map((m) =>
+          m.id === editingMilestoneId ? currentMilestone : m
+        )
+      );
       toast({
         title: "Milestone updated",
         description: "The milestone has been updated successfully.",
-      })
+      });
     } else {
       // Add new milestone
-      setMilestones([...milestones, currentMilestone])
+      setMilestones([...milestones, currentMilestone]);
       toast({
         title: "Milestone added",
         description: "The milestone has been added successfully.",
-      })
+      });
     }
 
-    setShowMilestoneDialog(false)
-  }
+    setShowMilestoneDialog(false);
+  };
 
   const handleDeleteMilestone = (id: string) => {
-    setMilestones(milestones.filter((m) => m.id !== id))
+    setMilestones(milestones.filter((m) => m.id !== id));
     toast({
       title: "Milestone deleted",
       description: "The milestone has been deleted successfully.",
-    })
-  }
+    });
+  };
 
   const formatCurrency = (value: string) => {
     // Remove any non-digit characters
-    const numericValue = value.replace(/[^0-9]/g, "")
+    const numericValue = value.replace(/[^0-9]/g, "");
 
     // Format as currency
     if (numericValue) {
-      return `$${Number.parseInt(numericValue).toLocaleString()}`
+      return `$${Number.parseInt(numericValue).toLocaleString()}`;
     }
-    return ""
-  }
+    return "";
+  };
 
   const handleMilestoneAmountChange = (value: string) => {
     setCurrentMilestone({
       ...currentMilestone,
       amount: formatCurrency(value),
-    })
-  }
+    });
+  };
 
-  const handleMilestoneDateChange = (date: Date | undefined) => {
-    if (date) {
-      setCurrentMilestone({
-        ...currentMilestone,
-        dueDate: date.toISOString(),
-      })
-    }
-  }
-
-  // Update milestone percentage and suggest a due date
   const handleMilestonePercentageChange = (percentage: number) => {
-    const newPercentage = Math.max(0, Math.min(100, percentage))
-
-    // Calculate suggested due date based on percentage
-    const suggestedDate = calculateSuggestedDueDate(newPercentage)
-
+    const newPercentage = Math.max(0, Math.min(100, percentage));
     setCurrentMilestone({
       ...currentMilestone,
       percentage: newPercentage,
-      dueDate: currentMilestone.dueDate || suggestedDate.toISOString(),
-    })
-  }
+    });
+  };
 
   // Add a new deliverable to the current milestone
   const handleAddDeliverable = () => {
-    if (!newDeliverable.trim()) return
+    if (!newDeliverable.trim()) return;
 
     const newDeliverableItem: Deliverable = {
       id: Date.now().toString(),
       description: newDeliverable.trim(),
       completed: false,
-    }
+    };
 
     setCurrentMilestone({
       ...currentMilestone,
       deliverables: [...currentMilestone.deliverables, newDeliverableItem],
-    })
+    });
 
-    setNewDeliverable("")
-  }
+    setNewDeliverable("");
+  };
 
   // Remove a deliverable from the current milestone
   const handleRemoveDeliverable = (id: string) => {
     setCurrentMilestone({
       ...currentMilestone,
       deliverables: currentMilestone.deliverables.filter((d) => d.id !== id),
-    })
-  }
+    });
+  };
 
   // Toggle the completed status of a deliverable
   const handleToggleDeliverable = (id: string) => {
     setCurrentMilestone({
       ...currentMilestone,
-      deliverables: currentMilestone.deliverables.map((d) => (d.id === id ? { ...d, completed: !d.completed } : d)),
-    })
-  }
+      deliverables: currentMilestone.deliverables.map((d) =>
+        d.id === id ? { ...d, completed: !d.completed } : d
+      ),
+    });
+  };
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -654,7 +607,9 @@ export default function CreateProposalPage() {
               <RadioGroup
                 id="proposalType"
                 value={proposalType || ""}
-                onValueChange={(value) => setProposalType(value as "need" | "provide")}
+                onValueChange={(value) =>
+                  setProposalType(value as "need" | "provide")
+                }
                 className="flex flex-col space-y-2"
               >
                 <div className="flex items-center space-x-2">
@@ -672,7 +627,8 @@ export default function CreateProposalPage() {
               </RadioGroup>
               {!proposalType && (
                 <p className="text-sm text-muted-foreground">
-                  Please select whether you need this smartject implemented or you can provide implementation services.
+                  Please select whether you need this smartject implemented or
+                  you can provide implementation services.
                 </p>
               )}
             </div>
@@ -689,7 +645,9 @@ export default function CreateProposalPage() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-medium">{smartject.title}</h3>
-                      <p className="text-sm text-muted-foreground">{smartject.mission?.substring(0, 100) || ""}...</p>
+                      <p className="text-sm text-muted-foreground">
+                        {smartject.mission?.substring(0, 100) || ""}...
+                      </p>
                     </div>
                     <Badge>{smartjectId}</Badge>
                   </div>
@@ -728,7 +686,7 @@ export default function CreateProposalPage() {
               />
             </div>
           </div>
-        )
+        );
 
       case 2:
         return (
@@ -754,7 +712,9 @@ export default function CreateProposalPage() {
                 value={formData.timeline}
                 onChange={handleInputChange}
               />
-              <p className="text-sm text-muted-foreground">Estimated time to complete the project</p>
+              <p className="text-sm text-muted-foreground">
+                Estimated time to complete the project
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -766,7 +726,9 @@ export default function CreateProposalPage() {
                 value={formData.budget}
                 onChange={handleInputChange}
               />
-              <p className="text-sm text-muted-foreground">Estimated budget for the project</p>
+              <p className="text-sm text-muted-foreground">
+                Estimated budget for the project
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -781,7 +743,7 @@ export default function CreateProposalPage() {
               />
             </div>
           </div>
-        )
+        );
 
       case 3:
         return proposalType === "need" ? (
@@ -797,7 +759,8 @@ export default function CreateProposalPage() {
                 onChange={handleInputChange}
               />
               <p className="text-sm text-muted-foreground">
-                Include any specific technical requirements, constraints, or preferences
+                Include any specific technical requirements, constraints, or
+                preferences
               </p>
             </div>
 
@@ -863,14 +826,17 @@ export default function CreateProposalPage() {
               />
             </div>
           </div>
-        )
+        );
 
       case 4:
         return (
           <div className="space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label htmlFor="use-milestones" className="flex items-center gap-2">
+                <Label
+                  htmlFor="use-milestones"
+                  className="flex items-center gap-2"
+                >
                   <span>Use payment milestones</span>
                   {useMilestones && totalPercentage !== 100 && (
                     <span className="text-xs text-red-500 flex items-center">
@@ -879,15 +845,20 @@ export default function CreateProposalPage() {
                     </span>
                   )}
                 </Label>
-                <Switch id="use-milestones" checked={useMilestones} onCheckedChange={setUseMilestones} />
+                <Switch
+                  id="use-milestones"
+                  checked={useMilestones}
+                  onCheckedChange={setUseMilestones}
+                />
               </div>
 
               {useMilestones && (
                 <>
                   <div className="border rounded-md p-3 bg-muted/30">
                     <p className="text-sm">
-                      Define payment milestones to break down the project into manageable phases. Each milestone should
-                      have a percentage of the total budget.
+                      Define payment milestones to break down the project into
+                      manageable phases. Each milestone should have a percentage
+                      of the total budget.
                     </p>
                     <div className="mt-2 text-sm flex justify-between">
                       <span>
@@ -902,45 +873,68 @@ export default function CreateProposalPage() {
                   {milestones.length > 0 ? (
                     <div className="space-y-2">
                       {milestones.map((milestone) => (
-                        <div key={milestone.id} className="border rounded-md p-3 flex justify-between items-start">
+                        <div
+                          key={milestone.id}
+                          className="border rounded-md p-3 flex justify-between items-start"
+                        >
                           <div className="w-full">
                             <div className="font-medium">{milestone.name}</div>
-                            <div className="text-sm text-muted-foreground">{milestone.description}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {milestone.description}
+                            </div>
                             <div className="mt-1 flex gap-3 text-sm">
                               <span>{milestone.percentage}%</span>
                               <span>{milestone.amount}</span>
-                              <span>Due: {new Date(milestone.dueDate).toLocaleDateString()}</span>
                             </div>
 
                             {/* Display deliverables if any */}
-                            {milestone.deliverables && milestone.deliverables.length > 0 && (
-                              <div className="mt-2 pt-2 border-t">
-                                <div className="flex items-center text-xs text-muted-foreground mb-1">
-                                  <ListChecks className="h-3 w-3 mr-1" /> Deliverables
+                            {milestone.deliverables &&
+                              milestone.deliverables.length > 0 && (
+                                <div className="mt-2 pt-2 border-t">
+                                  <div className="flex items-center text-xs text-muted-foreground mb-1">
+                                    <ListChecks className="h-3 w-3 mr-1" />{" "}
+                                    Deliverables
+                                  </div>
+                                  <ul className="text-sm space-y-1 mt-1">
+                                    {milestone.deliverables.map(
+                                      (deliverable) => (
+                                        <li
+                                          key={deliverable.id}
+                                          className="flex items-start gap-2"
+                                        >
+                                          <span className="mt-0.5">
+                                            {deliverable.completed ? (
+                                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                            ) : (
+                                              <Circle className="h-4 w-4 text-muted-foreground" />
+                                            )}
+                                          </span>
+                                          <span className="flex-1">
+                                            {deliverable.description}
+                                          </span>
+                                        </li>
+                                      )
+                                    )}
+                                  </ul>
                                 </div>
-                                <ul className="text-sm space-y-1 mt-1">
-                                  {milestone.deliverables.map((deliverable) => (
-                                    <li key={deliverable.id} className="flex items-start gap-2">
-                                      <span className="mt-0.5">
-                                        {deliverable.completed ? (
-                                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                        ) : (
-                                          <Circle className="h-4 w-4 text-muted-foreground" />
-                                        )}
-                                      </span>
-                                      <span className="flex-1">{deliverable.description}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
+                              )}
                           </div>
                           <div className="flex gap-1 ml-2">
-                            <Button variant="ghost" size="icon" onClick={() => openEditMilestoneDialog(milestone)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditMilestoneDialog(milestone)}
+                            >
                               <FileText className="h-4 w-4" />
                               <span className="sr-only">Edit</span>
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteMilestone(milestone.id)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                handleDeleteMilestone(milestone.id)
+                              }
+                            >
                               <Trash2 className="h-4 w-4" />
                               <span className="sr-only">Delete</span>
                             </Button>
@@ -952,11 +946,17 @@ export default function CreateProposalPage() {
                     <div className="border border-dashed rounded-md p-6 flex flex-col items-center justify-center text-center text-muted-foreground">
                       <FileText className="h-8 w-8 mb-2" />
                       <p>No milestones defined yet</p>
-                      <p className="text-sm">Add milestones to define the payment schedule</p>
+                      <p className="text-sm">
+                        Add milestones to define the payment schedule
+                      </p>
                     </div>
                   )}
 
-                  <Button variant="outline" className="w-full" onClick={openAddMilestoneDialog}>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={openAddMilestoneDialog}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Milestone
                   </Button>
@@ -964,7 +964,7 @@ export default function CreateProposalPage() {
               )}
             </div>
           </div>
-        )
+        );
 
       case 5:
         return (
@@ -973,7 +973,8 @@ export default function CreateProposalPage() {
               <Label>Supporting Documents</Label>
               <FileUploader onFilesChange={handleFileChange} />
               <p className="text-sm text-muted-foreground">
-                Upload any supporting documents such as diagrams, specifications, or portfolios (max 5 files, 10MB each)
+                Upload any supporting documents such as diagrams,
+                specifications, or portfolios (max 5 files, 10MB each)
               </p>
             </div>
 
@@ -1023,7 +1024,8 @@ export default function CreateProposalPage() {
                         <ListChecks className="h-4 w-4" /> Milestones
                       </p>
                       <p>
-                        {milestones.length} defined ({totalPercentage}% of budget allocated)
+                        {milestones.length} defined ({totalPercentage}% of
+                        budget allocated)
                       </p>
                     </div>
                   </>
@@ -1054,24 +1056,30 @@ export default function CreateProposalPage() {
               />
             </div>
           </div>
-        )
+        );
 
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center mb-6">
-          <Button variant="ghost" onClick={() => router.back()} className="mr-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="mr-4"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
           <div>
             <h1 className="text-2xl font-bold">Create Proposal</h1>
-            <p className="text-muted-foreground">Create a detailed proposal for a smartject</p>
+            <p className="text-muted-foreground">
+              Create a detailed proposal for a smartject
+            </p>
           </div>
         </div>
 
@@ -1082,15 +1090,17 @@ export default function CreateProposalPage() {
               {currentStep === 1
                 ? "Basic Information"
                 : currentStep === 2
-                  ? "Project Details"
-                  : currentStep === 3
-                    ? "Specific Requirements"
-                    : currentStep === 4
-                      ? "Payment Milestones"
-                      : "Documents & Review"}
+                ? "Project Details"
+                : currentStep === 3
+                ? "Specific Requirements"
+                : currentStep === 4
+                ? "Payment Milestones"
+                : "Documents & Review"}
             </p>
             <p className="text-sm text-muted-foreground">
-              {currentStep === 5 ? "Final Step" : `${currentStep * 20}% Complete`}
+              {currentStep === 5
+                ? "Final Step"
+                : `${currentStep * 20}% Complete`}
             </p>
           </div>
           <Progress value={currentStep * 20} className="h-2" />
@@ -1102,27 +1112,27 @@ export default function CreateProposalPage() {
               {currentStep === 1
                 ? "Basic Information"
                 : currentStep === 2
-                  ? "Project Details"
-                  : currentStep === 3
-                    ? proposalType === "need"
-                      ? "Your Requirements"
-                      : "Your Expertise & Approach"
-                    : currentStep === 4
-                      ? "Payment Milestones"
-                      : "Supporting Documents & Review"}
+                ? "Project Details"
+                : currentStep === 3
+                ? proposalType === "need"
+                  ? "Your Requirements"
+                  : "Your Expertise & Approach"
+                : currentStep === 4
+                ? "Payment Milestones"
+                : "Supporting Documents & Review"}
             </CardTitle>
             <CardDescription>
               {currentStep === 1
                 ? "Provide basic information about your proposal"
                 : currentStep === 2
-                  ? "Define the scope, timeline, and budget for the project"
-                  : currentStep === 3
-                    ? proposalType === "need"
-                      ? "Specify your detailed requirements for this smartject"
-                      : "Describe your expertise and approach to implementing this smartject"
-                    : currentStep === 4
-                      ? "Define payment milestones for the project"
-                      : "Upload supporting documents and review your proposal"}
+                ? "Define the scope, timeline, and budget for the project"
+                : currentStep === 3
+                ? proposalType === "need"
+                  ? "Specify your detailed requirements for this smartject"
+                  : "Describe your expertise and approach to implementing this smartject"
+                : currentStep === 4
+                ? "Define payment milestones for the project"
+                : "Upload supporting documents and review your proposal"}
             </CardDescription>
           </CardHeader>
           <CardContent>{renderStepContent()}</CardContent>
@@ -1136,7 +1146,11 @@ export default function CreateProposalPage() {
               )}
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleSaveDraft} disabled={isSaving}>
+              <Button
+                variant="outline"
+                onClick={handleSaveDraft}
+                disabled={isSaving}
+              >
                 <Save className="h-4 w-4 mr-2" />
                 {isSaving ? (
                   <>
@@ -1148,7 +1162,10 @@ export default function CreateProposalPage() {
                 )}
               </Button>
               {currentStep < 5 ? (
-                <Button onClick={nextStep} disabled={currentStep === 1 && !proposalType}>
+                <Button
+                  onClick={nextStep}
+                  disabled={currentStep === 1 && !proposalType}
+                >
                   Next
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
@@ -1176,9 +1193,13 @@ export default function CreateProposalPage() {
       <Dialog open={showMilestoneDialog} onOpenChange={setShowMilestoneDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingMilestoneId ? "Edit Milestone" : "Add Milestone"}</DialogTitle>
+            <DialogTitle>
+              {editingMilestoneId ? "Edit Milestone" : "Add Milestone"}
+            </DialogTitle>
             <DialogDescription>
-              {editingMilestoneId ? "Update the details of this milestone" : "Define a new milestone for the project"}
+              {editingMilestoneId
+                ? "Update the details of this milestone"
+                : "Define a new milestone for the project"}
             </DialogDescription>
           </DialogHeader>
 
@@ -1189,7 +1210,12 @@ export default function CreateProposalPage() {
                 id="milestone-name"
                 placeholder="e.g., Project Kickoff, MVP Delivery"
                 value={currentMilestone.name}
-                onChange={(e) => setCurrentMilestone({ ...currentMilestone, name: e.target.value })}
+                onChange={(e) =>
+                  setCurrentMilestone({
+                    ...currentMilestone,
+                    name: e.target.value,
+                  })
+                }
               />
             </div>
 
@@ -1199,7 +1225,12 @@ export default function CreateProposalPage() {
                 id="milestone-description"
                 placeholder="Describe what will be delivered in this milestone"
                 value={currentMilestone.description}
-                onChange={(e) => setCurrentMilestone({ ...currentMilestone, description: e.target.value })}
+                onChange={(e) =>
+                  setCurrentMilestone({
+                    ...currentMilestone,
+                    description: e.target.value,
+                  })
+                }
               />
             </div>
 
@@ -1213,9 +1244,15 @@ export default function CreateProposalPage() {
                   max="100"
                   placeholder="e.g., 25"
                   value={currentMilestone.percentage || ""}
-                  onChange={(e) => handleMilestonePercentageChange(Number.parseInt(e.target.value) || 0)}
+                  onChange={(e) =>
+                    handleMilestonePercentageChange(
+                      Number.parseInt(e.target.value) || 0
+                    )
+                  }
                 />
-                <p className="text-xs text-muted-foreground">Percentage of total budget</p>
+                <p className="text-xs text-muted-foreground">
+                  Percentage of total budget
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -1226,52 +1263,10 @@ export default function CreateProposalPage() {
                   value={currentMilestone.amount}
                   onChange={(e) => handleMilestoneAmountChange(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">Payment amount for this milestone</p>
+                <p className="text-xs text-muted-foreground">
+                  Payment amount for this milestone
+                </p>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="milestone-due-date">Due Date</Label>
-              <DatePicker
-                date={currentMilestone.dueDate ? new Date(currentMilestone.dueDate) : undefined}
-                onSelect={handleMilestoneDateChange}
-              />
-
-              {/* Timeline position indicator */}
-              {currentMilestone.dueDate && (
-                <div className="mt-2 pt-2 border-t">
-                  <p className="text-xs text-muted-foreground mb-1">Position in project timeline:</p>
-                  <div className="relative h-1 bg-muted rounded-full">
-                    {/* Project progress indicator */}
-                    <div className="absolute top-0 left-0 h-1 bg-primary/30 rounded-l-full" style={{ width: "100%" }} />
-
-                    {/* Milestone position */}
-                    {(() => {
-                      const milestoneDate = new Date(currentMilestone.dueDate)
-                      const position = Math.max(
-                        0,
-                        Math.min(
-                          ((milestoneDate.getTime() - projectStartDate.getTime()) /
-                            (projectEndDate.getTime() - projectStartDate.getTime())) *
-                            100,
-                          100,
-                        ),
-                      )
-
-                      return (
-                        <div
-                          className="absolute top-0 w-2 h-2 bg-primary rounded-full -translate-x-1 -translate-y-0.5"
-                          style={{ left: `${position}%` }}
-                        />
-                      )
-                    })()}
-                  </div>
-                  <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-                    <span>Start</span>
-                    <span>End</span>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Deliverables Section */}
@@ -1283,7 +1278,10 @@ export default function CreateProposalPage() {
               {currentMilestone.deliverables.length > 0 ? (
                 <div className="border rounded-md p-2 space-y-2 max-h-[200px] overflow-y-auto">
                   {currentMilestone.deliverables.map((deliverable) => (
-                    <div key={deliverable.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+                    <div
+                      key={deliverable.id}
+                      className="flex items-center gap-2 p-2 bg-muted/50 rounded-md"
+                    >
                       <Button
                         type="button"
                         variant="ghost"
@@ -1298,7 +1296,9 @@ export default function CreateProposalPage() {
                         )}
                         <span className="sr-only">Toggle completion</span>
                       </Button>
-                      <span className="flex-1 text-sm">{deliverable.description}</span>
+                      <span className="flex-1 text-sm">
+                        {deliverable.description}
+                      </span>
                       <Button
                         type="button"
                         variant="ghost"
@@ -1325,24 +1325,33 @@ export default function CreateProposalPage() {
                   onChange={(e) => setNewDeliverable(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newDeliverable.trim()) {
-                      e.preventDefault()
-                      handleAddDeliverable()
+                      e.preventDefault();
+                      handleAddDeliverable();
                     }
                   }}
                 />
-                <Button type="button" size="sm" onClick={handleAddDeliverable} disabled={!newDeliverable.trim()}>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleAddDeliverable}
+                  disabled={!newDeliverable.trim()}
+                >
                   <Plus className="h-4 w-4" />
                   <span className="sr-only">Add</span>
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Add specific items that will be delivered as part of this milestone
+                Add specific items that will be delivered as part of this
+                milestone
               </p>
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMilestoneDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowMilestoneDialog(false)}
+            >
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
@@ -1354,5 +1363,5 @@ export default function CreateProposalPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

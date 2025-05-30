@@ -44,7 +44,6 @@ interface Milestone {
   description: string
   percentage: number
   amount: string
-  dueDate: string
   deliverables: Deliverable[]
 }
 
@@ -84,11 +83,7 @@ const getMockData = (matchId: string, proposalId: string) => ({
       description: "Initial setup and requirements gathering",
       percentage: 20,
       amount: "$3,000",
-      dueDate: (() => {
-        const date = new Date()
-        date.setDate(date.getDate() + 14)
-        return date.toISOString()
-      })(),
+   
       deliverables: [
         {
           id: "del-1",
@@ -108,11 +103,7 @@ const getMockData = (matchId: string, proposalId: string) => ({
       description: "Development of core functionality",
       percentage: 40,
       amount: "$6,000",
-      dueDate: (() => {
-        const date = new Date()
-        date.setDate(date.getDate() + 45)
-        return date.toISOString()
-      })(),
+     
       deliverables: [
         {
           id: "del-3",
@@ -132,11 +123,6 @@ const getMockData = (matchId: string, proposalId: string) => ({
       description: "Complete system with documentation",
       percentage: 40,
       amount: "$6,000",
-      dueDate: (() => {
-        const date = new Date()
-        date.setDate(date.getDate() + 90)
-        return date.toISOString()
-      })(),
       deliverables: [
         {
           id: "del-5",
@@ -567,7 +553,7 @@ export default function NegotiatePage({
                               <div className="mt-1 flex gap-3 text-sm">
                                 <span>{milestone.percentage}%</span>
                                 <span>{milestone.amount}</span>
-                                <span>Due: {new Date(milestone.dueDate).toLocaleDateString()}</span>
+                      
                               </div>
 
                               {/* Display deliverables if any */}

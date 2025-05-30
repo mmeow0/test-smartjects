@@ -20,7 +20,6 @@ interface MilestoneType {
   description: string
   percentage: number
   amount: string
-  dueDate: string
   status: string
   completedDate?: string
   deliverables: string[]
@@ -326,7 +325,6 @@ export function ContractDocumentPreview({
                           <td>{milestone.name}</td>
                           <td>{milestone.description}</td>
                           <td>{milestone.amount}</td>
-                          <td>{new Date(milestone.dueDate).toLocaleDateString()}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -435,7 +433,7 @@ The total contract value is ${budget}, payable according to the following schedu
 ${paymentSchedule
   .map(
     (milestone) =>
-      `- ${milestone.name}: ${milestone.amount} (${milestone.percentage}%) due on ${new Date(milestone.dueDate).toLocaleDateString()}
+      `- ${milestone.name}: ${milestone.amount} (${milestone.percentage}%)
   Description: ${milestone.description}`,
   )
   .join("\n\n")}

@@ -77,7 +77,6 @@ export default function MilestoneDetailsPage({ params }: { params: Promise<{ id:
     description: "Data integration and initial model development",
     percentage: 30,
     amount: "$5,250",
-    dueDate: "2024-02-28",
     status: "pending_review", // completed, in_progress, pending, pending_review, overdue
     deliverables: [
       {
@@ -281,12 +280,7 @@ export default function MilestoneDetailsPage({ params }: { params: Promise<{ id:
                   </p>
                   <p className="font-medium">{milestone.amount}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground flex items-center">
-                    <Calendar className="h-4 w-4 mr-1" /> Due Date
-                  </p>
-                  <p className="font-medium">{new Date(milestone.dueDate).toLocaleDateString()}</p>
-                </div>
+                
                 <div>
                   <p className="text-sm text-muted-foreground flex items-center">
                     <FileText className="h-4 w-4 mr-1" /> Percentage
@@ -435,13 +429,7 @@ export default function MilestoneDetailsPage({ params }: { params: Promise<{ id:
                 </div>
                 {getMilestoneStatusBadge(milestone.status)}
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span className="text-sm">Due Date</span>
-                </div>
-                <span className="text-sm font-medium">{new Date(milestone.dueDate).toLocaleDateString()}</span>
-              </div>
+             
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />

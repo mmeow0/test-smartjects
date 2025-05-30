@@ -82,19 +82,16 @@ export default function ContractPage({
           milestone: "Project Kickoff",
           percentage: 30,
           amount: "$5,250",
-          dueDate: "2024-01-15",
         },
         {
           milestone: "Midpoint Delivery",
           percentage: 30,
           amount: "$5,250",
-          dueDate: "2024-02-28",
         },
         {
           milestone: "Final Delivery",
           percentage: 40,
           amount: "$7,000",
-          dueDate: "2024-03-31",
         },
       ],
       scope:
@@ -248,7 +245,7 @@ export default function ContractPage({
                         <th className="p-3 text-left">Milestone</th>
                         <th className="p-3 text-right">Percentage</th>
                         <th className="p-3 text-right">Amount</th>
-                        <th className="p-3 text-right">Due Date</th>
+    
                       </tr>
                     </thead>
                     <tbody>
@@ -262,9 +259,7 @@ export default function ContractPage({
                             {payment.percentage}%
                           </td>
                           <td className="p-3 text-right">{payment.amount}</td>
-                          <td className="p-3 text-right">
-                            {new Date(payment.dueDate).toLocaleDateString()}
-                          </td>
+                        
                         </tr>
                       ))}
                     </tbody>
