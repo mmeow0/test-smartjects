@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
+import { useNegotiation } from "@/hooks/use-negotiation"
 import {
   AlertCircle,
   ArrowLeft,
@@ -29,6 +30,7 @@ import {
 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
+import { useProposal } from "@/hooks/use-proposal"
 
 // Define deliverable type
 interface Deliverable {
@@ -182,14 +184,13 @@ export default function NegotiatePage({
 }) {
   const { id, proposalId } = use(params);
   
+  const { proposal, isLoading, refetch } = useProposal(proposalId);
+  const { negotiationData, isLoading: isNegotiationLoading, addMessage } = useNegotiation(id, proposalId);
+
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const { toast } = useToast()
 
-  // Use useMemo to prevent recreation of the negotiation object on each render
-  const negotiation = useMemo(() => getMockData(id, proposalId), [id, proposalId])
-
-  const [isLoading, setIsLoading] = useState(true)
   const [message, setMessage] = useState("")
   const [isCounterOffer, setIsCounterOffer] = useState(false)
   const [counterOffer, setCounterOffer] = useState({
@@ -202,37 +203,19 @@ export default function NegotiatePage({
 
   // Extract the timeline string once to avoid recalculations
   const currentTimelineStr = useMemo(() => {
-    const lastMessage = negotiation.messages[negotiation.messages.length - 1]
-    return lastMessage.isCounterOffer ? lastMessage.counterOffer.timeline : negotiation.currentProposal.timeline
-  }, [negotiation.messages, negotiation.currentProposal.timeline])
+    if (!negotiationData) return "";
+    const lastMessage = negotiationData.messages[negotiationData.messages.length - 1]
+    return lastMessage?.isCounterOffer ? lastMessage.counterOffer.timeline : negotiationData.currentProposal.timeline
+  }, [negotiationData])
 
-  // Initialize project timeline dates with default values
-  const [projectStartDate, setProjectStartDate] = useState<Date>(() => new Date())
-  const [projectEndDate, setProjectEndDate] = useState<Date>(() => {
-    const endDate = new Date()
-    endDate.setMonth(endDate.getMonth() + 3) // Default 3 months
-    return endDate
-  })
 
-  // Redirect if not authenticated or not a paid user
+  // Set milestones when negotiation data is loaded
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login")
-    } else if (user?.accountType !== "paid") {
-      router.push("/upgrade")
-    } else {
-      // Simulate loading data
-      setTimeout(() => {
-        setIsLoading(false)
-
-        // Set milestones from the negotiation data
-        if (negotiation.milestones && negotiation.milestones.length > 0) {
-          setMilestones(negotiation.milestones)
-          setUseMilestones(true)
-        }
-      }, 1000)
+    if (negotiationData?.milestones && negotiationData.milestones.length > 0) {
+      setMilestones(negotiationData.milestones)
+      setUseMilestones(true)
     }
-  }, [isAuthenticated, router, user, negotiation.milestones])
+  }, [negotiationData])
 
   // Calculate total percentage whenever milestones change
   useEffect(() => {
@@ -256,8 +239,6 @@ export default function NegotiatePage({
     const remainingDays = Math.round((durationMonths % 1) * 30)
     end.setDate(end.getDate() + remainingDays)
 
-    setProjectStartDate(start)
-    setProjectEndDate(end)
     // Only run this effect once on component mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

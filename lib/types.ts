@@ -57,6 +57,7 @@ export type ProposalType = {
     name: string;
     size: number;
     type: string;
+    path: string;
   }[];
   comments: {
     id: string;

@@ -682,43 +682,41 @@ export const proposalService = {
 
     const { data, error } = await supabase
       .from("proposals")
-      .select(
-        `
-    *,
-    smartjects (
-      title
-    ),
-    proposal_files (
-      id,
-      name,
-      size,
-      type
-    ),
-    proposal_comments (
-      id,
-      content,
-      created_at,
-      users (
-        id,
-        name,
-        avatar_url
-      )
-    ),
-    proposal_milestones (
-    id,
-    name,
-    description,
-    percentage,
-    amount,
-    proposal_id,
-    proposal_deliverables (
-      id,
-      description,
-      completed
-    )
-  )
-  `
-      )
+      .select(`
+        *,
+        smartjects (
+          title
+        ),
+        proposal_files!proposal_files_proposal_id_fkey (
+          id,
+          name,
+          size,
+          type,
+          path
+        ),
+        proposal_comments (
+          id,
+          content,
+          created_at,
+          users (
+            id,
+            name,
+            avatar_url
+          )
+        ),
+        proposal_milestones (
+          id,
+          name,
+          description,
+          percentage,
+          amount,
+          proposal_deliverables (
+            id,
+            description,
+            completed
+          )
+        )
+      `)
       .eq("id", id)
       .single();
 
@@ -770,6 +768,7 @@ export const proposalService = {
           name: file.name,
           size: file.size,
           type: file.type,
+          path: file.path
         })) ?? [],
 
       comments:
@@ -937,7 +936,7 @@ export const proposalService = {
     const filePath = `proposals/${proposalId}/${fileName}`;
 
     const { error } = await supabase.storage
-      .from("proposal-documents")
+      .from("proposal-uploads")
       .upload(filePath, file);
 
     if (error) {
@@ -947,7 +946,7 @@ export const proposalService = {
 
     // Get public URL for the file
     const { data } = supabase.storage
-      .from("proposal-documents")
+      .from("proposal-uploads")
       .getPublicUrl(filePath);
 
     return data.publicUrl;
@@ -961,12 +960,17 @@ export const proposalService = {
   ): Promise<boolean> {
     const supabase = getSupabaseBrowserClient();
 
-    const { error } = await supabase.from("proposal_documents").insert({
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const { error } = await supabase.from("proposal_files").insert({
       proposal_id: proposalId,
       name: file.name,
-      file_path: filePath,
-      file_type: file.type,
-      file_size: file.size,
+      path: filePath,
+      type: file.type,
+      size: file.size,
+      user_id: user?.id,
     });
 
     if (error) {
@@ -1019,6 +1023,169 @@ export const userService = {
 
     if (error) {
       console.error(`Error updating user with ID ${id}:`, error);
+      return false;
+    }
+
+    return true;
+  },
+};
+
+export const negotiationService = {
+  // Get negotiation data for the negotiate page
+  async getNegotiationData(matchId: string, proposalId: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Get the proposal with related data
+      const { data: proposalData, error: proposalError } = await supabase
+        .from("proposals")
+        .select(`
+          *,
+          smartjects (
+            id,
+            title,
+            user_id
+          ),
+          users (
+            id,
+            name,
+            avatar_url
+          ),
+          proposal_milestones (
+            id,
+            name,
+            description,
+            percentage,
+            amount,
+            proposal_deliverables (
+              id,
+              description,
+              completed
+            )
+          )
+        `)
+        .eq("id", proposalId)
+        .single();
+
+      if (proposalError) {
+        console.error("Error fetching proposal data:", proposalError);
+        return null;
+      }
+
+      // Get smartject owner (needer) info
+      const { data: neederData, error: neederError } = await supabase
+        .from("users")
+        .select("id, name, avatar_url")
+        .eq("id", proposalData.smartjects.user_id)
+        .single();
+
+      if (neederError) {
+        console.error("Error fetching needer data:", neederError);
+      }
+
+      // Get negotiation messages
+      const { data: messagesData, error: messagesError } = await supabase
+        .from("negotiation_messages")
+        .select(`
+          id,
+          sender_id,
+          content,
+          is_counter_offer,
+          counter_offer_budget,
+          counter_offer_timeline,
+          created_at,
+          users (
+            name
+          )
+        `)
+        .eq("proposal_id", proposalId)
+        .order("created_at", { ascending: true });
+
+      if (messagesError) {
+        console.error("Error fetching messages:", messagesError);
+      }
+
+      // Transform the data to match the expected format
+      const negotiationData = {
+        matchId: matchId as string,
+        proposalId: proposalId as string,
+        smartjectTitle: (proposalData.smartjects?.title as string) || "",
+        provider: {
+          id: (proposalData.users?.id as string) || "",
+          name: (proposalData.users?.name as string) || "",
+          avatar: (proposalData.users?.avatar_url as string) || "",
+          rating: 4.8 as number, // Default rating - you may want to add this to users table
+        },
+        needer: {
+          id: (neederData?.id as string) || "",
+          name: (neederData?.name as string) || "",
+          avatar: (neederData?.avatar_url as string) || "",
+          rating: 4.6 as number, // Default rating - you may want to add this to users table
+        },
+        currentProposal: {
+          budget: (proposalData.budget as string) || "",
+          timeline: (proposalData.timeline as string) || "",
+          scope: (proposalData.scope as string) || "",
+          deliverables: proposalData.deliverables ? 
+            (proposalData.deliverables as string).split('\n').filter((d: string) => d.trim()) : [] as string[],
+        },
+        milestones: proposalData.proposal_milestones?.map((milestone: any) => ({
+          id: (milestone.id as string) || "",
+          name: (milestone.name as string) || "",
+          description: (milestone.description as string) || "",
+          percentage: (milestone.percentage as number) || 0,
+          amount: (milestone.amount as string) || "",
+          deliverables: milestone.proposal_deliverables?.map((deliverable: any) => ({
+            id: (deliverable.id as string) || "",
+            description: (deliverable.description as string) || "",
+            completed: (deliverable.completed as boolean) || false,
+          })) || [],
+        })) || [],
+        messages: messagesData?.map((message: any) => ({
+          id: (message.id as string) || "",
+          sender: (message.sender_id === proposalData.user_id ? "provider" : "needer") as "provider" | "needer",
+          senderName: (message.users?.name as string) || "",
+          content: (message.content as string) || "",
+          timestamp: (message.created_at as string) || "",
+          isCounterOffer: (message.is_counter_offer as boolean) || false,
+          counterOffer: message.is_counter_offer ? {
+            budget: (message.counter_offer_budget as string) || "",
+            timeline: (message.counter_offer_timeline as string) || "",
+          } : undefined,
+        })) || [],
+      };
+
+      return negotiationData;
+    } catch (error) {
+      console.error("Error in getNegotiationData:", error);
+      return null;
+    }
+  },
+
+  // Add a negotiation message
+  async addNegotiationMessage(
+    proposalId: string,
+    senderId: string,
+    content: string,
+    isCounterOffer: boolean = false,
+    counterOfferBudget?: string,
+    counterOfferTimeline?: string
+  ): Promise<boolean> {
+    const supabase = getSupabaseBrowserClient();
+
+    const { error } = await supabase
+      .from("negotiation_messages")
+      .insert({
+        proposal_id: proposalId,
+        sender_id: senderId,
+        content,
+        is_counter_offer: isCounterOffer,
+        counter_offer_budget: counterOfferBudget,
+        counter_offer_timeline: counterOfferTimeline,
+      });
+
+    if (error) {
+      console.error("Error adding negotiation message:", error);
       return false;
     }
 

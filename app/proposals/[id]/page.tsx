@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +14,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { ProposalDocumentPreview } from "@/components/proposal-document-preview";
@@ -27,11 +26,9 @@ import {
   MessageSquare,
   Pencil,
   ThumbsUp,
-  ThumbsDown,
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { ProposalType } from "@/lib/types";
 import { proposalService } from "@/lib/services";
 import { useProposal } from "@/hooks/use-proposal";
 

@@ -77,7 +77,7 @@ export default function ProposalsPage() {
   }
 
   const filterProposals = useCallback(
-    (proposals: any[]) => {
+    (proposals: ProposalType[]) => {
       return proposals
         .filter((proposal) => {
           // Filter by search term
@@ -228,7 +228,7 @@ export default function ProposalsPage() {
                     <div>
                       <p className="text-sm text-muted-foreground">Budget</p>
                       <p className="font-medium">
-                        ${proposal.budget.toLocaleString()}
+                        ${proposal.budget?.toLocaleString()}
                       </p>
                     </div>
                     <div>
@@ -288,7 +288,7 @@ export default function ProposalsPage() {
                     <div>
                       <p className="text-sm text-muted-foreground">Budget</p>
                       <p className="font-medium">
-                        ${proposal.budget.toLocaleString()}
+                        ${proposal.budget?.toLocaleString()}
                       </p>
                     </div>
                     <div>
