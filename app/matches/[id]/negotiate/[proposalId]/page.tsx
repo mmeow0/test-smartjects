@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
-import { useNegotiation } from "@/hooks/use-negotiation"
 import {
   AlertCircle,
   ArrowLeft,
@@ -185,11 +184,13 @@ export default function NegotiatePage({
   const { id, proposalId } = use(params);
   
   const { proposal, isLoading, refetch } = useProposal(proposalId);
-  const { negotiationData, isLoading: isNegotiationLoading, addMessage } = useNegotiation(id, proposalId);
 
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const { toast } = useToast()
+
+  // Use useMemo to prevent recreation of the negotiation object on each render
+  const negotiation = useMemo(() => getMockData(id, proposalId), [id, proposalId])
 
   const [message, setMessage] = useState("")
   const [isCounterOffer, setIsCounterOffer] = useState(false)
@@ -203,19 +204,29 @@ export default function NegotiatePage({
 
   // Extract the timeline string once to avoid recalculations
   const currentTimelineStr = useMemo(() => {
-    if (!negotiationData) return "";
-    const lastMessage = negotiationData.messages[negotiationData.messages.length - 1]
-    return lastMessage?.isCounterOffer ? lastMessage.counterOffer.timeline : negotiationData.currentProposal.timeline
-  }, [negotiationData])
+    const lastMessage = negotiation.messages[negotiation.messages.length - 1]
+    return lastMessage.isCounterOffer ? lastMessage.counterOffer.timeline : negotiation.currentProposal.timeline
+  }, [negotiation.messages, negotiation.currentProposal.timeline])
 
 
-  // Set milestones when negotiation data is loaded
+  // Redirect if not authenticated or not a paid user
   useEffect(() => {
-    if (negotiationData?.milestones && negotiationData.milestones.length > 0) {
-      setMilestones(negotiationData.milestones)
-      setUseMilestones(true)
+    if (!isAuthenticated) {
+      router.push("/auth/login")
+    } else if (user?.accountType !== "paid") {
+      router.push("/upgrade")
+    } else {
+      // Simulate loading data
+      setTimeout(() => {
+
+        // Set milestones from the negotiation data
+        if (negotiation.milestones && negotiation.milestones.length > 0) {
+          setMilestones(negotiation.milestones)
+          setUseMilestones(true)
+        }
+      }, 1000)
     }
-  }, [negotiationData])
+  }, [isAuthenticated, router, user, negotiation.milestones])
 
   // Calculate total percentage whenever milestones change
   useEffect(() => {
