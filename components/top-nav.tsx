@@ -35,6 +35,7 @@ export function TopNav() {
     { href: "/dashboard", label: "Dashboard", isMain: true },
     { href: "/proposals", label: "Proposals", isMain: false },
     { href: "/matches", label: "Matches", isMain: false },
+    { href: "/negotiations", label: "Negotiations", isMain: false },
     { href: "/contracts", label: "Contracts", isMain: false },
   ]
 
@@ -119,6 +120,9 @@ export function TopNav() {
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/matches">My Matches</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/negotiations">My Negotiations</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/contracts">My Contracts</Link>

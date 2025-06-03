@@ -19,6 +19,7 @@ import {
   Clock,
   DollarSign,
   FileText,
+  Handshake,
   MessageSquare,
   Paperclip,
   Send,
@@ -314,10 +315,16 @@ export default function NegotiatePage({
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex items-center mb-6">
-        <Button variant="ghost" onClick={() => router.back()} className="mr-4">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
+        <div className="flex items-center gap-2 mr-4">
+          <Button variant="ghost" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <Button variant="outline" onClick={() => router.push('/negotiations')}>
+            <Handshake className="h-4 w-4 mr-2" />
+            All Negotiations
+          </Button>
+        </div>
         <div>
           <h1 className="text-2xl font-bold">Negotiate Terms</h1>
           <p className="text-muted-foreground">
@@ -328,6 +335,33 @@ export default function NegotiatePage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
+          {/* Proposal Creator Info */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Proposal Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback>{negotiation?.provider?.name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{negotiation?.provider?.name}</p>
+                    <p className="text-sm text-muted-foreground">Submitted this proposal</p>
+                  </div>
+                </div>
+                <Badge variant="secondary">Proposal Creator</Badge>
+              </div>
+              <div className="mt-4 text-sm text-muted-foreground">
+                {user?.id === negotiation?.provider?.id 
+                  ? "You submitted this proposal. The smartject owner can accept or negotiate terms."
+                  : "This proposal was submitted for your smartject. You can accept or negotiate terms."
+                }
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
@@ -477,10 +511,22 @@ export default function NegotiatePage({
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleAcceptTerms}>
-                <ThumbsUp className="h-4 w-4 mr-2" />
-                Accept Current Terms
-              </Button>
+              {user?.id === negotiation?.needer?.id ? (
+                <Button className="w-full" onClick={handleAcceptTerms}>
+                  <ThumbsUp className="h-4 w-4 mr-2" />
+                  Accept Current Terms
+                </Button>
+              ) : (
+                <div className="w-full text-center">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Only the smartject owner can accept terms
+                  </p>
+                  <Button className="w-full" disabled>
+                    <ThumbsUp className="h-4 w-4 mr-2" />
+                    Accept Current Terms
+                  </Button>
+                </div>
+              )}
             </CardFooter>
           </Card>
 
@@ -501,7 +547,9 @@ export default function NegotiatePage({
                       </span>
                     )}
                   </Label>
-                  <Switch id="use-milestones" checked={useMilestones} onCheckedChange={setUseMilestones} />
+                  <Switch id="use-milestones" checked={useMilestones} onCheckedChange={setUseMilestones}
+                  disabled={user?.id !== negotiation?.needer?.id}
+                  />
                 </div>
 
                 {useMilestones && (

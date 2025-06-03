@@ -980,6 +980,104 @@ export const proposalService = {
 
     return true;
   },
+
+  // Get all negotiations for a user (simplified version)
+  async getUserNegotiations(userId: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Get all proposals created by the user that have messages
+      const { data: userProposals, error: userProposalsError } = await supabase
+        .from("proposals")
+        .select("id, user_id, smartject_id, title, budget, timeline")
+        .eq("user_id", userId);
+
+      if (userProposalsError) {
+        console.error("Error fetching user proposals:", userProposalsError);
+        return [];
+      }
+
+      // Get all messages involving the user
+      const { data: allMessages, error: messagesError } = await supabase
+        .from("negotiation_messages")
+        .select("proposal_id, sender_id, created_at");
+
+      if (messagesError) {
+        console.error("Error fetching messages:", messagesError);
+        return [];
+      }
+
+      const negotiations: any[] = [];
+
+      // Process user's own proposals
+      if (userProposals) {
+        for (const proposal of userProposals) {
+          const proposalMessages = allMessages?.filter(msg => msg.proposal_id === proposal.id) || [];
+          
+          if (proposalMessages.length === 0) continue;
+
+          // Find other party (someone who messaged about this proposal)
+          const otherMessage = proposalMessages.find(msg => msg.sender_id !== userId);
+          const otherPartyId = otherMessage?.sender_id;
+
+          let otherPartyName = "Unknown User";
+          if (otherPartyId) {
+            const { data: userData } = await supabase
+              .from("users")
+              .select("name, avatar_url")
+              .eq("id", otherPartyId)
+              .single();
+            
+            if (userData) {
+              otherPartyName = userData.name || "Unknown User";
+            }
+          }
+
+          // Get smartject title
+          let smartjectTitle = proposal.title;
+          const { data: smartjectData } = await supabase
+            .from("smartjects")
+            .select("title")
+            .eq("id", proposal.smartject_id)
+            .single();
+          
+          if (smartjectData) {
+            smartjectTitle = smartjectData.title;
+          }
+
+          const lastActivity = proposalMessages.length > 0 
+            ? proposalMessages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].created_at
+            : new Date().toISOString();
+
+          negotiations.push({
+            id: `match-${proposal.smartject_id}-${proposal.id}`,
+            proposalId: proposal.id,
+            smartjectId: proposal.smartject_id,
+            smartjectTitle,
+            otherParty: {
+              id: otherPartyId || "",
+              name: otherPartyName,
+              avatar: "",
+            },
+            budget: proposal.budget || "",
+            timeline: proposal.timeline || "",
+            messageCount: proposalMessages.length,
+            lastActivity,
+            isProposalOwner: true,
+            status: 'active' as const
+          });
+        }
+      }
+
+      // Sort by last activity
+      return negotiations.sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime());
+
+    } catch (error) {
+      console.error("Error in getUserNegotiations:", error);
+      // Return empty array instead of mock data for real implementation
+      return [];
+    }
+  },
 };
 
 // User services
