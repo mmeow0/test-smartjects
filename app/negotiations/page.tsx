@@ -59,119 +59,140 @@ export default function NegotiationsPage() {
     fetchNegotiations()
   }, [isAuthenticated, user, router])
 
-  const getUserNegotiations = async (userId: string) => {
-    const supabase = getSupabaseBrowserClient();
 
-    try {
-      // Get all proposals created by the user that have messages
-      const { data: userProposals, error: userProposalsError } = await supabase
-        .from("proposals")
-        .select("id, user_id, smartject_id, title, budget, timeline")
-        .eq("user_id", userId);
+const getUserNegotiations = async (userId: string) => {
+  const supabase = getSupabaseBrowserClient();
 
-      if (userProposalsError) {
-        console.error("Error fetching user proposals:", userProposalsError);
-        return [];
-      }
+  try {
+    // 1. Получаем все пропозалы, где пользователь — владелец
+    const { data: ownedProposals, error: ownedProposalsError } = await supabase
+      .from("proposals")
+      .select("id, user_id, smartject_id, title, budget, timeline")
+      .eq("user_id", userId);
 
-      // Get all messages involving the user
-      const { data: allMessages, error: messagesError } = await supabase
-        .from("negotiation_messages")
-        .select("proposal_id, sender_id, created_at");
-
-      if (messagesError) {
-        console.error("Error fetching messages:", messagesError);
-        return [];
-      }
-
-      const userConversations: { [userId: string]: UserConversation } = {};
-
-      // Process user's own proposals
-      if (userProposals) {
-        for (const proposal of userProposals) {
-          const proposalMessages = allMessages?.filter(msg => msg.proposal_id === proposal.id) || [];
-          
-          if (proposalMessages.length === 0) continue;
-
-          // Find other party (someone who messaged about this proposal)
-          const otherMessage = proposalMessages.find(msg => msg.sender_id !== userId);
-          const otherPartyId = otherMessage?.sender_id;
-
-          if (!otherPartyId) continue;
-
-          // Get smartject title
-          let smartjectTitle = (proposal.title as string) || "Unknown Smartject";
-          const { data: smartjectData } = await supabase
-            .from("smartjects")
-            .select("title")
-            .eq("id", proposal.smartject_id as string)
-            .single();
-          
-          if (smartjectData) {
-            smartjectTitle = (smartjectData.title as string) || proposal.title as string;
-          }
-
-          const lastActivity = proposalMessages.length > 0 
-            ? proposalMessages.sort((a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime())[0].created_at as string
-            : new Date().toISOString();
-
-          // Group by other party
-          if (!userConversations[otherPartyId as string]) {
-            // Get other party info
-            let otherPartyName = "Unknown User";
-            const { data: userData } = await supabase
-              .from("users")
-              .select("name, avatar_url")
-              .eq("id", otherPartyId)
-              .single();
-            
-            if (userData) {
-              otherPartyName = (userData.name as string) || "Unknown User";
-            }
-
-            userConversations[otherPartyId as string] = {
-              id: `conversation-${otherPartyId}`,
-              otherParty: {
-                id: otherPartyId as string,
-                name: otherPartyName,
-                avatar: "",
-              },
-              totalMessages: 0,
-              lastActivity: lastActivity,
-              activeNegotiations: [],
-              status: 'active'
-            };
-          }
-
-          // Add this negotiation to the conversation
-          userConversations[otherPartyId as string].activeNegotiations.push({
-            proposalId: proposal.id as string,
-            smartjectId: proposal.smartject_id as string,
-            smartjectTitle,
-            budget: (proposal.budget as string) || "",
-            timeline: (proposal.timeline as string) || "",
-            messageCount: proposalMessages.length,
-            isProposalOwner: true,
-          });
-
-          // Update total messages and last activity for this conversation
-          userConversations[otherPartyId as string].totalMessages += proposalMessages.length;
-          
-          if (new Date(lastActivity).getTime() > new Date(userConversations[otherPartyId as string].lastActivity).getTime()) {
-            userConversations[otherPartyId as string].lastActivity = lastActivity;
-          }
-        }
-      }
-
-      // Convert to array and sort by last activity
-      const conversations = Object.values(userConversations);
-      return conversations.sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime());
-
-    } catch (error) {
-      console.error("Error in getUserNegotiations:", error);
+    if (ownedProposalsError) {
+      console.error("Error fetching owned proposals:", ownedProposalsError);
       return [];
     }
+
+    // 2. Получаем все сообщения, отправленные этим пользователем
+    const { data: sentMessages, error: sentMessagesError } = await supabase
+      .from("negotiation_messages")
+      .select("proposal_id, sender_id, created_at")
+      .eq("sender_id", userId);
+
+    if (sentMessagesError) {
+      console.error("Error fetching sent messages:", sentMessagesError);
+      return [];
+    }
+
+    // 3. Получаем все сообщения, адресованные пользователю (по owned proposals)
+    const { data: receivedMessages, error: receivedMessagesError } = await supabase
+      .from("negotiation_messages")
+      .select("proposal_id, sender_id, created_at")
+      .in("proposal_id", ownedProposals.map(p => p.id));
+
+    if (receivedMessagesError) {
+      console.error("Error fetching received messages:", receivedMessagesError);
+      return [];
+    }
+
+    // 4. Объединяем все сообщения, где участвует пользователь
+    const allMessages = [...sentMessages, ...receivedMessages];
+
+    // 5. Группируем по proposal_id
+    const uniqueProposalIds = [...new Set(allMessages.map(msg => msg.proposal_id))];
+
+    const userConversations: { [conversationId: string]: UserConversation } = {};
+
+    for (const proposalId of uniqueProposalIds) {
+      // Получаем пропозал
+      const { data: proposal, error: proposalError } = await supabase
+        .from("proposals")
+        .select("id, user_id, smartject_id, title, budget, timeline")
+        .eq("id", proposalId)
+        .single();
+
+      if (proposalError || !proposal) continue;
+
+      const isProposalOwner = proposal.user_id === userId;
+
+      // Получаем все сообщения по пропозалу
+      const { data: proposalMessages } = await supabase
+        .from("negotiation_messages")
+        .select("id, proposal_id, sender_id, created_at")
+        .eq("proposal_id", proposalId);
+
+      if (!proposalMessages || proposalMessages.length === 0) continue;
+
+      // Находим ID второй стороны
+      const otherPartyMessage = proposalMessages.find(msg => msg.sender_id !== userId);
+      const otherPartyId = isProposalOwner
+        ? otherPartyMessage?.sender_id
+        : proposal.user_id;
+
+      if (!otherPartyId) continue;
+
+      // Получаем данные другой стороны
+      const { data: userData } = await supabase
+        .from("users")
+        .select("name, avatar_url")
+        .eq("id", otherPartyId)
+        .single();
+
+      const otherPartyName = userData?.name || "Unknown User";
+      const otherPartyAvatar = userData?.avatar_url || "";
+
+      // Получаем smartject
+      const { data: smartjectData } = await supabase
+        .from("smartjects")
+        .select("title")
+        .eq("id", proposal.smartject_id)
+        .single();
+
+      const smartjectTitle = smartjectData?.title || "Unknown Smartject";
+
+      const lastActivity = proposalMessages
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+        .created_at;
+
+      const conversationKey = `${proposalId}-${otherPartyId}`;
+
+      if (!userConversations[conversationKey]) {
+        userConversations[conversationKey] = {
+          id: conversationKey,
+          otherParty: {
+            id: otherPartyId,
+            name: otherPartyName,
+            avatar: otherPartyAvatar,
+          },
+          totalMessages: 0,
+          lastActivity,
+          activeNegotiations: [],
+          status: 'active'
+        };
+      }
+
+      userConversations[conversationKey].activeNegotiations.push({
+        proposalId: proposal.id,
+        smartjectId: proposal.smartject_id,
+        smartjectTitle,
+        budget: proposal.budget || "",
+        timeline: proposal.timeline || "",
+        messageCount: proposalMessages.length,
+        isProposalOwner,
+      });
+
+      userConversations[conversationKey].totalMessages += proposalMessages.length;
+    }
+
+    const conversations = Object.values(userConversations);
+    return conversations.sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime());
+  } catch (error) {
+    console.error("Error in getUserNegotiations:", error);
+    return [];
   }
+};
 
   const fetchNegotiations = async () => {
     setIsLoading(true)
@@ -333,7 +354,7 @@ export default function NegotiationsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => router.push(`/matches/match-${negotiation.smartjectId}-${negotiation.proposalId}/negotiate/${negotiation.proposalId}`)}
+                            onClick={() => router.push(`/matches/match-${negotiation.smartjectId}-${negotiation.proposalId}/negotiate/${negotiation.proposalId}/${conversation.otherParty.id}`)}
                           >
                             Open
                           </Button>
@@ -351,7 +372,7 @@ export default function NegotiationsPage() {
                     onClick={() => {
                       // Navigate to the most recent negotiation
                       const mostRecent = conversation.activeNegotiations[0];
-                      router.push(`/matches/match-${mostRecent.smartjectId}-${mostRecent.proposalId}/negotiate/${mostRecent.proposalId}`);
+                      router.push(`/matches/match-${mostRecent.smartjectId}-${mostRecent.proposalId}/negotiate/${mostRecent.proposalId}/${conversation.otherParty.id}`);
                     }}
                     className="ml-4"
                   >

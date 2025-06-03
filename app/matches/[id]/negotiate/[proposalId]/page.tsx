@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast"
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowRight,
   Calendar,
   Check,
   Clock,
@@ -32,6 +33,7 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { useProposal } from "@/hooks/use-proposal"
 import { negotiationService } from "@/lib/services"
+import { getSupabaseBrowserClient } from "@/lib/supabase"
 
 // Define deliverable type
 interface Deliverable {
@@ -109,6 +111,8 @@ export default function NegotiatePage({
   // State for negotiation data
   const [negotiation, setNegotiation] = useState<NegotiationData | null>(null)
   const [negotiationLoading, setNegotiationLoading] = useState(true)
+  const [otherUsers, setOtherUsers] = useState<Array<{id: string, name: string}>>([])
+  const [showUserSelection, setShowUserSelection] = useState(false)
 
   const [message, setMessage] = useState("")
   const [isCounterOffer, setIsCounterOffer] = useState(false)
@@ -129,7 +133,7 @@ export default function NegotiatePage({
   }, [negotiation])
 
 
-  // Fetch negotiation data
+  // Fetch negotiation data and check for multiple users
   useEffect(() => {
     const fetchNegotiationData = async () => {
       if (!isAuthenticated || user?.accountType !== "paid") {
@@ -138,6 +142,45 @@ export default function NegotiatePage({
       
       setNegotiationLoading(true)
       try {
+        // First, check how many different users have sent messages for this proposal
+        const supabase = getSupabaseBrowserClient()
+        
+        const { data: messagesData, error: messagesError } = await supabase
+          .from("negotiation_messages")
+          .select("sender_id, users(id, name)")
+          .eq("proposal_id", proposalId)
+          .neq("sender_id", user?.id || "")
+
+        if (messagesError) {
+          console.error("Error fetching messages:", messagesError)
+        }
+
+        // Get unique other users
+        const uniqueOtherUsers = messagesData?.reduce((acc: Array<{id: string, name: string}>, msg: any) => {
+          const userId = msg.sender_id
+          const userName = msg.users?.name || "Unknown User"
+          if (!acc.find(u => u.id === userId)) {
+            acc.push({ id: userId, name: userName })
+          }
+          return acc
+        }, []) || []
+
+        setOtherUsers(uniqueOtherUsers)
+
+        // If there's more than one other user, show selection interface
+        if (uniqueOtherUsers.length > 1) {
+          setShowUserSelection(true)
+          setNegotiationLoading(false)
+          return
+        }
+        
+        // If there's exactly one other user, redirect to individual page
+        if (uniqueOtherUsers.length === 1) {
+          router.push(`/matches/${id}/negotiate/${proposalId}/${uniqueOtherUsers[0].id}`)
+          return
+        }
+
+        // If no other users, continue with original logic
         const data = await negotiationService.getNegotiationData(id, proposalId)
         setNegotiation(data)
         
@@ -159,7 +202,7 @@ export default function NegotiatePage({
     }
 
     fetchNegotiationData()
-  }, [id, proposalId, isAuthenticated, user, toast])
+  }, [id, proposalId, isAuthenticated, user, toast, router])
 
   // Redirect if not authenticated or not a paid user
   useEffect(() => {
@@ -196,7 +239,55 @@ export default function NegotiatePage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (!isAuthenticated || user?.accountType !== "paid" || isLoading || negotiationLoading || !negotiation) {
+  if (!isAuthenticated || user?.accountType !== "paid" || isLoading || negotiationLoading) {
+    return null
+  }
+
+  // Show user selection interface if multiple users
+  if (showUserSelection) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex items-center mb-6">
+          <Button variant="ghost" onClick={() => router.back()} className="mr-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <Button variant="outline" onClick={() => router.push('/negotiations')} className="mr-4">
+            <Handshake className="h-4 w-4 mr-2" />
+            All Negotiations
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Select Conversation</h1>
+            <p className="text-muted-foreground">
+              Multiple users are interested in this proposal. Choose who to negotiate with:
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 max-w-2xl">
+          {otherUsers.map((otherUser) => (
+            <Card key={otherUser.id} className="hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => router.push(`/matches/${id}/negotiate/${proposalId}/${otherUser.id}`)}>
+              <CardContent className="flex items-center justify-between p-6">
+                <div className="flex items-center space-x-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="font-medium">{otherUser.name}</h3>
+                    <p className="text-sm text-muted-foreground">Click to start individual negotiation</p>
+                  </div>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (!negotiation) {
     return null
   }
 

@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
+import { contractService } from "@/lib/services";
 import {
   ArrowLeft,
   Calendar,
@@ -37,85 +38,84 @@ export default function ContractPage({
   const [isLoading, setIsLoading] = useState(true);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSigning, setIsSigning] = useState(false);
+  const [contract, setContract] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Redirect if not authenticated or not a paid user
+  // Fetch contract data and handle authentication
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/auth/login");
-    } else if (user?.accountType !== "paid") {
-      router.push("/upgrade");
-    } else {
-      // Simulate loading data
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 1000);
+      return;
     }
-  }, [isAuthenticated, router, user]);
+    
+    if (user?.accountType !== "paid") {
+      router.push("/upgrade");
+      return;
+    }
 
-  if (!isAuthenticated || user?.accountType !== "paid" || isLoading) {
+    const fetchContractData = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const contractData = await contractService.getContractData(id, proposalId);
+        
+        if (!contractData) {
+          setError("Contract not found");
+          return;
+        }
+        
+        setContract(contractData);
+      } catch (error) {
+        console.error("Error fetching contract:", error);
+        setError("Failed to load contract data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchContractData();
+  }, [isAuthenticated, router, user, id, proposalId]);
+
+  if (!isAuthenticated || user?.accountType !== "paid") {
     return null;
   }
 
-  // Mock contract data
-  const contract = {
-    id: `contract-${proposalId}`,
-    matchId: id,
-    proposalId: proposalId,
-    smartjectTitle: "AI-Powered Supply Chain Optimization",
-    provider: {
-      id: "user-101",
-      name: "Tech Solutions Inc.",
-      email: "contact@techsolutions.com",
-    },
-    needer: {
-      id: "user-201",
-      name: "Global Logistics Corp",
-      email: "projects@globallogistics.com",
-    },
-    terms: {
-      budget: "$17,500",
-      timeline: "2.5 months",
-      startDate: "2024-01-15",
-      endDate: "2024-03-31",
-      paymentSchedule: [
-        {
-          milestone: "Project Kickoff",
-          percentage: 30,
-          amount: "$5,250",
-        },
-        {
-          milestone: "Midpoint Delivery",
-          percentage: 30,
-          amount: "$5,250",
-        },
-        {
-          milestone: "Final Delivery",
-          percentage: 40,
-          amount: "$7,000",
-        },
-      ],
-      scope:
-        "The project will include data integration from existing systems, machine learning model development, dashboard creation, and staff training.",
-      deliverables: [
-        "Data integration framework",
-        "Machine learning prediction model",
-        "Real-time monitoring dashboard",
-        "Documentation and training materials",
-      ],
-    },
-    status: {
-      providerSigned: false,
-      neederSigned: false,
-      contractActive: false,
-    },
-    exclusivity: {
-      clause:
-        "Upon signing this contract, both parties agree to an exclusivity period for this specific smartject implementation. The provider agrees not to offer similar implementation services for this smartject to other parties, and the needer agrees not to engage other providers for this smartject implementation, for the duration of this contract plus 30 days after completion.",
-      duration: "Contract period + 30 days",
-    },
-  };
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div className="space-y-4">
+            <div className="h-64 bg-gray-200 rounded"></div>
+            <div className="h-32 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  const handleSignContract = () => {
+  if (error || !contract) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <h3 className="text-lg font-medium mb-2">Contract Not Found</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              {error || "The requested contract could not be found."}
+            </p>
+            <Button onClick={() => router.back()}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Go Back
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const handleSignContract = async () => {
     if (!termsAccepted) {
       toast({
         title: "Terms not accepted",
@@ -125,27 +125,65 @@ export default function ContractPage({
       return;
     }
 
+    if (!user?.id || !contract) {
+      toast({
+        title: "Error",
+        description: "Unable to sign contract. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSigning(true);
 
-    // In a real app, we would call an API to sign the contract
-    setTimeout(() => {
+    try {
+      const isProvider = user.id === contract.provider.id;
+      const success = await contractService.signContract(contract.id, user.id, isProvider);
+
+      if (success) {
+        toast({
+          title: "Contract signed",
+          description: "You have successfully signed the contract. A copy has been sent to your email.",
+        });
+
+        // For mock implementation, simulate status update
+        if (contract) {
+          const updatedContract = { ...contract };
+          if (user.id === contract.provider.id) {
+            updatedContract.status.providerSigned = true;
+          } else if (user.id === contract.needer.id) {
+            updatedContract.status.neederSigned = true;
+          }
+          
+          // Check if both parties have signed
+          if (updatedContract.status.providerSigned && updatedContract.status.neederSigned) {
+            updatedContract.status.contractActive = true;
+          }
+          
+          setContract(updatedContract);
+        }
+
+        // If both parties have signed, redirect to contracts page
+        setTimeout(() => {
+          router.push("/contracts");
+        }, 2000);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to sign contract. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error signing contract:", error);
       toast({
-        title: "Contract signed",
-        description:
-          "You have successfully signed the contract. A copy has been sent to your email.",
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
+    } finally {
       setIsSigning(false);
-
-      // Simulate email notification
-      toast({
-        title: "Email sent",
-        description:
-          "A copy of the signed contract has been sent to your email.",
-      });
-
-      // Redirect to the contracts page
-      router.push("/contracts");
-    }, 2000);
+    }
   };
 
   const handleDownloadContract = () => {
@@ -249,7 +287,7 @@ export default function ContractPage({
                       </tr>
                     </thead>
                     <tbody>
-                      {contract.terms.paymentSchedule.map((payment, index) => (
+                      {contract.terms.paymentSchedule.map((payment: any, index: number) => (
                         <tr
                           key={index}
                           className={index % 2 === 0 ? "bg-muted/50" : ""}
@@ -284,7 +322,7 @@ export default function ContractPage({
                     Deliverables
                   </p>
                   <ul className="list-disc pl-5">
-                    {contract.terms.deliverables.map((item, index) => (
+                    {contract.terms.deliverables.map((item: string, index: number) => (
                       <li key={index}>{item}</li>
                     ))}
                   </ul>
@@ -398,16 +436,36 @@ export default function ContractPage({
                 <Mail className="h-4 w-4 mr-2" />
                 <span>A copy will be sent to your email after signing.</span>
               </div>
+              {user && contract && (
+                <div className="text-sm text-muted-foreground mt-2">
+                  {user.id === contract.provider.id && (
+                    <p>You are signing as the <strong>Provider</strong></p>
+                  )}
+                  {user.id === contract.needer.id && (
+                    <p>You are signing as the <strong>Needer</strong></p>
+                  )}
+                </div>
+              )}
             </CardContent>
             <CardFooter className="flex flex-col gap-2">
-              <Button
-                className="w-full"
-                onClick={handleSignContract}
-                disabled={!termsAccepted || isSigning}
-              >
-                <Signature className="h-4 w-4 mr-2" />
-                {isSigning ? "Signing..." : "Sign Contract"}
-              </Button>
+              {user && contract && (
+                ((user.id === contract.provider.id && contract.status.providerSigned) ||
+                 (user.id === contract.needer.id && contract.status.neederSigned)) ? (
+                  <Button className="w-full" disabled>
+                    <Signature className="h-4 w-4 mr-2" />
+                    Already Signed
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full"
+                    onClick={handleSignContract}
+                    disabled={!termsAccepted || isSigning}
+                  >
+                    <Signature className="h-4 w-4 mr-2" />
+                    {isSigning ? "Signing..." : "Sign Contract"}
+                  </Button>
+                )
+              )}
               <Button
                 variant="outline"
                 className="w-full"

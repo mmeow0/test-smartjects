@@ -615,12 +615,14 @@ export default function SmartjectDetailPage({
                               >
                                 View Details
                               </Button>
-                              <Button
-                                className="flex-1"
-                                onClick={() => handleNegotiate(proposal.id)}
-                              >
-                                Negotiate
-                              </Button>
+                               {proposal.userId !== user.id && (
+                                <Button
+                                  className="flex-1"
+                                  onClick={() => handleNegotiate(proposal.id)}
+                                >
+                                  Negotiate
+                                </Button>
+                              )}
                             </div>
                           </div>
                         ))}

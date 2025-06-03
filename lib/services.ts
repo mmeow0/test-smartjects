@@ -1080,6 +1080,295 @@ export const proposalService = {
   },
 };
 
+// Contract services
+export const contractService = {
+  // Get contract data by match ID and proposal ID
+  async getContractData(matchId: string, proposalId: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Get current user
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        console.error("No authenticated user");
+        return null;
+      }
+
+      // Get the proposal first
+      const { data: proposalData, error: proposalError } = await supabase
+        .from("proposals")
+        .select("*")
+        .eq("id", proposalId)
+        .single();
+
+      if (proposalError || !proposalData) {
+        console.error("Error fetching proposal:", proposalError);
+        return null;
+      }
+
+      // Get user data for provider
+      const { data: providerData, error: providerError } = await supabase
+        .from("users")
+        .select("id, name, email")
+        .eq("id", proposalData.user_id)
+        .single();
+
+      // For mock data, determine if current user is provider or needer
+      const isCurrentUserProvider = currentUser.id === proposalData.user_id;
+      const neederId = isCurrentUserProvider ? "mock-needer-id" : currentUser.id;
+      const providerId = proposalData.user_id;
+
+      // Get current user data
+      const { data: currentUserData, error: currentUserError } = await supabase
+        .from("users")
+        .select("id, name, email")
+        .eq("id", currentUser.id)
+        .single();
+
+      // For now, create a mock contract based on proposal data since we don't have real contracts yet
+      // This allows the page to work while the contract system is being developed
+      const mockContract = {
+        id: `contract-${proposalId}`,
+        match_id: matchId,
+        provider_id: providerId,
+        needer_id: neederId,
+        title: proposalData.title || "Contract Title",
+        status: "pending_start",
+        budget: proposalData.budget || "$0",
+        scope: proposalData.scope || proposalData.description || "",
+        start_date: new Date().toISOString(),
+        end_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days from now
+        exclusivity_ends: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString(), // 120 days from now
+        provider_signed: false,
+        needer_signed: false,
+        provider: {
+          id: providerId,
+          name: (providerData?.name as string) || "Provider Name",
+          email: (providerData?.email as string) || "provider@example.com"
+        },
+        needer: {
+          id: neederId,
+          name: isCurrentUserProvider ? "Smartject Owner" : ((currentUserData?.name as string) || "Current User"),
+          email: isCurrentUserProvider ? "needer@example.com" : ((currentUserData?.email as string) || "user@example.com")
+        }
+      };
+
+      const contractData = mockContract;
+
+      // For mock data, use empty arrays for milestones and deliverables
+      const milestonesData: any[] = [];
+      const deliverablesData: any[] = [];
+
+      // Get smartject title
+      const { data: smartjectData, error: smartjectError } = await supabase
+        .from("smartjects")
+        .select("title")
+        .eq("id", proposalData.smartject_id)
+        .single();
+
+      let smartjectTitle = proposalData.title as string;
+      if (smartjectData && !smartjectError) {
+        smartjectTitle = smartjectData.title as string;
+      }
+
+      // Transform data to match expected format
+      const contract = {
+        id: contractData.id,
+        matchId: contractData.match_id,
+        proposalId: proposalId,
+        smartjectTitle: smartjectTitle || "Unknown Project",
+        provider: {
+          id: contractData.provider.id,
+          name: contractData.provider.name,
+          email: contractData.provider.email,
+        },
+        needer: {
+          id: contractData.needer.id,
+          name: contractData.needer.name,
+          email: contractData.needer.email,
+        },
+        terms: {
+          budget: contractData.budget,
+          timeline: contractService.calculateTimeline(contractData.start_date, contractData.end_date),
+          startDate: contractData.start_date,
+          endDate: contractData.end_date,
+          paymentSchedule: [
+            {
+              milestone: "Project Start",
+              percentage: 50,
+              amount: "50% of total budget",
+            },
+            {
+              milestone: "Project Completion",
+              percentage: 50,
+              amount: "50% of total budget",
+            },
+          ],
+          scope: contractData.scope,
+          deliverables: (proposalData.deliverables as string)?.split('\n').filter(d => d.trim()) || [],
+        },
+        status: {
+          providerSigned: contractData.provider_signed,
+          neederSigned: contractData.needer_signed,
+          contractActive: contractData.status === "active",
+        },
+        exclusivity: {
+          clause: "Upon signing this contract, both parties agree to an exclusivity period for this specific smartject implementation. The provider agrees not to offer similar implementation services for this smartject to other parties, and the needer agrees not to engage other providers for this smartject implementation, for the duration of this contract plus 30 days after completion.",
+          duration: `Contract period + 30 days (until ${new Date(contractData.exclusivity_ends).toLocaleDateString()})`,
+        },
+      };
+
+      return contract;
+    } catch (error) {
+      console.error("Error in getContractData:", error);
+      return null;
+    }
+  },
+
+  // Helper function to calculate timeline
+  calculateTimeline(startDate: string, endDate: string): string {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+
+    if (diffMonths >= 1) {
+      const remainingDays = diffDays % 30;
+      if (remainingDays === 0) {
+        return `${diffMonths} month${diffMonths > 1 ? 's' : ''}`;
+      } else {
+        return `${diffMonths}.${Math.floor((remainingDays / 30) * 10)} months`;
+      }
+    } else if (diffWeeks >= 1) {
+      return `${diffWeeks} week${diffWeeks > 1 ? 's' : ''}`;
+    } else {
+      return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
+    }
+  },
+
+  // Sign contract (mock implementation for now)
+  async signContract(contractId: string, userId: string, isProvider: boolean): Promise<boolean> {
+    try {
+      // Since we're using mock contracts for now, just simulate signing
+      // In a real implementation, this would update the contracts table
+      console.log(`Mock signing contract ${contractId} by user ${userId} as ${isProvider ? 'provider' : 'needer'}`);
+      
+      // Simulate a small delay to make it feel real
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      return true;
+    } catch (error) {
+      console.error("Error in signContract:", error);
+      return false;
+    }
+  },
+
+  // Create contract from negotiation
+  async createContractFromNegotiation(
+    matchId: string,
+    proposalId: string,
+    providerId: string,
+    neederId: string,
+    terms: {
+      budget: string;
+      timeline: string;
+      scope: string;
+      deliverables: string[];
+      milestones: Array<{
+        name: string;
+        description: string;
+        percentage: number;
+        amount: string;
+      }>;
+    }
+  ): Promise<string | null> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Calculate dates
+      const startDate = new Date();
+      const timelineMatch = terms.timeline.match(/(\d+(\.\d+)?)/);
+      const timelineMonths = timelineMatch ? parseFloat(timelineMatch[1]) : 3;
+      
+      const endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + Math.floor(timelineMonths));
+      const remainingDays = Math.round((timelineMonths % 1) * 30);
+      endDate.setDate(endDate.getDate() + remainingDays);
+
+      const exclusivityEndDate = new Date(endDate);
+      exclusivityEndDate.setDate(exclusivityEndDate.getDate() + 30);
+
+      // Create contract
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .insert({
+          match_id: matchId,
+          provider_id: providerId,
+          needer_id: neederId,
+          title: `Contract for Proposal ${proposalId}`,
+          budget: terms.budget,
+          scope: terms.scope,
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+          exclusivity_ends: exclusivityEndDate.toISOString(),
+          status: 'pending_start'
+        })
+        .select()
+        .single();
+
+      if (contractError || !contractData) {
+        console.error("Error creating contract:", contractError);
+        return null;
+      }
+
+      const contractId = contractData.id;
+
+      // Create contract deliverables
+      if (terms.deliverables.length > 0) {
+        const deliverableInserts = terms.deliverables.map(deliverable => ({
+          contract_id: contractId,
+          description: deliverable
+        }));
+
+        const { error: deliverablesError } = await supabase
+          .from("contract_deliverables")
+          .insert(deliverableInserts);
+
+        if (deliverablesError) {
+          console.error("Error creating deliverables:", deliverablesError);
+        }
+      }
+
+      // Create contract milestones
+      if (terms.milestones.length > 0) {
+        const milestoneInserts = terms.milestones.map(milestone => ({
+          contract_id: contractId,
+          name: milestone.name,
+          description: milestone.description,
+          percentage: milestone.percentage,
+          amount: milestone.amount,
+          status: 'pending'
+        }));
+
+        const { error: milestonesError } = await supabase
+          .from("contract_milestones")
+          .insert(milestoneInserts);
+
+        if (milestonesError) {
+          console.error("Error creating milestones:", milestonesError);
+        }
+      }
+
+      return contractId as string;
+    } catch (error) {
+      console.error("Error in createContractFromNegotiation:", error);
+      return null;
+    }
+  },
+};
+
 // User services
 export const userService = {
   // Get a user by ID
