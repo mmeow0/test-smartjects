@@ -1043,8 +1043,7 @@ export const negotiationService = {
           *,
           smartjects (
             id,
-            title,
-            user_id
+            title
           ),
           users (
             id,
@@ -1066,7 +1065,7 @@ export const negotiationService = {
         `)
         .eq("id", proposalId)
         .single();
-
+        
       if (proposalError) {
         console.error("Error fetching proposal data:", proposalError);
         return null;
@@ -1076,7 +1075,7 @@ export const negotiationService = {
       const { data: neederData, error: neederError } = await supabase
         .from("users")
         .select("id, name, avatar_url")
-        .eq("id", proposalData.smartjects.user_id)
+        .eq("id", proposalData.user_id)
         .single();
 
       if (neederError) {
@@ -1173,11 +1172,17 @@ export const negotiationService = {
   ): Promise<boolean> {
     const supabase = getSupabaseBrowserClient();
 
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if(!user){
+       console.error("Error user:", userError);
+      return false;
+    }
     const { error } = await supabase
       .from("negotiation_messages")
       .insert({
         proposal_id: proposalId,
-        sender_id: senderId,
+        sender_id: user.id,
         content,
         is_counter_offer: isCounterOffer,
         counter_offer_budget: counterOfferBudget,

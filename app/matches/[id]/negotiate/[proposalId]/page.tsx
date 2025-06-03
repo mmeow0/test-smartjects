@@ -30,6 +30,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { useProposal } from "@/hooks/use-proposal"
+import { negotiationService } from "@/lib/services"
 
 // Define deliverable type
 interface Deliverable {
@@ -48,133 +49,48 @@ interface Milestone {
   deliverables: Deliverable[]
 }
 
+interface CounterOffer {
+  budget: string
+  timeline: string
+}
+
+interface Message {
+  id: string
+  sender: "provider" | "needer"
+  senderName: string
+  content: string
+  timestamp: string
+  isCounterOffer: boolean
+  counterOffer?: CounterOffer
+}
+
+interface User {
+  id: string
+  name: string
+  avatar: string
+  rating: number
+}
+
+interface CurrentProposal {
+  budget: string
+  timeline: string
+  scope: string
+  deliverables: string[]
+}
+
+interface NegotiationData {
+  matchId: string
+  proposalId: string
+  smartjectTitle: string
+  provider: User
+  needer: User
+  currentProposal: CurrentProposal
+  milestones: Milestone[]
+  messages: Message[]
+}
+
 // Define mock data outside the component to prevent recreation on each render
-const getMockData = (matchId: string, proposalId: string) => ({
-  matchId,
-  proposalId,
-  smartjectTitle: "AI-Powered Supply Chain Optimization",
-  provider: {
-    id: "user-101",
-    name: "Tech Solutions Inc.",
-    avatar: "",
-    rating: 4.8,
-  },
-  needer: {
-    id: "user-201",
-    name: "Global Logistics Corp",
-    avatar: "",
-    rating: 4.6,
-  },
-  currentProposal: {
-    budget: "$15,000",
-    timeline: "3 months",
-    scope:
-      "The project will include data integration from existing systems, machine learning model development, dashboard creation, and staff training.",
-    deliverables: [
-      "Data integration framework",
-      "Machine learning prediction model",
-      "Real-time monitoring dashboard",
-      "Documentation and training materials",
-    ],
-  },
-  milestones: [
-    {
-      id: "milestone-1",
-      name: "Project Kickoff",
-      description: "Initial setup and requirements gathering",
-      percentage: 20,
-      amount: "$3,000",
-   
-      deliverables: [
-        {
-          id: "del-1",
-          description: "Requirements document",
-          completed: false,
-        },
-        {
-          id: "del-2",
-          description: "Project plan",
-          completed: false,
-        },
-      ],
-    },
-    {
-      id: "milestone-2",
-      name: "MVP Development",
-      description: "Development of core functionality",
-      percentage: 40,
-      amount: "$6,000",
-     
-      deliverables: [
-        {
-          id: "del-3",
-          description: "Data integration framework",
-          completed: false,
-        },
-        {
-          id: "del-4",
-          description: "Basic prediction model",
-          completed: false,
-        },
-      ],
-    },
-    {
-      id: "milestone-3",
-      name: "Final Delivery",
-      description: "Complete system with documentation",
-      percentage: 40,
-      amount: "$6,000",
-      deliverables: [
-        {
-          id: "del-5",
-          description: "Complete dashboard",
-          completed: false,
-        },
-        {
-          id: "del-6",
-          description: "Documentation and training materials",
-          completed: false,
-        },
-      ],
-    },
-  ],
-  messages: [
-    {
-      id: "msg-1",
-      sender: "provider",
-      senderName: "Tech Solutions Inc.",
-      content:
-        "Thank you for considering our proposal. We're excited about the possibility of working together on this project.",
-      timestamp: "2023-12-06T10:30:00",
-      isCounterOffer: false,
-    },
-    {
-      id: "msg-2",
-      sender: "needer",
-      senderName: "Global Logistics Corp",
-      content: "We like your approach but we're wondering if the timeline could be shortened to 2.5 months?",
-      timestamp: "2023-12-06T14:15:00",
-      isCounterOffer: true,
-      counterOffer: {
-        budget: "$15,000",
-        timeline: "2.5 months",
-      },
-    },
-    {
-      id: "msg-3",
-      sender: "provider",
-      senderName: "Tech Solutions Inc.",
-      content:
-        "We could potentially shorten the timeline to 2.5 months, but it would require additional resources which would increase the budget to $17,500.",
-      timestamp: "2023-12-07T09:45:00",
-      isCounterOffer: true,
-      counterOffer: {
-        budget: "$17,500",
-        timeline: "2.5 months",
-      },
-    },
-  ],
-})
+
 
 export default function NegotiatePage({
   params,
@@ -189,8 +105,9 @@ export default function NegotiatePage({
   const { isAuthenticated, user } = useAuth()
   const { toast } = useToast()
 
-  // Use useMemo to prevent recreation of the negotiation object on each render
-  const negotiation = useMemo(() => getMockData(id, proposalId), [id, proposalId])
+  // State for negotiation data
+  const [negotiation, setNegotiation] = useState<NegotiationData | null>(null)
+  const [negotiationLoading, setNegotiationLoading] = useState(true)
 
   const [message, setMessage] = useState("")
   const [isCounterOffer, setIsCounterOffer] = useState(false)
@@ -201,13 +118,47 @@ export default function NegotiatePage({
   const [useMilestones, setUseMilestones] = useState(false)
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [totalPercentage, setTotalPercentage] = useState(0)
+  const [sendingMessage, setSendingMessage] = useState(false)
 
   // Extract the timeline string once to avoid recalculations
   const currentTimelineStr = useMemo(() => {
-    const lastMessage = negotiation.messages[negotiation.messages.length - 1]
-    return lastMessage.isCounterOffer ? lastMessage.counterOffer.timeline : negotiation.currentProposal.timeline
-  }, [negotiation.messages, negotiation.currentProposal.timeline])
+    if (!negotiation) return ""
+    const lastMessage = negotiation.messages?.[negotiation.messages.length - 1]
+    return lastMessage?.isCounterOffer ? lastMessage.counterOffer?.timeline : negotiation.currentProposal?.timeline
+  }, [negotiation])
 
+
+  // Fetch negotiation data
+  useEffect(() => {
+    const fetchNegotiationData = async () => {
+      if (!isAuthenticated || user?.accountType !== "paid") {
+        return
+      }
+      
+      setNegotiationLoading(true)
+      try {
+        const data = await negotiationService.getNegotiationData(id, proposalId)
+        setNegotiation(data)
+        
+        // Set milestones from the negotiation data
+        if (data?.milestones && data.milestones.length > 0) {
+          setMilestones(data.milestones)
+          setUseMilestones(true)
+        }
+      } catch (error) {
+        console.error("Error fetching negotiation data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load negotiation data",
+          variant: "destructive",
+        })
+      } finally {
+        setNegotiationLoading(false)
+      }
+    }
+
+    fetchNegotiationData()
+  }, [id, proposalId, isAuthenticated, user, toast])
 
   // Redirect if not authenticated or not a paid user
   useEffect(() => {
@@ -215,18 +166,8 @@ export default function NegotiatePage({
       router.push("/auth/login")
     } else if (user?.accountType !== "paid") {
       router.push("/upgrade")
-    } else {
-      // Simulate loading data
-      setTimeout(() => {
-
-        // Set milestones from the negotiation data
-        if (negotiation.milestones && negotiation.milestones.length > 0) {
-          setMilestones(negotiation.milestones)
-          setUseMilestones(true)
-        }
-      }, 1000)
     }
-  }, [isAuthenticated, router, user, negotiation.milestones])
+  }, [isAuthenticated, router, user])
 
   // Calculate total percentage whenever milestones change
   useEffect(() => {
@@ -240,7 +181,7 @@ export default function NegotiatePage({
     const start = new Date()
 
     // Extract number of months from timeline string (e.g., "3 months" -> 3)
-    const durationMatch = currentTimelineStr.match(/(\d+(\.\d+)?)/)
+    const durationMatch = currentTimelineStr?.match(/(\d+(\.\d+)?)/)
     const durationMonths = durationMatch ? Number.parseFloat(durationMatch[1]) : 3
 
     // Calculate end date
@@ -254,11 +195,11 @@ export default function NegotiatePage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (!isAuthenticated || user?.accountType !== "paid" || isLoading) {
+  if (!isAuthenticated || user?.accountType !== "paid" || isLoading || negotiationLoading || !negotiation) {
     return null
   }
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!message.trim() && (!isCounterOffer || (!counterOffer.budget && !counterOffer.timeline))) {
       toast({
         title: "Missing information",
@@ -268,19 +209,63 @@ export default function NegotiatePage({
       return
     }
 
-    // In a real app, we would call an API to send the message
-    toast({
-      title: isCounterOffer ? "Counter offer sent" : "Message sent",
-      description: `Your ${isCounterOffer ? "counter offer" : "message"} has been sent successfully.`,
-    })
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "User not authenticated",
+        variant: "destructive",
+      })
+      return
+    }
 
-    // Clear the inputs
-    setMessage("")
-    setCounterOffer({
-      budget: "",
-      timeline: "",
-    })
-    setIsCounterOffer(false)
+    setSendingMessage(true)
+    
+    try {
+      const success = await negotiationService.addNegotiationMessage(
+        proposalId,
+        user.id,
+        message,
+        isCounterOffer,
+        isCounterOffer ? counterOffer.budget : undefined,
+        isCounterOffer ? counterOffer.timeline : undefined
+      )
+
+      if (success) {
+        toast({
+          title: isCounterOffer ? "Counter offer sent" : "Message sent",
+          description: `Your ${isCounterOffer ? "counter offer" : "message"} has been sent successfully.`,
+        })
+
+        // Clear the inputs
+        setMessage("")
+        setCounterOffer({
+          budget: "",
+          timeline: "",
+        })
+        setIsCounterOffer(false)
+
+        // Refetch negotiation data to show the new message
+        const updatedData = await negotiationService.getNegotiationData(id, proposalId)
+        if (updatedData) {
+          setNegotiation(updatedData)
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error sending message:", error)
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setSendingMessage(false)
+    }
   }
 
   const handleAcceptTerms = () => {
@@ -336,7 +321,7 @@ export default function NegotiatePage({
         <div>
           <h1 className="text-2xl font-bold">Negotiate Terms</h1>
           <p className="text-muted-foreground">
-            For smartject: <span className="font-medium">{negotiation.smartjectTitle}</span>
+            For smartject: <span className="font-medium">{negotiation?.smartjectTitle || 'Loading...'}</span>
           </p>
         </div>
       </div>
@@ -350,14 +335,14 @@ export default function NegotiatePage({
                 <CardDescription>Negotiate terms and conditions</CardDescription>
               </div>
               <Badge variant="outline" className="ml-2">
-                {negotiation.messages.length} messages
+                {negotiation?.messages?.length || 0} messages
               </Badge>
             </CardHeader>
 
             <CardContent>
               {/* Comments-like interface for messages */}
               <div className="space-y-6 mb-6">
-                {negotiation.messages.map((msg) => {
+                {negotiation?.messages?.map((msg: Message) => {
                   const isCurrentUser = msg.sender === (user?.id === negotiation.provider.id ? "provider" : "needer")
                   return (
                     <div key={msg.id} className="flex gap-4 p-4 border rounded-lg bg-card">
@@ -371,7 +356,7 @@ export default function NegotiatePage({
                         </div>
                         <p className="mb-3">{msg.content}</p>
 
-                        {msg.isCounterOffer && (
+                        {msg.isCounterOffer && msg.counterOffer && (
                           <div className="bg-muted p-3 rounded-md mb-2">
                             <p className="text-sm font-medium mb-2">Counter Offer:</p>
                             <div className="grid grid-cols-2 gap-4">
@@ -438,9 +423,9 @@ export default function NegotiatePage({
                     <Paperclip className="h-4 w-4 mr-2" />
                     Attach File
                   </Button>
-                  <Button onClick={handleSendMessage}>
+                  <Button onClick={handleSendMessage} disabled={sendingMessage}>
                     <Send className="h-4 w-4 mr-2" />
-                    {isCounterOffer ? "Send Counter Offer" : "Send Message"}
+                    {sendingMessage ? "Sending..." : (isCounterOffer ? "Send Counter Offer" : "Send Message")}
                   </Button>
                 </div>
               </div>
@@ -461,9 +446,9 @@ export default function NegotiatePage({
                     <DollarSign className="h-4 w-4 mr-1" /> Budget
                   </div>
                   <p className="font-medium">
-                    {negotiation.messages[negotiation.messages.length - 1].isCounterOffer
-                      ? negotiation.messages[negotiation.messages.length - 1].counterOffer.budget
-                      : negotiation.currentProposal.budget}
+                    {negotiation?.messages && negotiation.messages.length > 0 && negotiation.messages[negotiation.messages.length - 1]?.isCounterOffer
+                      ? negotiation.messages[negotiation.messages.length - 1]?.counterOffer?.budget
+                      : negotiation?.currentProposal?.budget}
                   </p>
                 </div>
                 <div>
@@ -484,9 +469,9 @@ export default function NegotiatePage({
                     <Check className="h-4 w-4 mr-1" /> Deliverables
                   </div>
                   <ul className="text-sm list-disc pl-5">
-                    {negotiation.currentProposal.deliverables.map((item, index) => (
+                    {negotiation?.currentProposal?.deliverables?.map((item: string, index: number) => (
                       <li key={index}>{item}</li>
-                    ))}
+                    )) || []}
                   </ul>
                 </div>
               </div>
@@ -598,7 +583,7 @@ export default function NegotiatePage({
                     <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
                     <span className="text-sm">Started</span>
                   </div>
-                  <span className="text-sm">{new Date(negotiation.messages[0].timestamp).toLocaleDateString()}</span>
+                  <span className="text-sm">{new Date(negotiation.messages[0]?.timestamp).toLocaleDateString()}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
@@ -613,7 +598,7 @@ export default function NegotiatePage({
                     <span className="text-sm">Last Activity</span>
                   </div>
                   <span className="text-sm">
-                    {new Date(negotiation.messages[negotiation.messages.length - 1].timestamp).toLocaleDateString()}
+                    {new Date(negotiation.messages[negotiation.messages.length - 1]?.timestamp).toLocaleDateString()}
                   </span>
                 </div>
               </div>
