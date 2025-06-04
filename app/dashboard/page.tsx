@@ -277,7 +277,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Matches Section */}
-          <div className="mb-8">
+          {/* <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Recent Matches</h2>
               <Button
@@ -371,7 +371,7 @@ export default function DashboardPage() {
                 </Card>
               )}
             </div>
-          </div>
+          </div> */}
 
           {/* Contracts Section */}
           <div className="mb-8">

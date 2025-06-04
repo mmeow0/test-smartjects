@@ -118,9 +118,9 @@ export function TopNav() {
                     <DropdownMenuItem asChild>
                       <Link href="/proposals">My Proposals</Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
+                    {/* <DropdownMenuItem asChild>
                       <Link href="/matches">My Matches</Link>
-                    </DropdownMenuItem>
+                    </DropdownMenuItem> */}
                     <DropdownMenuItem asChild>
                       <Link href="/negotiations">My Negotiations</Link>
                     </DropdownMenuItem>
