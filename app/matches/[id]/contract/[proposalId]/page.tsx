@@ -146,27 +146,18 @@ export default function ContractPage({
           description: "You have successfully signed the contract. A copy has been sent to your email.",
         });
 
-        // For mock implementation, simulate status update
-        if (contract) {
-          const updatedContract = { ...contract };
-          if (user.id === contract.provider.id) {
-            updatedContract.status.providerSigned = true;
-          } else if (user.id === contract.needer.id) {
-            updatedContract.status.neederSigned = true;
-          }
+        // Reload contract data to get updated signing status
+        const updatedContractData = await contractService.getContractData(id, proposalId);
+        if (updatedContractData) {
+          setContract(updatedContractData);
           
-          // Check if both parties have signed
-          if (updatedContract.status.providerSigned && updatedContract.status.neederSigned) {
-            updatedContract.status.contractActive = true;
+          // If both parties have signed, redirect to contracts page
+          if (updatedContractData.status.providerSigned && updatedContractData.status.neederSigned) {
+            setTimeout(() => {
+              router.push("/contracts");
+            }, 2000);
           }
-          
-          setContract(updatedContract);
         }
-
-        // If both parties have signed, redirect to contracts page
-        setTimeout(() => {
-          router.push("/contracts");
-        }, 2000);
       } else {
         toast({
           title: "Error",

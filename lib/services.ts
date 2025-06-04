@@ -1348,16 +1348,34 @@ export const contractService = {
     }
   },
 
-  // Sign contract (mock implementation for now)
+  // Sign contract by updating the appropriate signing status in the database
   async signContract(contractId: string, userId: string, isProvider: boolean): Promise<boolean> {
+    const supabase = getSupabaseBrowserClient();
+
     try {
-      // Since we're using mock contracts for now, just simulate signing
-      // In a real implementation, this would update the contracts table
-      console.log(`Mock signing contract ${contractId} by user ${userId} as ${isProvider ? 'provider' : 'needer'}`);
-      
-      // Simulate a small delay to make it feel real
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      // Determine which column to update based on user role
+      const updateColumn = isProvider ? 'provider_signed' : 'needer_signed';
+      const updateData = { [updateColumn]: true };
+
+      // Update the contract signing status
+      const { data, error } = await supabase
+        .from("contracts")
+        .update(updateData)
+        .eq("id", contractId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error signing contract:", error);
+        return false;
+      }
+
+      if (!data) {
+        console.error("Contract not found:", contractId);
+        return false;
+      }
+
+      console.log(`Contract ${contractId} signed by user ${userId} as ${isProvider ? 'provider' : 'needer'}`);
       return true;
     } catch (error) {
       console.error("Error in signContract:", error);

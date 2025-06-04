@@ -317,37 +317,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = async () => {
-    if (!supabase) {
-      throw new Error("Supabase client not available");
-    }
+const logout = async () => {
+  if (!supabase) {
+    console.error("Supabase client not available");
+    return;
+  }
 
-    try {
-      console.log("Attempting logout");
-      setIsLoading(true);
+  console.log("Attempting logout");
+  setIsLoading(true);
 
-      const { error } = await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
 
-      if (error) {
-        setIsLoading(false);
-        throw error;
-      }
+  if (error) {
+    console.error("Logout error:", error);
+    setIsLoading(false);
+    return;
+  }
 
-      console.log("Logout successful");
+  console.log("Logout successful");
 
-      setUser(null);
-      setSession(null);
-      setIsAuthenticated(false);
-      setIsLoading(false);
+  setUser(null);
+  setSession(null);
+  setIsAuthenticated(false);
+  setIsLoading(false);
 
-      // Use Next.js router for navigation
-      router.push("/");
-    } catch (error) {
-      console.error("Logout error:", error);
-      setIsLoading(false);
-      throw error;
-    }
-  };
+  router.push("/");
+};
+
 
   return (
     <AuthContext.Provider
