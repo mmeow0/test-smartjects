@@ -29,6 +29,7 @@ import {
   ChevronUp,
 } from "lucide-react"
 import { ContractDocumentPreview } from "@/components/contract-document-preview"
+import { contractService } from "@/lib/services"
 
 export default function ContractDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -38,23 +39,87 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [expandedMilestone, setExpandedMilestone] = useState<string | null>(null)
+  const [isCheckingSigningStatus, setIsCheckingSigningStatus] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Redirect if not authenticated or not a paid user
+  // Check contract signing status and redirect if needed
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login")
-    } else if (user?.accountType !== "paid") {
-      router.push("/upgrade")
-    } else {
-      // Simulate loading data
-      setTimeout(() => {
-        setIsLoading(false)
-      }, 1000)
-    }
-  }, [isAuthenticated, router, user])
+    const checkContractAccess = async () => {
+      if (!isAuthenticated) {
+        router.push("/auth/login")
+        return
+      }
+      
+      if (user?.accountType !== "paid") {
+        router.push("/upgrade")
+        return
+      }
 
-  if (!isAuthenticated || user?.accountType !== "paid" || isLoading) {
-    return null
+      try {
+        // Check if contract is fully signed using contractId
+        const { isSigned } = await contractService.isContractFullySigned(id)
+        
+        if (!isSigned) {
+          // Contract not fully signed - need to get matchId and proposalId to redirect
+          // First get the contract data to find the matchId
+          const contractData = await contractService.isContractFullySigned(id)
+          
+          if (contractData.isSigned) {
+            // Redirect to signing page instead of showing contract details
+            router.push(`/matches/${contractData.matchId}/contract/${contractData.proposalId}`)
+            return
+          } else {
+            // If we can't get contract data, show error
+            setError("Contract not found or access denied")
+            setIsCheckingSigningStatus(false)
+            setIsLoading(false)
+            return
+          }
+        }
+        
+        // Contract is fully signed - proceed to show contract details
+        setIsCheckingSigningStatus(false)
+        setIsLoading(false)
+        
+      } catch (error) {
+        console.error("Error checking contract access:", error)
+        setError("Failed to verify contract access")
+        setIsCheckingSigningStatus(false)
+        setIsLoading(false)
+      }
+    }
+
+    checkContractAccess()
+  }, [isAuthenticated, router, user, id])
+
+  if (!isAuthenticated || user?.accountType !== "paid" || isLoading || isCheckingSigningStatus) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">
+              {isCheckingSigningStatus ? "Checking contract access..." : "Loading contract..."}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <p className="text-destructive mb-4">{error}</p>
+            <Button onClick={() => router.back()}>
+              Go Back
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Mock contract data

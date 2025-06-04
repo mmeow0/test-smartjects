@@ -1365,6 +1365,50 @@ export const contractService = {
     }
   },
 
+
+async isContractFullySigned(contractId: string): Promise<{
+  isSigned: boolean;
+  matchId?: string;
+  proposalId?: string;
+}> {
+  const supabase = getSupabaseBrowserClient();
+
+  try {
+    // Получить данные контракта, включая matchId и proposalId
+    const { data: contractData, error } = await supabase
+      .from("contracts")
+      .select("provider_signed, needer_signed, match_id, proposal_id")
+      .eq("id", contractId)
+      .single();
+
+    if (error || !contractData) {
+      console.error("Error checking contract signing status:", error);
+      return { isSigned: false };
+    }
+
+    const isSigned = contractData.provider_signed && contractData.needer_signed;
+
+    return {
+      isSigned,
+      matchId: contractData.match_id,
+      proposalId: contractData.proposal_id,
+    };
+  } catch (error) {
+    console.error("Error in isContractFullySigned:", error);
+    return { isSigned: false };
+  }
+},
+
+  getContractNavigationUrl(matchId: string, proposalId: string, contractId: string, isSigned: boolean): string {
+    if (isSigned) {
+      // Contract is fully signed - go to final contract page
+      return `/contracts/${contractId}`;
+    } else {
+      // Contract is still in signing phase - go to contract signing page
+      return `/matches/${matchId}/contract/${proposalId}`;
+    }
+  },
+
   // Create contract from negotiation
   async createContractFromNegotiation(
     matchId: string,
@@ -1422,6 +1466,7 @@ export const contractService = {
           match_id: matchId,
           provider_id: finalProviderId,
           needer_id: finalNeederId,
+          proposal_id: proposalId,
           title: `Contract for Proposal ${proposalId}`,
           budget: terms.budget,
           scope: terms.scope,

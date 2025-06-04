@@ -176,7 +176,23 @@ export default function ContractsPage() {
             <Card
               key={contract.id}
               className="cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => router.push(`/contracts/${contract.id}`)}
+              onClick={async () => {
+                try {
+                  // Check if contract is fully signed
+                 const { isSigned, matchId, proposalId } = await contractService.isContractFullySigned(contract.id);
+                  if (!isSigned) {
+                    // Contract is fully signed - go to contract details
+                    router.push(`/matches/${matchId}/contract/${proposalId}`);
+                  } else {
+                    // Contract not fully signed - show message or redirect to signing
+                    console.log("Contract not fully signed yet");
+                    router.push(`/contracts/${contract.id}`); // Temporary fallback
+                  }
+                } catch (error) {
+                  console.error("Error checking contract status:", error);
+                  router.push(`/contracts/${contract.id}`);
+                }
+              }}
             >
               <CardHeader>
                 <div className="flex justify-between items-start">
@@ -227,7 +243,31 @@ export default function ContractsPage() {
                     <Download className="h-4 w-4 mr-2" />
                     Download
                   </Button>
-                  <Button size="sm">View Details</Button>
+                  <Button 
+                    size="sm"
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      try {
+                        // Check if contract is fully signed
+                        const { isSigned, matchId, proposalId } = await contractService.isContractFullySigned(contract.id);
+                        console.log(isSigned, matchId, proposalId);
+                        
+                        if (!isSigned) {
+                          // Contract is fully signed - go to contract details
+                          router.push(`/matches/${matchId}/contract/${proposalId}`);
+                        } else {
+                          // Contract not fully signed - show message or redirect to signing
+                          console.log("Contract not fully signed yet");
+                          router.push(`/contracts/${contract.id}`); // Temporary fallback
+                        }
+                      } catch (error) {
+                        console.error("Error checking contract status:", error);
+                        router.push(`/contracts/${contract.id}`);
+                      }
+                    }}
+                  >
+                    View Details
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -305,7 +345,16 @@ export default function ContractsPage() {
                     <Download className="h-4 w-4 mr-2" />
                     Download
                   </Button>
-                  <Button size="sm">View Details</Button>
+                  <Button 
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      // Completed contracts are assumed to be fully signed
+                      router.push(`/contracts/${contract.id}`)
+                    }}
+                  >
+                    View Details
+                  </Button>
                 </div>
               </CardContent>
             </Card>
