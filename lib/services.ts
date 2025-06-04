@@ -1427,6 +1427,267 @@ async isContractFullySigned(contractId: string): Promise<{
     }
   },
 
+  // Get contract by ID with full details
+  async getContractById(contractId: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Get current user
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        console.error("No authenticated user");
+        return null;
+      }
+
+      // Get contract data with related information
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select(`
+          *,
+          provider:users!contracts_provider_id_fkey(id, name, email),
+          needer:users!contracts_needer_id_fkey(id, name, email),
+          contract_deliverables(id, description),
+          contract_milestones(id, name, description, percentage, amount, status, completed_date)
+        `)
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        console.error("Error fetching contract:", contractError);
+        return null;
+      }
+
+      // Check if user has access to this contract
+      if (contractData.provider_id !== currentUser.id && contractData.needer_id !== currentUser.id) {
+        console.error("User does not have access to this contract");
+        return null;
+      }
+
+      // Get smartject title from match
+      const { data: matchData } = await supabase
+        .from("matches")
+        .select("smartject_id")
+        .eq("id", contractData.match_id)
+        .single();
+
+      let smartjectTitle = "Unknown Project";
+      if (matchData) {
+        const { data: smartjectData } = await supabase
+          .from("smartjects")
+          .select("title")
+          .eq("id", matchData.smartject_id)
+          .single();
+        
+        if (smartjectData) {
+          smartjectTitle = smartjectData.title;
+        }
+      }
+
+      // Get milestone comments
+      const { data: milestoneComments } = await supabase
+        .from("contract_milestone_comments")
+        .select(`
+          *,
+          user:users(name)
+        `)
+        .in("milestone_id", contractData.contract_milestones?.map((m: any) => m.id) || []);
+
+      // Transform milestones data
+      const paymentSchedule = contractData.contract_milestones?.map((milestone: any) => ({
+        id: milestone.id,
+        name: milestone.name,
+        description: milestone.description,
+        percentage: milestone.percentage,
+        amount: milestone.amount,
+        status: milestone.status,
+        completedDate: milestone.completed_date,
+        deliverables: [`${milestone.name} deliverables`], // Mock deliverables for now
+        comments: milestoneComments?.filter(c => c.milestone_id === milestone.id).map(c => ({
+          user: c.user?.name || "Unknown User",
+          date: c.created_at,
+          content: c.content
+        })) || []
+      })) || [
+        {
+          id: "milestone-1",
+          name: "Project Kickoff",
+          description: "Initial setup, requirements gathering, and project planning",
+          percentage: 30,
+          amount: "30% of total budget",
+          status: "pending",
+          deliverables: ["Project plan", "Requirements document"],
+          comments: []
+        },
+        {
+          id: "milestone-2", 
+          name: "Midpoint Delivery",
+          description: "Core development and implementation",
+          percentage: 40,
+          amount: "40% of total budget", 
+          status: "pending",
+          deliverables: ["Core functionality", "Testing results"],
+          comments: []
+        },
+        {
+          id: "milestone-3",
+          name: "Final Delivery", 
+          description: "Complete system with documentation and training",
+          percentage: 30,
+          amount: "30% of total budget",
+          status: "pending", 
+          deliverables: ["Complete system", "Documentation", "Training materials"],
+          comments: []
+        }
+      ];
+
+      // Determine user role
+      const isProvider = currentUser.id === contractData.provider_id;
+      const role = isProvider ? "provider" : "needer";
+
+      // Calculate status
+      let status = contractData.status;
+      if (contractData.provider_signed && contractData.needer_signed && status === "pending_start") {
+        status = "active";
+      }
+
+      // Transform contract data
+      const contract = {
+        id: contractData.id,
+        title: contractData.title || smartjectTitle,
+        smartjectId: contractData.match_id,
+        smartjectTitle: smartjectTitle,
+        status: status,
+        role: role,
+        createdAt: contractData.created_at,
+        startDate: contractData.start_date,
+        endDate: contractData.end_date,
+        exclusivityEnds: contractData.exclusivity_ends,
+        budget: contractData.budget,
+        provider: {
+          id: contractData.provider.id,
+          name: contractData.provider.name,
+          email: contractData.provider.email,
+          avatar: "",
+        },
+        needer: {
+          id: contractData.needer.id,
+          name: contractData.needer.name,
+          email: contractData.needer.email,
+          avatar: "",
+        },
+        scope: contractData.scope,
+        deliverables: contractData.contract_deliverables?.map((d: any) => d.description) || [
+          "Project implementation",
+          "Documentation and training",
+          "Testing and quality assurance"
+        ],
+        paymentSchedule: paymentSchedule,
+        documents: await (async () => {
+          const { data: contractDocuments } = await supabase
+            .from("contract_documents")
+            .select("*")
+            .eq("contract_id", contractData.id);
+          
+          return contractDocuments?.map(doc => ({
+            name: doc.name,
+            type: doc.type || "pdf",
+            size: doc.size || "Unknown",
+            uploadedAt: doc.created_at,
+          })) || [
+            {
+              name: "Contract Agreement.pdf",
+              type: "pdf", 
+              size: "1.2 MB",
+              uploadedAt: contractData.created_at,
+            }
+          ];
+        })(),
+        activity: await (async () => {
+          const { data: contractActivity } = await supabase
+            .from("contract_activities")
+            .select(`
+              *,
+              user:users(name)
+            `)
+            .eq("contract_id", contractData.id)
+            .order("created_at", { ascending: false });
+          
+          return contractActivity?.map(activity => ({
+            id: activity.id,
+            type: activity.type,
+            date: activity.created_at,
+            description: activity.description,
+            user: activity.user?.name || "System",
+          })) || [
+            {
+              id: "activity-1",
+              type: "contract_created",
+              date: contractData.created_at,
+              description: "Contract created",
+              user: "System",
+            }
+          ];
+        })(),
+        messages: await (async () => {
+          const { data: contractMessages } = await supabase
+            .from("contract_messages")
+            .select(`
+              *,
+              user:users(name)
+            `)
+            .eq("contract_id", contractData.id)
+            .order("created_at", { ascending: true });
+          
+          return contractMessages?.map(message => ({
+            id: message.id,
+            sender: message.user?.name || "Unknown User",
+            content: message.content,
+            timestamp: message.created_at,
+          })) || [
+            {
+              id: "msg-1",
+              sender: isProvider ? contractData.needer.name : contractData.provider.name,
+              content: "Looking forward to working together on this project!",
+              timestamp: contractData.created_at,
+            }
+          ];
+        })(),
+        documentVersions: await (async () => {
+          const { data: docVersions } = await supabase
+            .from("document_versions")
+            .select(`
+              *,
+              author:users(name),
+              document:contract_documents!inner(contract_id)
+            `)
+            .eq("document.contract_id", contractData.id)
+            .order("version_number", { ascending: false });
+          
+          return docVersions?.map(version => ({
+            id: version.id,
+            versionNumber: version.version_number,
+            date: version.created_at,
+            author: version.author?.name || "System",
+            changes: Array.isArray(version.changes) ? version.changes : ["Version created"],
+          })) || [
+            {
+              id: "version-1",
+              versionNumber: 1,
+              date: contractData.created_at,
+              author: "System",
+              changes: ["Initial contract creation"],
+            }
+          ];
+        })(),
+      };
+
+      return contract;
+    } catch (error) {
+      console.error("Error in getContractById:", error);
+      return null;
+    }
+  },
+
   // Create contract from negotiation
   async createContractFromNegotiation(
     matchId: string,
