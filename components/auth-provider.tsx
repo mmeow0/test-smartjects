@@ -6,6 +6,8 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
+const supabase = getSupabaseBrowserClient();
+
 type UserType = {
   id: string;
   name: string;
@@ -33,16 +35,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-
-  // Initialize Supabase client safely
-  const [supabase] = useState(() => {
-    try {
-      return getSupabaseBrowserClient();
-    } catch (e) {
-      console.error(e);
-      return null;
-    }
-  });
 
   // Fetch user profile from the database
   const fetchUserProfile = async (authUser: User) => {

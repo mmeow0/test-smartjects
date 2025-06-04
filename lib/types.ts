@@ -175,6 +175,23 @@ export type ContractMilestoneType = {
   deliverables: DeliverableType[];
 };
 
+export type ContractListType = {
+  id: string;
+  smartjectId: string;
+  smartjectTitle: string;
+  otherParty: string;
+  role: "provider" | "needer";
+  startDate: string;
+  endDate: string;
+  status: "pending_start" | "active" | "completed" | "cancelled";
+  budget: string;
+  nextMilestone?: string;
+  nextMilestoneDate?: string;
+  finalMilestone?: string;
+  completionDate?: string;
+  exclusivityEnds: string;
+};
+
 export type DocumentVersionType = {
   id: string;
   documentId: string;

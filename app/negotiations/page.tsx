@@ -26,6 +26,7 @@ interface UserConversation {
   totalMessages: number
   lastActivity: string
   activeNegotiations: {
+    matchId: string;
     proposalId: string
     smartjectId: string
     smartjectTitle: string
@@ -105,6 +106,7 @@ const getUserNegotiations = async (userId: string) => {
 
     const userConversations: { [conversationId: string]: UserConversation } = {};
 
+    
     for (const proposalId of uniqueProposalIds) {
       // Получаем пропозал
       const { data: proposal, error: proposalError } = await supabase
@@ -132,6 +134,62 @@ const getUserNegotiations = async (userId: string) => {
         : proposal.user_id;
 
       if (!otherPartyId) continue;
+
+      // Определяем provider и needer
+      const providerId = proposal.user_id; // Тот кто создал proposal всегда provider
+      const neederId = isProposalOwner ? otherPartyId : userId;
+
+      console.log(`Looking for match with smartject_id: ${proposal.smartject_id}, provider: ${providerId}, needer: ${neederId}`);
+
+      // Получаем или создаем match по smartject_id, provider_id и needer_id
+      let matchId = null;
+      
+      // Сначала пытаемся найти существующий match
+      const { data: existingMatch, error: matchError } = await supabase
+        .from("matches")
+        .select("id")
+        .eq("smartject_id", proposal.smartject_id)
+        .eq("provider_id", providerId)
+        .eq("needer_id", neederId)
+        .maybeSingle();
+
+      if (matchError) {
+        console.error("Error looking up match:", matchError);
+        continue; // Пропускаем этот proposal если не можем найти match
+      }
+
+      if (existingMatch) {
+        matchId = existingMatch.id;
+        console.log(`Found existing match: ${matchId} for smartject: ${proposal.smartject_id} between provider: ${providerId} and needer: ${neederId}`);
+      } else {
+        console.log(`No existing match found for smartject: ${proposal.smartject_id} between provider: ${providerId} and needer: ${neederId}, creating new match...`);
+        
+        // Если match не найден, создаем новый
+        const { data: newMatch, error: createError } = await supabase
+          .from("matches")
+          .insert({
+            smartject_id: proposal.smartject_id,
+            provider_id: providerId,
+            needer_id: neederId,
+            status: 'new'
+          })
+          .select("id")
+          .single();
+
+        if (newMatch && !createError) {
+          matchId = newMatch.id;
+          console.log(`Created new match: ${matchId} for smartject: ${proposal.smartject_id} between provider: ${providerId} and needer: ${neederId}`);
+        } else {
+          console.error(`Error creating match for smartject ${proposal.smartject_id} between provider: ${providerId} and needer: ${neederId}:`, createError);
+          console.error("Proposal data:", proposal);
+          continue; // Пропускаем этот proposal если не можем создать match
+        }
+      }
+
+      if (!matchId) {
+        console.error(`Failed to get matchId for proposal ${proposalId} with smartject ${proposal.smartject_id} between provider: ${providerId} and needer: ${neederId}`);
+        continue;
+      }
 
       // Получаем данные другой стороны
       const { data: userData } = await supabase
@@ -176,6 +234,7 @@ const getUserNegotiations = async (userId: string) => {
       userConversations[conversationKey].activeNegotiations.push({
         proposalId: proposal.id,
         smartjectId: proposal.smartject_id,
+        matchId,
         smartjectTitle,
         budget: proposal.budget || "",
         timeline: proposal.timeline || "",
@@ -354,7 +413,7 @@ const getUserNegotiations = async (userId: string) => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => router.push(`/matches/match-${negotiation.smartjectId}-${negotiation.proposalId}/negotiate/${negotiation.proposalId}/${conversation.otherParty.id}`)}
+                            onClick={() => router.push(`/matches/${negotiation.matchId}/negotiate/${negotiation.proposalId}/${conversation.otherParty.id}`)}
                           >
                             Open
                           </Button>
@@ -372,7 +431,7 @@ const getUserNegotiations = async (userId: string) => {
                     onClick={() => {
                       // Navigate to the most recent negotiation
                       const mostRecent = conversation.activeNegotiations[0];
-                      router.push(`/matches/match-${mostRecent.smartjectId}-${mostRecent.proposalId}/negotiate/${mostRecent.proposalId}/${conversation.otherParty.id}`);
+                      router.push(`/matches/${mostRecent.matchId}/negotiate/${mostRecent.proposalId}/${conversation.otherParty.id}`);
                     }}
                     className="ml-4"
                   >

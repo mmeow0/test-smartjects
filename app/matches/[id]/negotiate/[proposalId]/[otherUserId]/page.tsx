@@ -31,6 +31,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { getSupabaseBrowserClient } from "@/lib/supabase"
+import { contractService } from "@/lib/services"
 
 interface Deliverable {
   id: string
@@ -113,6 +114,7 @@ export default function IndividualNegotiatePage({
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [totalPercentage, setTotalPercentage] = useState(0)
   const [sendingMessage, setSendingMessage] = useState(false)
+  const [acceptingTerms, setAcceptingTerms] = useState(false)
 
   const currentTimelineStr = useMemo(() => {
     if (!negotiation) return ""
@@ -345,7 +347,7 @@ export default function IndividualNegotiatePage({
     }
   }
 
-  const handleAcceptTerms = () => {
+  const handleAcceptTerms = async () => {
     if (useMilestones) {
       if (milestones.length === 0) {
         toast({
@@ -366,12 +368,72 @@ export default function IndividualNegotiatePage({
       }
     }
 
-    toast({
-      title: "Terms accepted",
-      description: `You've accepted the terms for negotiation with ${negotiation.otherUser.name}. A contract will be generated.`,
-    })
+    if (!negotiation || !user?.id) {
+      toast({
+        title: "Error",
+        description: "Missing negotiation data or user information.",
+        variant: "destructive",
+      })
+      return
+    }
 
-    router.push(`/matches/${id}/contract/${proposalId}`)
+    setAcceptingTerms(true)
+
+    try {
+      // Get the latest terms from messages or current proposal
+      const lastMessage = negotiation.messages?.[negotiation.messages.length - 1]
+      const currentBudget = lastMessage?.isCounterOffer ? lastMessage.counterOffer?.budget : negotiation.currentProposal?.budget
+      const currentTimeline = lastMessage?.isCounterOffer ? lastMessage.counterOffer?.timeline : negotiation.currentProposal?.timeline
+
+      // Create contract terms
+      const terms = {
+        budget: currentBudget || "",
+        timeline: currentTimeline || "",
+        scope: negotiation.currentProposal.scope,
+        deliverables: negotiation.currentProposal.deliverables,
+        milestones: useMilestones ? milestones.map(m => ({
+          name: m.name,
+          description: m.description,
+          percentage: m.percentage,
+          amount: m.amount
+        })) : []
+      }
+
+      // Create contract - provider and needer IDs will be fetched from the match table
+      const contractId = await contractService.createContractFromNegotiation(
+        id,
+        proposalId,
+        "", // providerId - will be fetched from match
+        "", // neederId - will be fetched from match
+        terms
+      )
+
+      if (!contractId) {
+        toast({
+          title: "Error",
+          description: "Failed to create contract. Please try again.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      toast({
+        title: "Terms accepted",
+        description: `Contract created successfully! You've accepted the terms for negotiation with ${negotiation.otherUser.name}.`,
+      })
+
+      router.push(`/matches/${id}/contract/${proposalId}`)
+
+    } catch (error) {
+      console.error("Error creating contract:", error)
+      toast({
+        title: "Error",
+        description: "Failed to create contract. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setAcceptingTerms(false)
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -581,9 +643,9 @@ export default function IndividualNegotiatePage({
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleAcceptTerms}>
+              <Button className="w-full" onClick={handleAcceptTerms} disabled={acceptingTerms}>
                 <ThumbsUp className="h-4 w-4 mr-2" />
-                Accept Terms with {negotiation.otherUser.name}
+                {acceptingTerms ? "Creating Contract..." : `Accept Terms with ${negotiation.otherUser.name}`}
               </Button>
             </CardFooter>
           </Card>

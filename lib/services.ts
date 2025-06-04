@@ -7,6 +7,7 @@ import type {
   UserType,
   MilestoneType,
   DeliverableType,
+  ContractListType,
 } from "./types";
 
 // Smartject services
@@ -1094,7 +1095,106 @@ export const contractService = {
         return null;
       }
 
-      // Get the proposal first
+      // First, try to get real contract data by match_id
+      const { data: realContractData, error: contractError } = await supabase
+        .from("contracts")
+        .select(`
+          *,
+          provider:users!provider_id(id, name, email),
+          needer:users!needer_id(id, name, email),
+          contract_deliverables(description),
+          contract_milestones(name, description, percentage, amount, status)
+        `)
+        .eq("match_id", matchId)
+        .single();
+
+      // If we found a real contract, use it
+      if (realContractData && !contractError) {
+        // Get smartject title
+        const { data: proposalData } = await supabase
+          .from("proposals")
+          .select("smartject_id, title")
+          .eq("id", proposalId)
+          .single();
+
+        const { data: smartjectData } = await supabase
+          .from("smartjects")
+          .select("title")
+          .eq("id", proposalData?.smartject_id)
+          .single();
+
+        const smartjectTitle = smartjectData?.title || proposalData?.title || "Unknown Project";
+
+        // Transform real contract data
+        const contract = {
+          id: realContractData.id,
+          matchId: realContractData.match_id,
+          proposalId: proposalId,
+          smartjectTitle: smartjectTitle,
+          provider: {
+            id: realContractData.provider.id,
+            name: realContractData.provider.name,
+            email: realContractData.provider.email,
+          },
+          needer: {
+            id: realContractData.needer.id,
+            name: realContractData.needer.name,
+            email: realContractData.needer.email,
+          },
+          terms: {
+            budget: realContractData.budget,
+            timeline: contractService.calculateTimeline(realContractData.start_date, realContractData.end_date),
+            startDate: realContractData.start_date,
+            endDate: realContractData.end_date,
+            paymentSchedule: realContractData.contract_milestones?.length > 0 
+              ? realContractData.contract_milestones.map((m: any) => ({
+                  milestone: m.name,
+                  percentage: m.percentage,
+                  amount: m.amount,
+                }))
+              : [
+                  {
+                    milestone: "Project Start",
+                    percentage: 50,
+                    amount: "50% of total budget",
+                  },
+                  {
+                    milestone: "Project Completion",
+                    percentage: 50,
+                    amount: "50% of total budget",
+                  },
+                ],
+            scope: realContractData.scope,
+            deliverables: realContractData.contract_deliverables?.map((d: any) => d.description) || [],
+          },
+          status: {
+            providerSigned: realContractData.provider_signed || false,
+            neederSigned: realContractData.needer_signed || false,
+            contractActive: realContractData.status === "active",
+          },
+          exclusivity: {
+            clause: "Upon signing this contract, both parties agree to an exclusivity period for this specific smartject implementation. The provider agrees not to offer similar implementation services for this smartject to other parties, and the needer agrees not to engage other providers for this smartject implementation, for the duration of this contract plus 30 days after completion.",
+            duration: `Contract period + 30 days (until ${new Date(realContractData.exclusivity_ends).toLocaleDateString()})`,
+          },
+        };
+
+        return contract;
+      }
+
+      // Fallback to mock data if no real contract exists
+      // First, get the match to determine provider and needer
+      const { data: matchInfo, error: matchInfoError } = await supabase
+        .from("matches")
+        .select("provider_id, needer_id, smartject_id")
+        .eq("id", matchId)
+        .single();
+
+      if (matchInfoError || !matchInfo) {
+        console.error("Error fetching match info:", matchInfoError);
+        return null;
+      }
+
+      // Get the proposal data
       const { data: proposalData, error: proposalError } = await supabase
         .from("proposals")
         .select("*")
@@ -1106,23 +1206,23 @@ export const contractService = {
         return null;
       }
 
+      // Use provider and needer IDs from match
+      const providerId = matchInfo.provider_id;
+      const neederId = matchInfo.needer_id;
+      const isCurrentUserProvider = currentUser.id === providerId;
+
       // Get user data for provider
       const { data: providerData, error: providerError } = await supabase
         .from("users")
         .select("id, name, email")
-        .eq("id", proposalData.user_id)
+        .eq("id", providerId)
         .single();
 
-      // For mock data, determine if current user is provider or needer
-      const isCurrentUserProvider = currentUser.id === proposalData.user_id;
-      const neederId = isCurrentUserProvider ? "mock-needer-id" : currentUser.id;
-      const providerId = proposalData.user_id;
-
-      // Get current user data
-      const { data: currentUserData, error: currentUserError } = await supabase
+      // Get needer data
+      const { data: neederData, error: neederError } = await supabase
         .from("users")
         .select("id, name, email")
-        .eq("id", currentUser.id)
+        .eq("id", neederId)
         .single();
 
       // For now, create a mock contract based on proposal data since we don't have real contracts yet
@@ -1148,8 +1248,8 @@ export const contractService = {
         },
         needer: {
           id: neederId,
-          name: isCurrentUserProvider ? "Smartject Owner" : ((currentUserData?.name as string) || "Current User"),
-          email: isCurrentUserProvider ? "needer@example.com" : ((currentUserData?.email as string) || "user@example.com")
+          name: (neederData?.name as string) || "Needer Name",
+          email: (neederData?.email as string) || "needer@example.com"
         }
       };
 
@@ -1163,7 +1263,7 @@ export const contractService = {
       const { data: smartjectData, error: smartjectError } = await supabase
         .from("smartjects")
         .select("title")
-        .eq("id", proposalData.smartject_id)
+        .eq("id", matchInfo.smartject_id)
         .single();
 
       let smartjectTitle = proposalData.title as string;
@@ -1287,6 +1387,21 @@ export const contractService = {
     const supabase = getSupabaseBrowserClient();
 
     try {
+      // Verify match exists and get provider/needer IDs from it
+      const { data: matchData, error: matchError } = await supabase
+        .from("matches")
+        .select("provider_id, needer_id")
+        .eq("id", matchId)
+        .single();
+
+      if (matchError || !matchData) {
+        console.error("Error fetching match data:", matchError);
+        return null;
+      }
+
+      // Use provider and needer IDs from the match table
+      const finalProviderId = matchData.provider_id || providerId;
+      const finalNeederId = matchData.needer_id || neederId;
       // Calculate dates
       const startDate = new Date();
       const timelineMatch = terms.timeline.match(/(\d+(\.\d+)?)/);
@@ -1305,8 +1420,8 @@ export const contractService = {
         .from("contracts")
         .insert({
           match_id: matchId,
-          provider_id: providerId,
-          needer_id: neederId,
+          provider_id: finalProviderId,
+          needer_id: finalNeederId,
           title: `Contract for Proposal ${proposalId}`,
           budget: terms.budget,
           scope: terms.scope,
@@ -1365,6 +1480,75 @@ export const contractService = {
     } catch (error) {
       console.error("Error in createContractFromNegotiation:", error);
       return null;
+    }
+  },
+
+  // Get user's contracts
+  async getUserContracts(userId: string): Promise<{
+    activeContracts: ContractListType[];
+    completedContracts: ContractListType[];
+  }> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Get contracts where user is either provider or needer
+      const { data: contractsData, error: contractsError } = await supabase
+        .from("contracts")
+        .select(`
+          *,
+          provider:users!contracts_provider_id_fkey(id, name, email),
+          needer:users!contracts_needer_id_fkey(id, name, email)
+        `)
+        .or(`provider_id.eq.${userId},needer_id.eq.${userId}`)
+        .order('created_at', { ascending: false });
+
+      if (contractsError) {
+        console.error("Error fetching contracts:", contractsError);
+        return { activeContracts: [], completedContracts: [] };
+      }
+
+      const contracts = contractsData || [];
+
+      // Transform contracts to match the expected format
+      const transformedContracts = contracts.map(contract => {
+        const isProvider = contract.provider_id === userId;
+        const otherParty = isProvider ? contract.needer?.name : contract.provider?.name;
+        const role = isProvider ? "provider" : "needer";
+
+        return {
+          id: contract.id,
+          smartjectId: contract.match_id,
+          smartjectTitle: contract.title || "Unknown Project",
+          otherParty: otherParty || "Unknown Party",
+          role: role,
+          startDate: contract.start_date,
+          endDate: contract.end_date,
+          status: contract.status,
+          budget: contract.budget,
+          nextMilestone: contract.status === "active" ? "In Progress" : contract.status === "pending_start" ? "Project Kickoff" : "N/A",
+          nextMilestoneDate: contract.status === "pending_start" ? contract.start_date : contract.end_date,
+          finalMilestone: contract.status === "completed" ? "Final Delivery" : undefined,
+          completionDate: contract.status === "completed" ? contract.end_date : undefined,
+          exclusivityEnds: contract.exclusivity_ends,
+        };
+      });
+
+      // Separate active and completed contracts
+      const activeContracts = transformedContracts.filter(contract => 
+        contract.status === "active" || contract.status === "pending_start"
+      );
+      
+      const completedContracts = transformedContracts.filter(contract => 
+        contract.status === "completed"
+      );
+
+      return {
+        activeContracts,
+        completedContracts
+      };
+    } catch (error) {
+      console.error("Error in getUserContracts:", error);
+      return { activeContracts: [], completedContracts: [] };
     }
   },
 };

@@ -8,13 +8,30 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/components/auth-provider"
+import { contractService } from "@/lib/services"
+import { ContractListType } from "@/lib/types"
 import { Calendar, Clock, Download, FileText, Search, Shield } from "lucide-react"
 
 export default function ContractsPage() {
+  // Helper function to safely format dates
+  const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return "N/A"
+    try {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return "Invalid Date"
+      return date.toLocaleDateString()
+    } catch {
+      return "Invalid Date"
+    }
+  }
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [activeContracts, setActiveContracts] = useState<ContractListType[]>([])
+  const [completedContracts, setCompletedContracts] = useState<ContractListType[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   // Redirect if not authenticated or not a paid user
   useEffect(() => {
@@ -25,74 +42,63 @@ export default function ContractsPage() {
     }
   }, [isAuthenticated, router, user])
 
+  // Fetch contracts data
+  useEffect(() => {
+    const fetchContracts = async () => {
+      if (!user?.id) return
+      
+      setLoading(true)
+      setError(null)
+      try {
+        const contractsData = await contractService.getUserContracts(user.id)
+        setActiveContracts(contractsData.activeContracts)
+        setCompletedContracts(contractsData.completedContracts)
+      } catch (error) {
+        console.error("Error fetching contracts:", error)
+        setError("Failed to load contracts. Please try again.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (isAuthenticated && user?.id && user?.accountType === "paid") {
+      fetchContracts()
+    }
+  }, [isAuthenticated, user])
+
   if (!isAuthenticated || user?.accountType !== "paid") {
     return null
   }
 
-  // Mock contracts data
-  const activeContracts = [
-    {
-      id: "contract-1",
-      smartjectId: "smartject-2",
-      smartjectTitle: "Automated Customer Support Chatbot",
-      otherParty: "Global Retail Corp",
-      role: "provider",
-      startDate: "2023-12-15",
-      endDate: "2024-02-15",
-      status: "active",
-      budget: "$14,000",
-      nextMilestone: "Midpoint Delivery",
-      nextMilestoneDate: "2024-01-15",
-      exclusivityEnds: "2024-03-15",
-    },
-    {
-      id: "contract-2",
-      smartjectId: "smartject-1",
-      smartjectTitle: "AI-Powered Supply Chain Optimization",
-      otherParty: "Tech Solutions Inc.",
-      role: "needer",
-      startDate: "2024-01-15",
-      endDate: "2024-03-31",
-      status: "pending_start",
-      budget: "$17,500",
-      nextMilestone: "Project Kickoff",
-      nextMilestoneDate: "2024-01-15",
-      exclusivityEnds: "2024-04-30",
-    },
-  ]
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading contracts...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-  const completedContracts = [
-    {
-      id: "contract-3",
-      smartjectId: "smartject-4",
-      smartjectTitle: "AI-Enhanced Fraud Detection System",
-      otherParty: "Security First Solutions",
-      role: "needer",
-      startDate: "2023-08-01",
-      endDate: "2023-11-15",
-      status: "completed",
-      budget: "$22,000",
-      finalMilestone: "Final Delivery",
-      completionDate: "2023-11-15",
-      exclusivityEnds: "2023-12-15",
-    },
-    {
-      id: "contract-4",
-      smartjectId: "smartject-5",
-      smartjectTitle: "Personalized Learning Platform",
-      otherParty: "EduTech Innovations",
-      role: "provider",
-      startDate: "2023-06-15",
-      endDate: "2023-10-30",
-      status: "completed",
-      budget: "$19,500",
-      finalMilestone: "Final Delivery",
-      completionDate: "2023-10-30",
-      exclusivityEnds: "2023-11-30",
-    },
-  ]
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <p className="text-destructive mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-  const filterContracts = (contracts: any[]) => {
+  const filterContracts = (contracts: ContractListType[]): ContractListType[] => {
     return contracts
       .filter((contract) => {
         // Filter by search term
@@ -113,7 +119,7 @@ export default function ContractsPage() {
   const filteredActiveContracts = filterContracts(activeContracts)
   const filteredCompletedContracts = filterContracts(completedContracts)
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: ContractListType['status']) => {
     switch (status) {
       case "active":
         return <Badge className="bg-green-100 text-green-800">Active</Badge>
@@ -190,8 +196,8 @@ export default function ContractsPage() {
                       <Calendar className="h-4 w-4 mr-1" /> Duration
                     </p>
                     <p className="font-medium">
-                      {new Date(contract.startDate).toLocaleDateString()} -{" "}
-                      {new Date(contract.endDate).toLocaleDateString()}
+                      {formatDate(contract.startDate)} -{" "}
+                      {formatDate(contract.endDate)}
                     </p>
                   </div>
                   <div>
@@ -206,14 +212,14 @@ export default function ContractsPage() {
                     </p>
                     <p className="font-medium">{contract.nextMilestone}</p>
                     <p className="text-xs text-muted-foreground">
-                      Due: {new Date(contract.nextMilestoneDate).toLocaleDateString()}
+                      Due: {formatDate(contract.nextMilestoneDate)}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground flex items-center">
                       <Shield className="h-4 w-4 mr-1" /> Exclusivity Ends
                     </p>
-                    <p className="font-medium">{new Date(contract.exclusivityEnds).toLocaleDateString()}</p>
+                    <p className="font-medium">{formatDate(contract.exclusivityEnds)}</p>
                   </div>
                 </div>
                 <div className="flex justify-end">
@@ -268,8 +274,8 @@ export default function ContractsPage() {
                       <Calendar className="h-4 w-4 mr-1" /> Duration
                     </p>
                     <p className="font-medium">
-                      {new Date(contract.startDate).toLocaleDateString()} -{" "}
-                      {new Date(contract.endDate).toLocaleDateString()}
+                      {formatDate(contract.startDate)} -{" "}
+                      {formatDate(contract.endDate)}
                     </p>
                   </div>
                   <div>
@@ -284,14 +290,14 @@ export default function ContractsPage() {
                     </p>
                     <p className="font-medium">{contract.finalMilestone}</p>
                     <p className="text-xs text-muted-foreground">
-                      On: {new Date(contract.completionDate).toLocaleDateString()}
+                      On: {formatDate(contract.completionDate)}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground flex items-center">
                       <Shield className="h-4 w-4 mr-1" /> Exclusivity Ended
                     </p>
-                    <p className="font-medium">{new Date(contract.exclusivityEnds).toLocaleDateString()}</p>
+                    <p className="font-medium">{formatDate(contract.exclusivityEnds)}</p>
                   </div>
                 </div>
                 <div className="flex justify-end">
