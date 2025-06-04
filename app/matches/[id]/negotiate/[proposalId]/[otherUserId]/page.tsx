@@ -31,7 +31,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { getSupabaseBrowserClient } from "@/lib/supabase"
-import { contractService } from "@/lib/services"
+import { contractService, negotiationService } from "@/lib/services"
 
 interface Deliverable {
   id: string
@@ -320,6 +320,16 @@ export default function IndividualNegotiatePage({
           variant: "destructive",
         })
       } else {
+        // Update match status to negotiating if it's not already
+        try {
+          const statusUpdated = await negotiationService.updateNegotiationStatus(id, 'negotiating')
+          if (!statusUpdated) {
+            console.error("Failed to update match status to negotiating")
+          }
+        } catch (statusUpdateError) {
+          console.error("Error updating match status:", statusUpdateError);
+        }
+
         toast({
           title: isCounterOffer ? "Counter offer sent" : "Message sent",
           description: `Your ${isCounterOffer ? "counter offer" : "message"} has been sent successfully.`,
@@ -415,6 +425,17 @@ export default function IndividualNegotiatePage({
           variant: "destructive",
         })
         return
+      }
+
+      // Update match status to indicate contract has been created
+      try {
+        const statusUpdated = await negotiationService.updateNegotiationStatus(id, 'contract_created')
+        if (!statusUpdated) {
+          console.error("Failed to update match status to contract_created")
+          // Don't block the flow if status update fails
+        }
+      } catch (error) {
+        console.error("Error updating match status:", error)
       }
 
       toast({

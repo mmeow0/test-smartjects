@@ -34,8 +34,9 @@ interface UserConversation {
     timeline: string
     messageCount: number
     isProposalOwner: boolean
+    status?: string
   }[]
-  status: 'active' | 'pending' | 'completed'
+  status: 'active' | 'pending' | 'completed' | 'contract_created' | 'cancelled'
 }
 
 export default function NegotiationsPage() {
@@ -44,6 +45,8 @@ export default function NegotiationsPage() {
   const { toast } = useToast()
 
   const [conversations, setConversations] = useState<UserConversation[]>([])
+  const [completedConversations, setCompletedConversations] = useState<UserConversation[]>([])
+  const [showCompleted, setShowCompleted] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -147,7 +150,7 @@ const getUserNegotiations = async (userId: string) => {
       // Сначала пытаемся найти существующий match
       const { data: existingMatch, error: matchError } = await supabase
         .from("matches")
-        .select("id")
+        .select("id, status")
         .eq("smartject_id", proposal.smartject_id)
         .eq("provider_id", providerId)
         .eq("needer_id", neederId)
@@ -240,16 +243,53 @@ const getUserNegotiations = async (userId: string) => {
         timeline: proposal.timeline || "",
         messageCount: proposalMessages.length,
         isProposalOwner,
+        status: existingMatch?.status || 'new',
       });
 
       userConversations[conversationKey].totalMessages += proposalMessages.length;
     }
 
-    const conversations = Object.values(userConversations);
-    return conversations.sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime());
+    const allConversations = Object.values(userConversations);
+    
+    // Separate active and completed conversations
+    const activeConversations: UserConversation[] = [];
+    const completedConversations: UserConversation[] = [];
+    
+    allConversations.forEach(conversation => {
+      const activeNegotiations = conversation.activeNegotiations.filter(neg => 
+        neg.status !== 'contract_created' && neg.status !== 'cancelled'
+      );
+      const completedNegotiations = conversation.activeNegotiations.filter(neg => 
+        neg.status === 'contract_created' || neg.status === 'cancelled'
+      );
+      
+      if (activeNegotiations.length > 0) {
+        activeConversations.push({
+          ...conversation,
+          activeNegotiations,
+          status: 'active'
+        });
+      }
+      
+      if (completedNegotiations.length > 0) {
+        completedConversations.push({
+          ...conversation,
+          activeNegotiations: completedNegotiations,
+          status: completedNegotiations[0].status === 'contract_created' ? 'completed' : 'cancelled'
+        });
+      }
+    });
+    
+    return {
+      active: activeConversations.sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()),
+      completed: completedConversations.sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime())
+    };
   } catch (error) {
     console.error("Error in getUserNegotiations:", error);
-    return [];
+    return {
+      active: [],
+      completed: []
+    };
   }
 };
 
@@ -258,8 +298,9 @@ const getUserNegotiations = async (userId: string) => {
     try {
       if (!user?.id) return
       
-      const userConversations = await getUserNegotiations(user.id)
-      setConversations(userConversations)
+      const result = await getUserNegotiations(user.id)
+      setConversations(result.active)
+      setCompletedConversations(result.completed)
     } catch (error) {
       console.error("Error fetching negotiations:", error)
       toast({
@@ -295,9 +336,30 @@ const getUserNegotiations = async (userId: string) => {
       case "pending":
         return <Badge variant="secondary">Pending</Badge>
       case "completed":
-        return <Badge variant="outline">Completed</Badge>
+        return <Badge variant="outline" className="text-green-600 border-green-600">Completed</Badge>
+      case "cancelled":
+        return <Badge variant="outline" className="text-red-600 border-red-600">Cancelled</Badge>
+      case "contract_created":
+        return <Badge variant="outline" className="text-green-600 border-green-600">Contract Created</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
+    }
+  }
+
+  const getNegotiationStatusBadge = (status: string) => {
+    switch (status) {
+      case "new":
+        return <Badge variant="secondary" className="text-xs">New</Badge>
+      case "negotiating":
+        return <Badge variant="default" className="text-xs">Negotiating</Badge>
+      case "terms_agreed":
+        return <Badge variant="outline" className="text-xs text-blue-600 border-blue-600">Terms Agreed</Badge>
+      case "contract_created":
+        return <Badge variant="outline" className="text-xs text-green-600 border-green-600">Contract Created</Badge>
+      case "cancelled":
+        return <Badge variant="outline" className="text-xs text-red-600 border-red-600">Cancelled</Badge>
+      default:
+        return <Badge variant="outline" className="text-xs">{status}</Badge>
     }
   }
 
@@ -326,17 +388,36 @@ const getUserNegotiations = async (userId: string) => {
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Your Negotiations</h1>
         <p className="text-muted-foreground mt-2">
-          Manage your active proposal negotiations and discussions
+          Manage your proposal negotiations and discussions
         </p>
+        <div className="flex gap-2 mt-4">
+          <Button 
+            variant={!showCompleted ? "default" : "outline"} 
+            onClick={() => setShowCompleted(false)}
+          >
+            Active ({conversations.length})
+          </Button>
+          <Button 
+            variant={showCompleted ? "default" : "outline"} 
+            onClick={() => setShowCompleted(true)}
+          >
+            Completed ({completedConversations.length})
+          </Button>
+        </div>
       </div>
 
-      {conversations.length === 0 ? (
+      {(!showCompleted && conversations.length === 0) || (showCompleted && completedConversations.length === 0) ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Active Conversations</h3>
+            <h3 className="text-lg font-medium mb-2">
+              {showCompleted ? "No Completed Conversations" : "No Active Conversations"}
+            </h3>
             <p className="text-muted-foreground text-center mb-4">
-              You don't have any active negotiation conversations at the moment.
+              {showCompleted 
+                ? "You don't have any completed negotiation conversations yet."
+                : "You don't have any active negotiation conversations at the moment."
+              }
             </p>
             <Button onClick={() => router.push("/smartjects")}>
               Browse Smartjects
@@ -345,7 +426,7 @@ const getUserNegotiations = async (userId: string) => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {conversations.map((conversation) => (
+          {(showCompleted ? completedConversations : conversations).map((conversation) => (
             <Card key={conversation.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -408,15 +489,37 @@ const getUserNegotiations = async (userId: string) => {
                               <span>💰 {negotiation.budget}</span>
                               <span>⏰ {negotiation.timeline}</span>
                               <span>💬 {negotiation.messageCount} messages</span>
+                              {negotiation.status && getNegotiationStatusBadge(negotiation.status)}
                             </div>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => router.push(`/matches/${negotiation.matchId}/negotiate/${negotiation.proposalId}/${conversation.otherParty.id}`)}
-                          >
-                            Open
-                          </Button>
+                          {showCompleted ? (
+                            <div className="flex gap-2">
+                              {negotiation.status === 'contract_created' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => router.push(`/matches/${negotiation.matchId}/contract/${negotiation.proposalId}`)}
+                                >
+                                  View Contract
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => router.push(`/matches/${negotiation.matchId}/negotiate/${negotiation.proposalId}/${conversation.otherParty.id}`)}
+                              >
+                                View History
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/matches/${negotiation.matchId}/negotiate/${negotiation.proposalId}/${conversation.otherParty.id}`)}
+                            >
+                              Open
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -425,19 +528,24 @@ const getUserNegotiations = async (userId: string) => {
 
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-muted-foreground">
-                    Negotiating on {conversation.activeNegotiations.length} project{conversation.activeNegotiations.length !== 1 ? 's' : ''} with this user
+                    {showCompleted 
+                      ? `${conversation.activeNegotiations.length} completed negotiation${conversation.activeNegotiations.length !== 1 ? 's' : ''} with this user`
+                      : `Negotiating on ${conversation.activeNegotiations.length} project${conversation.activeNegotiations.length !== 1 ? 's' : ''} with this user`
+                    }
                   </div>
-                  <Button
-                    onClick={() => {
-                      // Navigate to the most recent negotiation
-                      const mostRecent = conversation.activeNegotiations[0];
-                      router.push(`/matches/${mostRecent.matchId}/negotiate/${mostRecent.proposalId}/${conversation.otherParty.id}`);
-                    }}
-                    className="ml-4"
-                  >
-                    Continue Conversation
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
+                  {!showCompleted && (
+                    <Button
+                      onClick={() => {
+                        // Navigate to the most recent negotiation
+                        const mostRecent = conversation.activeNegotiations[0];
+                        router.push(`/matches/${mostRecent.matchId}/negotiate/${mostRecent.proposalId}/${conversation.otherParty.id}`);
+                      }}
+                      className="ml-4"
+                    >
+                      Continue Conversation
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

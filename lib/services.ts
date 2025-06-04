@@ -1767,4 +1767,28 @@ export const negotiationService = {
 
     return true;
   },
+
+  async updateNegotiationStatus(matchId: string, status: 'new' | 'negotiating' | 'terms_agreed' | 'contract_created' | 'cancelled'): Promise<boolean> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { error } = await supabase
+        .from("matches")
+        .update({ 
+          status: status,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", matchId);
+
+      if (error) {
+        console.error("Error updating negotiation status:", error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in updateNegotiationStatus:", error);
+      return false;
+    }
+  },
 };
