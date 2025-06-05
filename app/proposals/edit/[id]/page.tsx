@@ -30,7 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { AlertCircle, Plus, Trash2, ListChecks, Circle, CheckCircle2, X } from "lucide-react"
-import { proposalService } from "@/lib/services"
+import { proposalService, fileService } from "@/lib/services"
 
 // Define deliverable type
 interface Deliverable {
@@ -58,42 +58,43 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchProposalData = async () => {
-  try {
-    const proposal = await proposalService.getProposalById(id)
+    try {
+      const proposal = await proposalService.getProposalById(id)
 
-    if (!proposal) {
-      toast({ title: "Proposal not found", variant: "destructive" })
-      router.push("/proposals")
-      return
+      if (!proposal) {
+        toast({ title: "Proposal not found", variant: "destructive" })
+        router.push("/proposals")
+        return
+      }
+
+      setFormData({
+        title: proposal.title || "",
+        smartjectId: proposal.smartjectId || "",
+        smartjectTitle: proposal.smartjectTitle || "",
+        description: proposal.description || "",
+        scope: proposal.scope || "",
+        timeline: proposal.timeline || "",
+        budget: proposal.budget || "",
+        deliverables: proposal.deliverables || "",
+        requirements: proposal.type === "need" ? proposal.requirements || "" : "",
+        expertise: proposal.type === "provide" ? proposal.expertise || "" : "",
+        approach: proposal.type === "provide" ? proposal.approach || "" : "",
+        team: proposal.type === "provide" ? proposal.team || "" : "",
+        additionalInfo: proposal.additionalInfo || "",
+      })
+    
+      setFiles(proposal.files)
+      setProposalType(proposal.type)
+      setMilestones(proposal.milestones || [])
+      setUseMilestones(Boolean(proposal.milestones && proposal.milestones.length > 0))
+
+      setIsLoading(false)
+    } catch (error) {
+      console.error("Error fetching proposal data:", error)
+      toast({ title: "Failed to load proposal", variant: "destructive" })
+      setIsLoading(false)
     }
-
-    setFormData({
-      title: proposal.title || "",
-      smartjectId: proposal.smartjectId || "",
-      smartjectTitle: proposal.smartjectTitle || "",
-      description: proposal.description || "",
-      scope: proposal.scope || "",
-      timeline: proposal.timeline || "",
-      budget: proposal.budget || "",
-      deliverables: proposal.deliverables || "",
-      requirements: proposal.type === "need" ? proposal.requirements || "" : "",
-      expertise: proposal.type === "provide" ? proposal.expertise || "" : "",
-      approach: proposal.type === "provide" ? proposal.approach || "" : "",
-      team: proposal.type === "provide" ? proposal.team || "" : "",
-      additionalInfo: proposal.additionalInfo || "",
-    })
-
-    setProposalType(proposal.type)
-    setMilestones(proposal.milestones || [])
-    setUseMilestones(proposal.milestones?.length > 0)
-
-    setIsLoading(false)
-  } catch (error) {
-    console.error("Error fetching proposal data:", error)
-    toast({ title: "Failed to load proposal", variant: "destructive" })
-    setIsLoading(false)
   }
-}
 
 
   // Form state
@@ -114,7 +115,13 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
     team: "",
     additionalInfo: "",
   })
-  const [files, setFiles] = useState<File[]>([])
+  const [files, setFiles] = useState<{
+    id: string;
+    name: string;
+    size: number;
+    type: string;
+    path: string;
+  }[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [documentVersions, setDocumentVersions] = useState<DocumentVersion[]>([])
@@ -180,9 +187,43 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleFileChange = (uploadedFiles: File[]) => {
-    setFiles(uploadedFiles)
-  }
+  const handleFileChange = async (uploadedFiles: File[]) => {
+    try {
+      const newFiles: {
+        id: string;
+        name: string;
+        size: number;
+        type: string;
+        path: string;
+      }[] = [];
+      
+      for (const file of uploadedFiles) {
+        // Загружаем файл в Supabase
+        const filePath = await proposalService.uploadFile(id, file);
+        if (filePath) {
+          // Сохраняем ссылку на файл в базе данных
+          const success = await proposalService.saveFileReference(id, file, filePath);
+          if (success) {
+            newFiles.push({
+              id: Date.now().toString(),
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              path: filePath,
+            });
+          }
+        }
+      }
+      setFiles(prevFiles => [...prevFiles, ...newFiles]);
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить файлы. Пожалуйста, попробуйте снова.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSaveDraft = async () => {
     setIsSaving(true)
@@ -222,15 +263,44 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
       return
     }
 
-    // In a real app, we would call an API to submit the proposal
-    setTimeout(() => {
+    try {
+      const updatedProposal = {
+        title: formData.title,
+        description: formData.description,
+        budget: formData.budget,
+        timeline: formData.timeline,
+        scope: formData.scope,
+        deliverables: formData.deliverables,
+        requirements: formData.requirements,
+        expertise: formData.expertise,
+        approach: formData.approach,
+        team: formData.team,
+        additionalInfo: formData.additionalInfo,
+        milestones: useMilestones ? milestones : undefined,
+        files: files,
+      }
+
+      const success = await proposalService.updateProposal(id, updatedProposal)
+
+      if (success) {
+        toast({
+          title: "Proposal updated",
+          description: "Your proposal has been updated successfully.",
+        })
+        router.push(`/proposals/${id}`)
+      } else {
+        throw new Error("Failed to update proposal")
+      }
+    } catch (error) {
+      console.error("Error updating proposal:", error)
       toast({
-        title: "Proposal updated",
-        description: "Your proposal has been updated successfully.",
+        title: "Error",
+        description: "Failed to update proposal. Please try again.",
+        variant: "destructive",
       })
+    } finally {
       setIsSubmitting(false)
-      router.push(`/proposals/${id}`)
-    }, 1500)
+    }
   }
 
   const nextStep = () => {
@@ -389,6 +459,44 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
       ...currentMilestone,
       deliverables: currentMilestone.deliverables.map((d) => (d.id === id ? { ...d, completed: !d.completed } : d)),
     })
+  }
+
+  const handleDeleteFile = async (fileId: string) => {
+    try {
+      const success = await fileService.deleteFile(fileId)
+      if (success) {
+        setFiles(files.filter(file => file.id !== fileId))
+        toast({
+          title: "Файл удален",
+          description: "Файл был успешно удален.",
+        })
+      } else {
+        throw new Error("Failed to delete file")
+      }
+    } catch (error) {
+      console.error("Error deleting file:", error)
+      toast({
+        title: "Ошибка",
+        description: "Не удалось удалить файл. Пожалуйста, попробуйте снова.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDownloadFile = async (filePath: string, fileName: string) => {
+    try {
+      const url =  await fileService.downloadFile(filePath, fileName)
+      if (url) {
+        window.open(url, "_blank"); // или <img src={url} />
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error)
+      toast({
+        title: "Ошибка",
+        description: "Не удалось скачать файл. Пожалуйста, попробуйте снова.",
+        variant: "destructive",
+      })
+    }
   }
 
   const renderStepContent = () => {
@@ -701,51 +809,37 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               <p className="text-sm text-muted-foreground">
                 Upload any supporting documents such as diagrams, specifications, or portfolios (max 5 files, 10MB each)
               </p>
-
-              {/* Display existing files */}
-              {files.length === 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium mb-2">Current Files</h4>
-                  <ul className="space-y-2">
-                    <li className="flex items-center justify-between p-3 border rounded-md">
+               {files.map((file, index) => (
+                    <li
+                      key={index}
+                      className="flex items-center justify-between p-3 border rounded-md"
+                    >
                       <div className="flex items-center">
                         <FileText className="h-5 w-5 mr-2 text-blue-500" />
-                        <span>implementation-plan.pdf</span>
+                        <span>{file.name}</span>
                       </div>
                       <div className="flex items-center">
-                        <span className="text-sm text-muted-foreground mr-4">2.4 MB</span>
-                        <Button variant="ghost" size="sm">
-                          Remove
+                        <span className="text-sm text-muted-foreground mr-4">
+                          {file.size}
+                        </span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleDownloadFile(file.path, file.name)}
+                        >
+                          Скачать
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleDeleteFile(file.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          Удалить
                         </Button>
                       </div>
                     </li>
-                    <li className="flex items-center justify-between p-3 border rounded-md">
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 mr-2 text-blue-500" />
-                        <span>team-credentials.docx</span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="text-sm text-muted-foreground mr-4">1.8 MB</span>
-                        <Button variant="ghost" size="sm">
-                          Remove
-                        </Button>
-                      </div>
-                    </li>
-                    <li className="flex items-center justify-between p-3 border rounded-md">
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 mr-2 text-blue-500" />
-                        <span>sample-dashboard.png</span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="text-sm text-muted-foreground mr-4">3.2 MB</span>
-                        <Button variant="ghost" size="sm">
-                          Remove
-                        </Button>
-                      </div>
-                    </li>
-                  </ul>
-                </div>
-              )}
+                  ))}
             </div>
 
             <div className="space-y-4 mt-8">

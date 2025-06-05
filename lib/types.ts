@@ -73,6 +73,18 @@ export type ProposalType = {
   status: "draft" | "submitted" | "accepted" | "rejected";
   createdAt: string;
   updatedAt: string;
+  milestones?: {
+    id: string;
+    name: string;
+    description: string;
+    percentage: number;
+    amount: string;
+    deliverables: {
+      id: string;
+      description: string;
+      completed: boolean;
+    }[];
+  }[];
 };
 
 export type MilestoneType = {

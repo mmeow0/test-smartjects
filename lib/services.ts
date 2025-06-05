@@ -829,30 +829,120 @@ export const proposalService = {
   ): Promise<boolean> {
     const supabase = getSupabaseBrowserClient();
 
-    const { error } = await supabase
-      .from("proposals")
-      .update({
-        title: proposal.title,
-        description: proposal.description,
-        budget: proposal.budget,
-        timeline: proposal.timeline,
-        scope: proposal.scope,
-        deliverables: proposal.deliverables,
-        requirements: proposal.requirements,
-        expertise: proposal.expertise,
-        approach: proposal.approach,
-        team: proposal.team,
-        additional_info: proposal.additionalInfo,
-        status: proposal.status,
-      })
-      .eq("id", id);
+    try {
+      // Начинаем транзакцию
+      const { error: proposalError } = await supabase
+        .from("proposals")
+        .update({
+          title: proposal.title || "",
+          description: proposal.description || "",
+          budget: proposal.budget || "",
+          timeline: proposal.timeline || "",
+          scope: proposal.scope || "",
+          deliverables: proposal.deliverables || "",
+          requirements: proposal.requirements || "",
+          expertise: proposal.expertise || "",
+          approach: proposal.approach || "",
+          team: proposal.team || "",
+          additional_info: proposal.additionalInfo || "",
+          status: proposal.status || "draft",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id);
 
-    if (error) {
-      console.error(`Error updating proposal with ID ${id}:`, error);
+      if (proposalError) {
+        console.error("Error updating proposal:", proposalError);
+        return false;
+      }
+
+      // Если есть вехи, обновляем их
+      if (proposal.milestones && proposal.milestones.length > 0) {
+        // Получаем существующие вехи
+        const { data: existingMilestones, error: fetchError } = await supabase
+          .from("proposal_milestones")
+          .select("id")
+          .eq("proposal_id", id);
+
+        if (fetchError) {
+          console.error("Error fetching existing milestones:", fetchError);
+          return false;
+        }
+
+        // Удаляем старые deliverables
+        if (existingMilestones && existingMilestones.length > 0) {
+          const { error: deliverablesError } = await supabase
+            .from("proposal_deliverables")
+            .delete()
+            .in(
+              "milestone_id",
+              existingMilestones.map((m) => m.id)
+            );
+
+          if (deliverablesError) {
+            console.error("Error deleting old deliverables:", deliverablesError);
+            return false;
+          }
+        }
+
+        // Удаляем старые milestones
+        const { error: milestonesError } = await supabase
+          .from("proposal_milestones")
+          .delete()
+          .eq("proposal_id", id);
+
+        if (milestonesError) {
+          console.error("Error deleting old milestones:", milestonesError);
+          return false;
+        }
+
+        // Создаем новые milestones
+        const { data: newMilestones, error: createMilestonesError } = await supabase
+          .from("proposal_milestones")
+          .insert(
+            proposal.milestones.map((milestone) => ({
+              proposal_id: id,
+              name: milestone.name,
+              description: milestone.description,
+              percentage: milestone.percentage,
+              amount: milestone.amount,
+            }))
+          )
+          .select("id, name");
+
+        if (createMilestonesError) {
+          console.error("Error creating milestones:", createMilestonesError);
+          return false;
+        }
+
+        // Создаем deliverables для каждого milestone
+        for (let i = 0; i < proposal.milestones.length; i++) {
+          const milestone = proposal.milestones[i];
+          const newMilestoneId = newMilestones?.[i]?.id;
+
+          if (newMilestoneId && milestone.deliverables && milestone.deliverables.length > 0) {
+            const { error: deliverablesError } = await supabase
+              .from("proposal_deliverables")
+              .insert(
+                milestone.deliverables.map((deliverable) => ({
+                  milestone_id: newMilestoneId,
+                  description: deliverable.description,
+                  completed: deliverable.completed,
+                }))
+              );
+
+            if (deliverablesError) {
+              console.error("Error creating deliverables:", deliverablesError);
+              return false;
+            }
+          }
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in updateProposal:", error);
       return false;
     }
-
-    return true;
   },
 
   async addCommentToProposal(
@@ -2159,4 +2249,74 @@ export const negotiationService = {
       return false;
     }
   },
+};
+
+export const fileService = {
+  async deleteFile(fileId: string): Promise<boolean> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Получаем информацию о файле
+      const { data: fileData, error: fetchError } = await supabase
+        .from("proposal_files")
+        .select("path")
+        .eq("id", fileId)
+        .single();
+
+      if (fetchError) {
+        console.error("Error fetching file data:", fetchError);
+        return false;
+      }
+
+      // Удаляем файл из хранилища
+      if (fileData?.path) {
+        const { error: storageError } = await supabase.storage
+          .from("proposal-files")
+          .remove([fileData.path]);
+
+        if (storageError) {
+          console.error("Error deleting file from storage:", storageError);
+          return false;
+        }
+      }
+
+      // Удаляем запись о файле из базы данных
+      const { error: deleteError } = await supabase
+        .from("proposal_files")
+        .delete()
+        .eq("id", fileId);
+
+      if (deleteError) {
+        console.error("Error deleting file record:", deleteError);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in deleteFile:", error);
+      return false;
+    }
+  },
+
+async downloadFile(path: string, filename: string): Promise<string | null> {
+  const supabase = getSupabaseBrowserClient();
+
+  try {
+   const { data, error } = await supabase
+    .storage
+    .from("proposal-uploads")
+    .createSignedUrl(path, 60); // ссылка активна 60 секунд
+
+  if (error || !data?.signedUrl) {
+    console.error("Ошибка при получении signed URL:", error);
+    return null;
+  }
+
+  return data.signedUrl;
+  } catch (error) {
+    console.error("Ошибка при скачивании файла:", error);
+    return null
+  }
+}
+
 };
