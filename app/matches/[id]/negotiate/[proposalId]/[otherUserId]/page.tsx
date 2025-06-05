@@ -400,28 +400,72 @@ export default function IndividualNegotiatePage({
         setMessageFiles([])
 
         // Refetch negotiation data to show the new message
-        const updatedData = await negotiationService.getNegotiationData(id, proposalId)
-        if (updatedData) {
-          // Получаем данные о другом пользователе
-          const supabase = getSupabaseBrowserClient()
-          const { data: otherUserData } = await supabase
-            .from("users")
-            .select("id, name, avatar_url")
-            .eq("id", otherUserId)
-            .single()
+        const supabase = getSupabaseBrowserClient()
 
-          if (otherUserData) {
-            setNegotiation({
-              ...updatedData,
-              otherUserId,
-              otherUser: {
-                id: (otherUserData.id as string) || "",
-                name: (otherUserData.name as string) || "Unknown User",
-                avatar: (otherUserData.avatar_url as string) || "",
-                rating: 4.5
-              }
-            })
-          }
+        // Получаем обновленные сообщения с файлами
+        const { data: messagesData } = await supabase
+          .from("negotiation_messages")
+          .select(`
+            id,
+            sender_id,
+            content,
+            is_counter_offer,
+            counter_offer_budget,
+            counter_offer_timeline,
+            created_at,
+            users (
+              name
+            ),
+            negotiation_files (
+              id,
+              file_name,
+              file_url,
+              file_type,
+              file_size
+            )
+          `)
+          .eq("proposal_id", proposalId)
+          .or(`sender_id.eq.${user?.id},sender_id.eq.${otherUserId}`)
+          .order("created_at", { ascending: true });
+
+        // Получаем данные о другом пользователе
+        const { data: otherUserData } = await supabase
+          .from("users")
+          .select("id, name, avatar_url")
+          .eq("id", otherUserId)
+          .single()
+
+        if (otherUserData && messagesData) {
+          // Фильтруем сообщения только между текущим пользователем и другим пользователем
+          const filteredMessages = messagesData.filter(msg => 
+            (msg.sender_id === user?.id || msg.sender_id === otherUserId)
+          );
+
+          setNegotiation(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              messages: filteredMessages.map((message: any) => ({
+                id: (message.id as string) || "",
+                sender: (message.sender_id === prev.provider.id ? "provider" : "needer") as "provider" | "needer",
+                senderName: (message.users?.name as string) || "",
+                content: (message.content as string) || "",
+                timestamp: (message.created_at as string) || "",
+                isCounterOffer: (message.is_counter_offer as boolean) || false,
+                counterOffer: message.is_counter_offer ? {
+                  budget: (message.counter_offer_budget as string) || "",
+                  timeline: (message.counter_offer_timeline as string) || "",
+                } : undefined,
+                files: message.negotiation_files?.map((file: any) => ({
+                  id: file.id,
+                  file_name: file.file_name,
+                  file_url: file.file_url,
+                  file_type: file.file_type,
+                  file_size: file.file_size
+                })) || []
+              }))
+            };
+          });
         }
       } else {
         toast({
