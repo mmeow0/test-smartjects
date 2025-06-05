@@ -33,6 +33,16 @@ interface Message {
   }
 }
 
+interface NegotiationFile {
+  id: string
+  file_name: string
+  file_url: string
+  file_type: string
+  file_size: number
+  uploaded_by: string
+  created_at: string
+}
+
 interface NegotiationData {
   matchId: string
   proposalId: string
@@ -57,6 +67,7 @@ interface NegotiationData {
   }
   milestones: Milestone[]
   messages: Message[]
+  files: NegotiationFile[]
 }
 
 export const useNegotiation = (matchId: string, proposalId: string) => {

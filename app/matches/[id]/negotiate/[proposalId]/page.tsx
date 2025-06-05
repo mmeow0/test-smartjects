@@ -81,6 +81,16 @@ interface CurrentProposal {
   deliverables: string[]
 }
 
+interface NegotiationFile {
+  id: string
+  file_name: string
+  file_url: string
+  file_type: string
+  file_size: number
+  uploaded_by: string
+  created_at: string
+}
+
 interface NegotiationData {
   matchId: string
   proposalId: string
@@ -90,6 +100,7 @@ interface NegotiationData {
   currentProposal: CurrentProposal
   milestones: Milestone[]
   messages: Message[]
+  files: NegotiationFile[]
 }
 
 // Define mock data outside the component to prevent recreation on each render
@@ -124,6 +135,9 @@ export default function NegotiatePage({
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [totalPercentage, setTotalPercentage] = useState(0)
   const [sendingMessage, setSendingMessage] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploadingFile, setUploadingFile] = useState(false)
+  const [messageFiles, setMessageFiles] = useState<File[]>([])
 
   // Extract the timeline string once to avoid recalculations
   const currentTimelineStr = useMemo(() => {
@@ -182,7 +196,37 @@ export default function NegotiatePage({
 
         // If no other users, continue with original logic
         const data = await negotiationService.getNegotiationData(id, proposalId)
-        setNegotiation(data)
+        
+        // Получаем файлы для переговоров
+        const { data: filesData } = await supabase
+          .from('negotiation_files')
+          .select('*')
+          .eq('negotiation_id', proposalId)
+          .order('created_at', { ascending: false })
+
+        const files = (filesData || []).map(file => ({
+          id: file.id,
+          file_name: file.file_name,
+          file_url: file.file_url,
+          file_type: file.file_type,
+          file_size: file.file_size,
+          uploaded_by: file.uploaded_by,
+          created_at: file.created_at
+        })) as NegotiationFile[]
+
+        if (data) {
+          setNegotiation({
+            matchId: data.matchId,
+            proposalId: data.proposalId,
+            smartjectTitle: data.smartjectTitle,
+            provider: data.provider,
+            needer: data.needer,
+            currentProposal: data.currentProposal,
+            milestones: data.milestones,
+            messages: data.messages,
+            files
+          })
+        }
         
         // Set milestones from the negotiation data
         if (data?.milestones && data.milestones.length > 0) {
@@ -291,11 +335,18 @@ export default function NegotiatePage({
     return null
   }
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files && files.length > 0) {
+      setMessageFiles(Array.from(files))
+    }
+  }
+
   const handleSendMessage = async () => {
-    if (!message.trim() && (!isCounterOffer || (!counterOffer.budget && !counterOffer.timeline))) {
+    if (!message.trim() && (!isCounterOffer || (!counterOffer.budget && !counterOffer.timeline)) && messageFiles.length === 0) {
       toast({
         title: "Missing information",
-        description: "Please provide a message or counter offer terms.",
+        description: "Please provide a message, counter offer terms, or attach files.",
         variant: "destructive",
       })
       return
@@ -323,6 +374,51 @@ export default function NegotiatePage({
       )
 
       if (success) {
+        // Загружаем файлы, если они есть
+        if (messageFiles.length > 0) {
+          const supabase = getSupabaseBrowserClient()
+          
+          // Получаем последнее сообщение переговоров
+          const { data: lastMessage } = await supabase
+            .from('negotiation_messages')
+            .select('id')
+            .eq('proposal_id', proposalId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single()
+
+          if (lastMessage) {
+            for (const file of messageFiles) {
+              const fileExt = file.name.split('.').pop()
+              const fileName = `${Math.random()}.${fileExt}`
+              const filePath = `negotiation-files/${proposalId}/${fileName}`
+
+              const { error: uploadError } = await supabase.storage
+                .from('negotiation-files')
+                .upload(filePath, file)
+
+              if (uploadError) throw uploadError
+
+              const { data: { publicUrl } } = supabase.storage
+                .from('negotiation-files')
+                .getPublicUrl(filePath)
+
+              const { error: dbError } = await supabase
+                .from('negotiation_files')
+                .insert({
+                  negotiation_id: lastMessage.id,
+                  file_name: file.name,
+                  file_url: publicUrl,
+                  file_type: file.type,
+                  file_size: file.size,
+                  uploaded_by: user.id
+                })
+
+              if (dbError) throw dbError
+            }
+          }
+        }
+
         toast({
           title: isCounterOffer ? "Counter offer sent" : "Message sent",
           description: `Your ${isCounterOffer ? "counter offer" : "message"} has been sent successfully.`,
@@ -335,6 +431,7 @@ export default function NegotiatePage({
           timeline: "",
         })
         setIsCounterOffer(false)
+        setMessageFiles([])
 
         // Refetch negotiation data to show the new message
         const updatedData = await negotiationService.getNegotiationData(id, proposalId)
@@ -402,6 +499,146 @@ export default function NegotiatePage({
       minute: "2-digit",
     })
   }
+
+  const handleFileUpload = async () => {
+    if (!selectedFile || !negotiation) return
+
+    setUploadingFile(true)
+    try {
+      const supabase = getSupabaseBrowserClient()
+      
+      // Загружаем файл в storage
+      const fileExt = selectedFile.name.split('.').pop()
+      const fileName = `${Math.random()}.${fileExt}`
+      const filePath = `negotiation-files/${negotiation.proposalId}/${fileName}`
+
+      const { error: uploadError, data } = await supabase.storage
+        .from('negotiation-files')
+        .upload(filePath, selectedFile)
+
+      if (uploadError) throw uploadError
+
+      // Получаем публичный URL файла
+      const { data: { publicUrl } } = supabase.storage
+        .from('negotiation-files')
+        .getPublicUrl(filePath)
+
+      // Получаем последнее сообщение переговоров
+      const { data: lastMessage } = await supabase
+        .from('negotiation_messages')
+        .select('id')
+        .eq('proposal_id', negotiation.proposalId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (!lastMessage) throw new Error('No negotiation message found')
+
+      // Сохраняем информацию о файле в базе данных
+      const { error: dbError } = await supabase
+        .from('negotiation_files')
+        .insert({
+          negotiation_id: lastMessage.id,
+          file_name: selectedFile.name,
+          file_url: publicUrl,
+          file_type: selectedFile.type,
+          file_size: selectedFile.size,
+          uploaded_by: user?.id
+        })
+
+      if (dbError) throw dbError
+
+      toast({
+        title: "Успех",
+        description: "Файл успешно загружен",
+      })
+
+      // Обновляем список файлов
+      const { data: filesData } = await supabase
+        .from('negotiation_files')
+        .select('*')
+        .eq('negotiation_id', lastMessage.id)
+        .order('created_at', { ascending: false })
+
+      const files = (filesData || []).map(file => ({
+        id: file.id,
+        file_name: file.file_name,
+        file_url: file.file_url,
+        file_type: file.file_type,
+        file_size: file.file_size,
+        uploaded_by: file.uploaded_by,
+        created_at: file.created_at
+      })) as NegotiationFile[]
+
+      setNegotiation(prev => {
+        if (!prev) return null
+        return {
+          ...prev,
+          files
+        }
+      })
+      setSelectedFile(null)
+    } catch (error) {
+      console.error('Error uploading file:', error)
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить файл",
+        variant: "destructive",
+      })
+    } finally {
+      setUploadingFile(false)
+    }
+  }
+
+  // Добавляем компонент для отображения файлов в UI
+  const renderFiles = () => {
+    if (!negotiation?.files?.length) return null
+
+    return (
+      <div className="mt-4">
+        <h3 className="text-lg font-semibold mb-2">Прикрепленные файлы</h3>
+        <div className="space-y-2">
+          {negotiation.files.map((file) => (
+            <div key={file.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+              <div className="flex items-center space-x-2">
+                <FileText className="h-4 w-4" />
+                <a 
+                  href={file.file_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  {file.file_name}
+                </a>
+              </div>
+              <span className="text-sm text-gray-500">
+                {(file.file_size / 1024).toFixed(1)} KB
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Добавляем компонент загрузки файла в UI
+  const renderFileUpload = () => (
+    <div className="mt-4">
+      <div className="flex items-center space-x-2">
+        <Input
+          type="file"
+          onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+          disabled={uploadingFile}
+        />
+        <Button
+          onClick={handleFileUpload}
+          disabled={!selectedFile || uploadingFile}
+        >
+          {uploadingFile ? "Загрузка..." : "Загрузить"}
+        </Button>
+      </div>
+    </div>
+  )
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -543,11 +780,34 @@ export default function NegotiatePage({
                   </div>
                 )}
 
-                <div className="flex justify-between">
-                  <Button variant="outline" size="sm">
-                    <Paperclip className="h-4 w-4 mr-2" />
-                    Attach File
-                  </Button>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      onChange={handleFileSelect}
+                      multiple
+                      className="flex-1"
+                    />
+                  </div>
+                  {messageFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {messageFiles.map((file, index) => (
+                        <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                          <FileText className="h-3 w-3" />
+                          {file.name}
+                          <button
+                            onClick={() => setMessageFiles(files => files.filter((_, i) => i !== index))}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end">
                   <Button onClick={handleSendMessage} disabled={sendingMessage}>
                     <Send className="h-4 w-4 mr-2" />
                     {sendingMessage ? "Sending..." : (isCounterOffer ? "Send Counter Offer" : "Send Message")}
@@ -745,6 +1005,8 @@ export default function NegotiatePage({
           </Card>
         </div>
       </div>
+      {renderFileUpload()}
+      {renderFiles()}
     </div>
   )
 }

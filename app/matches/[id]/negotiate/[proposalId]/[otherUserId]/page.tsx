@@ -61,6 +61,13 @@ interface Message {
   timestamp: string
   isCounterOffer: boolean
   counterOffer?: CounterOffer
+  files?: {
+    id: string
+    file_name: string
+    file_url: string
+    file_type: string
+    file_size: number
+  }[]
 }
 
 interface User {
@@ -115,6 +122,9 @@ export default function IndividualNegotiatePage({
   const [totalPercentage, setTotalPercentage] = useState(0)
   const [sendingMessage, setSendingMessage] = useState(false)
   const [acceptingTerms, setAcceptingTerms] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploadingFile, setUploadingFile] = useState(false)
+  const [messageFiles, setMessageFiles] = useState<File[]>([])
 
   const currentTimelineStr = useMemo(() => {
     if (!negotiation) return ""
@@ -180,6 +190,13 @@ export default function IndividualNegotiatePage({
             created_at,
             users (
               name
+            ),
+            negotiation_files (
+              id,
+              file_name,
+              file_url,
+              file_type,
+              file_size
             )
           `)
           .eq("proposal_id", proposalId)
@@ -240,6 +257,13 @@ export default function IndividualNegotiatePage({
               budget: (message.counter_offer_budget as string) || "",
               timeline: (message.counter_offer_timeline as string) || "",
             } : undefined,
+            files: message.negotiation_files?.map((file: any) => ({
+              id: file.id,
+              file_name: file.file_name,
+              file_url: file.file_url,
+              file_type: file.file_type,
+              file_size: file.file_size
+            })) || []
           })),
         };
 
@@ -277,11 +301,18 @@ export default function IndividualNegotiatePage({
     return null
   }
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files && files.length > 0) {
+      setMessageFiles(Array.from(files))
+    }
+  }
+
   const handleSendMessage = async () => {
-    if (!message.trim() && (!isCounterOffer || (!counterOffer.budget && !counterOffer.timeline))) {
+    if (!message.trim() && (!isCounterOffer || (!counterOffer.budget && !counterOffer.timeline)) && messageFiles.length === 0) {
       toast({
         title: "Missing information",
-        description: "Please provide a message or counter offer terms.",
+        description: "Please provide a message, counter offer terms, or attach files.",
         variant: "destructive",
       })
       return
@@ -299,35 +330,59 @@ export default function IndividualNegotiatePage({
     setSendingMessage(true)
     
     try {
-      const supabase = getSupabaseBrowserClient()
-      
-      const { error } = await supabase
-        .from("negotiation_messages")
-        .insert({
-          proposal_id: proposalId,
-          sender_id: user.id,
-          content: message,
-          is_counter_offer: isCounterOffer,
-          counter_offer_budget: isCounterOffer ? counterOffer.budget : null,
-          counter_offer_timeline: isCounterOffer ? counterOffer.timeline : null,
-        });
+      const success = await negotiationService.addNegotiationMessage(
+        proposalId,
+        user.id,
+        message,
+        isCounterOffer,
+        isCounterOffer ? counterOffer.budget : undefined,
+        isCounterOffer ? counterOffer.timeline : undefined
+      )
 
-      if (error) {
-        console.error("Error sending message:", error)
-        toast({
-          title: "Error",
-          description: "Failed to send message. Please try again.",
-          variant: "destructive",
-        })
-      } else {
-        // Update match status to negotiating if it's not already
-        try {
-          const statusUpdated = await negotiationService.updateNegotiationStatus(id, 'negotiating')
-          if (!statusUpdated) {
-            console.error("Failed to update match status to negotiating")
+      if (success) {
+        // Загружаем файлы, если они есть
+        if (messageFiles.length > 0) {
+          const supabase = getSupabaseBrowserClient()
+          
+          // Получаем последнее сообщение переговоров
+          const { data: lastMessage } = await supabase
+            .from('negotiation_messages')
+            .select('id')
+            .eq('proposal_id', proposalId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single()
+
+          if (lastMessage) {
+            for (const file of messageFiles) {
+              const fileExt = file.name.split('.').pop()
+              const fileName = `${Math.random()}.${fileExt}`
+              const filePath = `negotiation-files/${proposalId}/${fileName}`
+
+              const { error: uploadError } = await supabase.storage
+                .from('negotiation-files')
+                .upload(filePath, file)
+
+              if (uploadError) throw uploadError
+
+              const { data: { publicUrl } } = supabase.storage
+                .from('negotiation-files')
+                .getPublicUrl(filePath)
+
+              const { error: dbError } = await supabase
+                .from('negotiation_files')
+                .insert({
+                  negotiation_id: lastMessage.id,
+                  file_name: file.name,
+                  file_url: publicUrl,
+                  file_type: file.type,
+                  file_size: file.size,
+                  uploaded_by: user.id
+                })
+
+              if (dbError) throw dbError
+            }
           }
-        } catch (statusUpdateError) {
-          console.error("Error updating match status:", statusUpdateError);
         }
 
         toast({
@@ -335,15 +390,45 @@ export default function IndividualNegotiatePage({
           description: `Your ${isCounterOffer ? "counter offer" : "message"} has been sent successfully.`,
         })
 
+        // Clear the inputs
         setMessage("")
         setCounterOffer({
           budget: "",
           timeline: "",
         })
         setIsCounterOffer(false)
+        setMessageFiles([])
 
-        // Refresh the page data
-        window.location.reload()
+        // Refetch negotiation data to show the new message
+        const updatedData = await negotiationService.getNegotiationData(id, proposalId)
+        if (updatedData) {
+          // Получаем данные о другом пользователе
+          const supabase = getSupabaseBrowserClient()
+          const { data: otherUserData } = await supabase
+            .from("users")
+            .select("id, name, avatar_url")
+            .eq("id", otherUserId)
+            .single()
+
+          if (otherUserData) {
+            setNegotiation({
+              ...updatedData,
+              otherUserId,
+              otherUser: {
+                id: (otherUserData.id as string) || "",
+                name: (otherUserData.name as string) || "Unknown User",
+                avatar: (otherUserData.avatar_url as string) || "",
+                rating: 4.5
+              }
+            })
+          }
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       console.error("Error sending message:", error)
@@ -440,7 +525,7 @@ export default function IndividualNegotiatePage({
 
       toast({
         title: "Terms accepted",
-        description: `Contract created successfully! You've accepted the terms for negotiation with ${negotiation.otherUser.name}.`,
+        description: `Contract created successfully! You've accepted the terms for negotiation with ${negotiation.otherUser?.name}.`,
       })
 
       router.push(`/matches/${id}/contract/${proposalId}`)
@@ -480,7 +565,7 @@ export default function IndividualNegotiatePage({
           All Negotiations
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Negotiate with {negotiation.otherUser.name}</h1>
+          <h1 className="text-2xl font-bold">Negotiate with {negotiation.otherUser?.name}</h1>
           <p className="text-muted-foreground">
             For smartject: <span className="font-medium">{negotiation.smartjectTitle}</span>
           </p>
@@ -491,16 +576,16 @@ export default function IndividualNegotiatePage({
         <div className="lg:col-span-2">
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Conversation with {negotiation.otherUser.name}</CardTitle>
+              <CardTitle>Conversation with {negotiation.otherUser?.name}</CardTitle>
               <CardDescription>Individual negotiation discussion</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-3 mb-4 p-3 bg-muted/30 rounded-lg">
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback>{negotiation.otherUser.name.charAt(0)}</AvatarFallback>
+                  <AvatarFallback>{negotiation.otherUser?.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium">{negotiation.otherUser.name}</p>
+                  <p className="font-medium">{negotiation.otherUser?.name}</p>
                   <p className="text-sm text-muted-foreground">
                     This conversation contains only messages between you and this user
                   </p>
@@ -513,7 +598,7 @@ export default function IndividualNegotiatePage({
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Discussion</CardTitle>
-                <CardDescription>Private conversation between you and {negotiation.otherUser.name}</CardDescription>
+                <CardDescription>Private conversation between you and {negotiation.otherUser?.name}</CardDescription>
               </div>
               <Badge variant="outline" className="ml-2">
                 {negotiation.messages.length} messages
@@ -525,7 +610,7 @@ export default function IndividualNegotiatePage({
                 {negotiation.messages.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No messages yet with {negotiation.otherUser.name}</p>
+                    <p>No messages yet with {negotiation.otherUser?.name}</p>
                     <p className="text-sm">Start the conversation below</p>
                   </div>
                 ) : (
@@ -560,6 +645,29 @@ export default function IndividualNegotiatePage({
                                   </div>
                                 )}
                               </div>
+                            </div>
+                          )}
+
+                          {msg.files && msg.files.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {msg.files.map((file) => (
+                                <div key={file.id} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                                  <div className="flex items-center space-x-2">
+                                    <FileText className="h-4 w-4" />
+                                    <a 
+                                      href={file.file_url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:underline"
+                                    >
+                                      {file.file_name}
+                                    </a>
+                                  </div>
+                                  <span className="text-sm text-muted-foreground">
+                                    {(file.file_size / 1024).toFixed(1)} KB
+                                  </span>
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
@@ -605,11 +713,34 @@ export default function IndividualNegotiatePage({
                   </div>
                 )}
 
-                <div className="flex justify-between">
-                  <Button variant="outline" size="sm">
-                    <Paperclip className="h-4 w-4 mr-2" />
-                    Attach File
-                  </Button>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      onChange={handleFileSelect}
+                      multiple
+                      className="flex-1"
+                    />
+                  </div>
+                  {messageFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {messageFiles.map((file, index) => (
+                        <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                          <FileText className="h-3 w-3" />
+                          {file.name}
+                          <button
+                            onClick={() => setMessageFiles(files => files.filter((_, i) => i !== index))}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end">
                   <Button onClick={handleSendMessage} disabled={sendingMessage}>
                     <Send className="h-4 w-4 mr-2" />
                     {sendingMessage ? "Sending..." : (isCounterOffer ? "Send Counter Offer" : "Send Message")}
@@ -666,7 +797,7 @@ export default function IndividualNegotiatePage({
             <CardFooter>
               <Button className="w-full" onClick={handleAcceptTerms} disabled={acceptingTerms}>
                 <ThumbsUp className="h-4 w-4 mr-2" />
-                {acceptingTerms ? "Creating Contract..." : `Accept Terms with ${negotiation.otherUser.name}`}
+                {acceptingTerms ? "Creating Contract..." : `Accept Terms with ${negotiation.otherUser?.name}`}
               </Button>
             </CardFooter>
           </Card>

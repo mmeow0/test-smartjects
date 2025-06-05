@@ -2133,6 +2133,17 @@ export const negotiationService = {
         console.error("Error fetching messages:", messagesError);
       }
 
+      // Get negotiation files
+      const { data: filesData, error: filesError } = await supabase
+        .from("negotiation_files")
+        .select("*")
+        .eq("negotiation_id", proposalId)
+        .order("created_at", { ascending: false });
+
+      if (filesError) {
+        console.error("Error fetching files:", filesError);
+      }
+
       // Transform the data to match the expected format
       const negotiationData = {
         matchId: matchId as string,
@@ -2180,6 +2191,15 @@ export const negotiationService = {
             budget: (message.counter_offer_budget as string) || "",
             timeline: (message.counter_offer_timeline as string) || "",
           } : undefined,
+        })) || [],
+        files: filesData?.map((file: any) => ({
+          id: file.id,
+          file_name: file.file_name,
+          file_url: file.file_url,
+          file_type: file.file_type,
+          file_size: file.file_size,
+          uploaded_by: file.uploaded_by,
+          created_at: file.created_at
         })) || [],
       };
 
