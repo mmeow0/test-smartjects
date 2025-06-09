@@ -373,6 +373,14 @@ export default function DashboardPage() {
     return null;
   }
 
+  // Helper function to display field value or "not specified"
+  const displayField = (value: string | undefined | null) => {
+    if (!value || value.trim() === "") {
+      return <span className="text-muted-foreground italic">not specified</span>;
+    }
+    return value;
+  };
+
   // In a real app, we would fetch the user's smartjects from an API
   const believedSmartjects = smartjects.believe;
   const needSmartjects = user?.accountType === "paid" ? smartjects.need : [];
@@ -578,7 +586,7 @@ export default function DashboardPage() {
                     <div className="flex items-center">
                       <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
                       <span className="font-medium">
-                        ${proposal.budget?.toLocaleString()}
+                        {proposal.budget ? `$${proposal.budget.toLocaleString()}` : displayField(proposal.budget)}
                       </span>
                     </div>
                   </CardContent>
@@ -697,8 +705,8 @@ export default function DashboardPage() {
                                   {negotiation.smartjectTitle}
                                 </h5>
                                 <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                                  <span>💰 {negotiation.budget}</span>
-                                  <span>⏰ {negotiation.timeline}</span>
+                                  <span>💰 {negotiation.budget ? `$${negotiation.budget}` : displayField(negotiation.budget)}</span>
+                                  <span>⏰ {displayField(negotiation.timeline)}</span>
                                   <span>
                                     💬 {negotiation.messageCount} messages
                                   </span>
@@ -809,7 +817,7 @@ export default function DashboardPage() {
                           <DollarSign className="h-4 w-4 mr-1" /> Budget
                         </p>
                         <p className="font-medium">
-                          ${contract.budget.toLocaleString()}
+                          {contract.budget ? `$${contract.budget.toLocaleString()}` : displayField(contract.budget)}
                         </p>
                       </div>
                     </div>

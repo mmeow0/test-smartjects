@@ -23,7 +23,8 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { FileUploader } from "@/components/file-uploader";
-import { smartjectService, proposalService } from "@/lib/services";
+import { smartjectService } from "@/lib/services/smartject.service";
+import { proposalService } from "@/lib/services/proposal.service";
 import {
   ArrowLeft,
   ArrowRight,
@@ -46,6 +47,8 @@ import { ProposalDocumentPreview } from "@/components/proposal-document-preview"
 import type { DocumentVersion } from "@/components/document-version-history";
 import type { SmartjectType } from "@/lib/types";
 import { Switch } from "@/components/ui/switch";
+import { PrivateFieldManager } from "@/components/private-field-manager/private-field-manager";
+import type { ProposalPrivateFields } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
@@ -95,6 +98,7 @@ export default function CreateProposalPage() {
   const [proposalType, setProposalType] = useState<"need" | "provide" | null>(
     null
   );
+  const [isCooperationProposal, setIsCooperationProposal] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     smartjectId: smartjectId || "",
@@ -108,6 +112,32 @@ export default function CreateProposalPage() {
     approach: "",
     team: "",
     additionalInfo: "",
+  });
+
+  // Private fields state for confidential information
+  const [privateFields, setPrivateFields] = useState<ProposalPrivateFields>({
+    scope: "",
+    timeline: "",
+    budget: "",
+    deliverables: "",
+    requirements: "",
+    expertise: "",
+    approach: "",
+    team: "",
+    additionalInfo: "",
+  });
+
+  // Track which fields have private versions enabled
+  const [enabledPrivateFields, setEnabledPrivateFields] = useState<Record<string, boolean>>({
+    scope: false,
+    timeline: false,
+    budget: false,
+    deliverables: false,
+    requirements: false,
+    expertise: false,
+    approach: false,
+    team: false,
+    additionalInfo: false,
   });
   const [files, setFiles] = useState<File[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -227,6 +257,18 @@ export default function CreateProposalPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handlePrivateFieldChange = (fieldName: string, value: string) => {
+    setPrivateFields((prev) => ({ ...prev, [fieldName]: value }));
+  };
+
+  const handleTogglePrivateField = (fieldName: string, enabled: boolean) => {
+    setEnabledPrivateFields((prev) => ({ ...prev, [fieldName]: enabled }));
+    // Clear private field value if disabled
+    if (!enabled) {
+      setPrivateFields((prev) => ({ ...prev, [fieldName]: "" }));
+    }
+  };
+
   const handleFileChange = (uploadedFiles: File[]) => {
     setFiles(uploadedFiles);
   };
@@ -244,6 +286,14 @@ export default function CreateProposalPage() {
     setIsSaving(true);
 
     try {
+      // Prepare private fields (only include fields that are enabled and have content)
+      const proposalPrivateFields = Object.keys(enabledPrivateFields).reduce((acc, fieldName) => {
+        if (enabledPrivateFields[fieldName] && privateFields[fieldName as keyof typeof privateFields]) {
+          acc[fieldName as keyof typeof privateFields] = privateFields[fieldName as keyof typeof privateFields];
+        }
+        return acc;
+      }, {} as typeof privateFields);
+
       // Save the proposal to Supabase
       const proposalId = await proposalService.createProposal({
         userId: user.id,
@@ -251,6 +301,7 @@ export default function CreateProposalPage() {
         type: proposalType || "need",
         title: formData.title,
         description: formData.description,
+        isCooperationProposal: isCooperationProposal,
         budget: formData.budget,
         timeline: formData.timeline,
         scope: formData.scope,
@@ -260,6 +311,7 @@ export default function CreateProposalPage() {
         approach: formData.approach,
         team: formData.team,
         additionalInfo: formData.additionalInfo,
+        privateFields: proposalPrivateFields,
         status: "draft",
       });
 
@@ -322,19 +374,32 @@ export default function CreateProposalPage() {
       return;
     }
 
-    // Validate milestones if they're being used
-    if (useMilestones && totalPercentage !== 100) {
-      toast({
-        title: "Invalid milestone percentages",
-        description: "The total percentage of all milestones must equal 100%.",
-        variant: "destructive",
-      });
-      return;
+    // For cooperation proposals, only basic validation is needed
+    if (isCooperationProposal) {
+      // Skip milestone validation and other detailed validations
+    } else {
+      // Validate milestones if they're being used
+      if (useMilestones && totalPercentage !== 100) {
+        toast({
+          title: "Invalid milestone percentages",
+          description: "The total percentage of all milestones must equal 100%.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setIsSubmitting(true);
 
     try {
+      // Prepare private fields (only include fields that are enabled and have content)
+      const proposalPrivateFields = Object.keys(enabledPrivateFields).reduce((acc, fieldName) => {
+        if (enabledPrivateFields[fieldName] && privateFields[fieldName as keyof typeof privateFields]) {
+          acc[fieldName as keyof typeof privateFields] = privateFields[fieldName as keyof typeof privateFields];
+        }
+        return acc;
+      }, {} as typeof privateFields);
+
       // Save the proposal to Supabase
       const proposalId = await proposalService.createProposal({
         userId: user.id,
@@ -342,15 +407,17 @@ export default function CreateProposalPage() {
         type: proposalType || "need",
         title: formData.title,
         description: formData.description,
-        budget: formData.budget,
-        timeline: formData.timeline,
-        scope: formData.scope,
-        deliverables: formData.deliverables,
-        requirements: formData.requirements,
-        expertise: formData.expertise,
-        approach: formData.approach,
-        team: formData.team,
+        isCooperationProposal: isCooperationProposal,
+        budget: isCooperationProposal ? "" : formData.budget,
+        timeline: isCooperationProposal ? "" : formData.timeline,
+        scope: isCooperationProposal ? "" : formData.scope,
+        deliverables: isCooperationProposal ? "" : formData.deliverables,
+        requirements: isCooperationProposal ? "" : formData.requirements,
+        expertise: isCooperationProposal ? "" : formData.expertise,
+        approach: isCooperationProposal ? "" : formData.approach,
+        team: isCooperationProposal ? "" : formData.team,
         additionalInfo: formData.additionalInfo,
+        privateFields: proposalPrivateFields,
         status: "submitted",
       });
 
@@ -358,7 +425,7 @@ export default function CreateProposalPage() {
         throw new Error("Failed to create proposal");
       }
 
-      if (useMilestones && milestones.length > 0) {
+      if (useMilestones && milestones.length > 0 && !isCooperationProposal) {
         // 1. Создаём все milestones и получаем их с id
         const createdMilestones = await proposalService.createMilestones(
           proposalId,
@@ -434,7 +501,11 @@ export default function CreateProposalPage() {
   };
 
   const nextStep = () => {
-    if (currentStep < 5) {
+    // Skip to step 5 for cooperation proposals
+    if (currentStep === 1 && isCooperationProposal) {
+      setCurrentStep(5);
+      window.scrollTo(0, 0);
+    } else if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
       window.scrollTo(0, 0);
     }
@@ -624,6 +695,7 @@ export default function CreateProposalPage() {
                     I Provide (I can implement this smartject for someone)
                   </Label>
                 </div>
+
               </RadioGroup>
               {!proposalType && (
                 <p className="text-sm text-muted-foreground">
@@ -685,146 +757,198 @@ export default function CreateProposalPage() {
                 onChange={handleInputChange}
               />
             </div>
+
+            {proposalType && (
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="cooperation"
+                    checked={isCooperationProposal}
+                    onChange={(e) => setIsCooperationProposal(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <Label htmlFor="cooperation" className="cursor-pointer">
+                    This is a proposal for cooperation (partnership or collaboration)
+                  </Label>
+                </div>
+                {isCooperationProposal && (
+                  <p className="text-sm text-muted-foreground">
+                    Cooperation proposals will skip detailed project planning and go directly to document upload.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         );
 
       case 2:
         return (
           <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="scope">Project Scope</Label>
-              <Textarea
-                id="scope"
-                name="scope"
-                placeholder="Define the scope of the project"
-                rows={4}
-                value={formData.scope}
-                onChange={handleInputChange}
-              />
-            </div>
+            <PrivateFieldManager
+              fieldName="scope"
+              label="Project Scope"
+              publicValue={formData.scope}
+              privateValue={privateFields.scope || ""}
+              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, scope: value }))}
+              onPrivateChangeAction={(value) => handlePrivateFieldChange("scope", value)}
+              fieldType="textarea"
+              placeholder="Define the scope of the project"
+              privatePlaceholder="Confidential scope details..."
+              rows={4}
+              hasPrivateField={enabledPrivateFields.scope}
+              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("scope", enabled)}
+              isProposalOwner={true}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="timeline">Timeline</Label>
-              <Input
-                id="timeline"
-                name="timeline"
-                placeholder="e.g., 3 months, 12 weeks"
-                value={formData.timeline}
-                onChange={handleInputChange}
-              />
-              <p className="text-sm text-muted-foreground">
-                Estimated time to complete the project
-              </p>
-            </div>
+            <PrivateFieldManager
+              fieldName="timeline"
+              label="Timeline"
+              publicValue={formData.timeline}
+              privateValue={privateFields.timeline || ""}
+              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, timeline: value }))}
+              onPrivateChangeAction={(value) => handlePrivateFieldChange("timeline", value)}
+              fieldType="input"
+              placeholder="e.g., 3 months, 12 weeks"
+              privatePlaceholder="Confidential timeline details..."
+              hasPrivateField={enabledPrivateFields.timeline}
+              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("timeline", enabled)}
+              isProposalOwner={true}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="budget">Budget</Label>
-              <Input
-                id="budget"
-                name="budget"
-                placeholder="e.g., $5,000, $10,000-$15,000"
-                value={formData.budget}
-                onChange={handleInputChange}
-              />
-              <p className="text-sm text-muted-foreground">
-                Estimated budget for the project
-              </p>
-            </div>
+            <PrivateFieldManager
+              fieldName="budget"
+              label="Budget"
+              publicValue={formData.budget}
+              privateValue={privateFields.budget || ""}
+              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, budget: value }))}
+              onPrivateChangeAction={(value) => handlePrivateFieldChange("budget", value)}
+              fieldType="input"
+              placeholder="e.g., $5,000, $10,000-$15,000"
+              privatePlaceholder="Confidential budget details..."
+              hasPrivateField={enabledPrivateFields.budget}
+              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("budget", enabled)}
+              isProposalOwner={true}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="deliverables">Deliverables</Label>
-              <Textarea
-                id="deliverables"
-                name="deliverables"
-                placeholder="List the specific deliverables expected from this project"
-                rows={4}
-                value={formData.deliverables}
-                onChange={handleInputChange}
-              />
-            </div>
+            <PrivateFieldManager
+              fieldName="deliverables"
+              label="Deliverables"
+              publicValue={formData.deliverables}
+              privateValue={privateFields.deliverables || ""}
+              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, deliverables: value }))}
+              onPrivateChangeAction={(value) => handlePrivateFieldChange("deliverables", value)}
+              fieldType="textarea"
+              placeholder="List the specific deliverables expected from this project"
+              privatePlaceholder="Confidential deliverables details..."
+              rows={4}
+              hasPrivateField={enabledPrivateFields.deliverables}
+              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("deliverables", enabled)}
+              isProposalOwner={true}
+            />
           </div>
         );
 
       case 3:
         return proposalType === "need" ? (
           <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="requirements">Requirements</Label>
-              <Textarea
-                id="requirements"
-                name="requirements"
-                placeholder="Specify your detailed requirements for this project"
-                rows={6}
-                value={formData.requirements}
-                onChange={handleInputChange}
-              />
-              <p className="text-sm text-muted-foreground">
-                Include any specific technical requirements, constraints, or
-                preferences
-              </p>
-            </div>
+            <PrivateFieldManager
+              fieldName="requirements"
+              label="Requirements"
+              publicValue={formData.requirements}
+              privateValue={privateFields.requirements || ""}
+              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, requirements: value }))}
+              onPrivateChangeAction={(value) => handlePrivateFieldChange("requirements", value)}
+              fieldType="textarea"
+              placeholder="Specify your detailed requirements for this project"
+              privatePlaceholder="Confidential requirements details..."
+              rows={6}
+              hasPrivateField={enabledPrivateFields.requirements}
+              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("requirements", enabled)}
+              isProposalOwner={true}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="additionalInfo">Additional Information</Label>
-              <Textarea
-                id="additionalInfo"
-                name="additionalInfo"
-                placeholder="Any other information that might be helpful for potential providers"
-                rows={4}
-                value={formData.additionalInfo}
-                onChange={handleInputChange}
-              />
-            </div>
+            <PrivateFieldManager
+              fieldName="additionalInfo"
+              label="Additional Information"
+              publicValue={formData.additionalInfo}
+              privateValue={privateFields.additionalInfo || ""}
+              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, additionalInfo: value }))}
+              onPrivateChangeAction={(value) => handlePrivateFieldChange("additionalInfo", value)}
+              fieldType="textarea"
+              placeholder="Any other information that might be helpful for potential providers"
+              privatePlaceholder="Confidential additional information..."
+              rows={4}
+              hasPrivateField={enabledPrivateFields.additionalInfo}
+              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("additionalInfo", enabled)}
+              isProposalOwner={true}
+            />
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="expertise">Expertise & Experience</Label>
-              <Textarea
-                id="expertise"
-                name="expertise"
-                placeholder="Describe your relevant expertise and experience for this project"
-                rows={4}
-                value={formData.expertise}
-                onChange={handleInputChange}
-              />
-            </div>
+            <PrivateFieldManager
+              fieldName="expertise"
+              label="Expertise & Experience"
+              publicValue={formData.expertise}
+              privateValue={privateFields.expertise || ""}
+              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, expertise: value }))}
+              onPrivateChangeAction={(value) => handlePrivateFieldChange("expertise", value)}
+              fieldType="textarea"
+              placeholder="Describe your relevant expertise and experience for this project"
+              privatePlaceholder="Confidential expertise details..."
+              rows={4}
+              hasPrivateField={enabledPrivateFields.expertise}
+              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("expertise", enabled)}
+              isProposalOwner={true}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="approach">Implementation Approach</Label>
-              <Textarea
-                id="approach"
-                name="approach"
-                placeholder="Describe your approach to implementing this smartject"
-                rows={4}
-                value={formData.approach}
-                onChange={handleInputChange}
-              />
-            </div>
+            <PrivateFieldManager
+              fieldName="approach"
+              label="Implementation Approach"
+              publicValue={formData.approach}
+              privateValue={privateFields.approach || ""}
+              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, approach: value }))}
+              onPrivateChangeAction={(value) => handlePrivateFieldChange("approach", value)}
+              fieldType="textarea"
+              placeholder="Describe your approach to implementing this smartject"
+              privatePlaceholder="Confidential approach details..."
+              rows={4}
+              hasPrivateField={enabledPrivateFields.approach}
+              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("approach", enabled)}
+              isProposalOwner={true}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="team">Team & Resources</Label>
-              <Textarea
-                id="team"
-                name="team"
-                placeholder="Describe the team and resources you'll allocate to this project"
-                rows={3}
-                value={formData.team}
-                onChange={handleInputChange}
-              />
-            </div>
+            <PrivateFieldManager
+              fieldName="team"
+              label="Team & Resources"
+              publicValue={formData.team}
+              privateValue={privateFields.team || ""}
+              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, team: value }))}
+              onPrivateChangeAction={(value) => handlePrivateFieldChange("team", value)}
+              fieldType="textarea"
+              placeholder="Describe the team and resources you'll allocate to this project"
+              privatePlaceholder="Confidential team details..."
+              rows={3}
+              hasPrivateField={enabledPrivateFields.team}
+              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("team", enabled)}
+              isProposalOwner={true}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="additionalInfo">Additional Information</Label>
-              <Textarea
-                id="additionalInfo"
-                name="additionalInfo"
-                placeholder="Any other information that might strengthen your proposal"
-                rows={3}
-                value={formData.additionalInfo}
-                onChange={handleInputChange}
-              />
-            </div>
+            <PrivateFieldManager
+              fieldName="additionalInfo"
+              label="Additional Information"
+              publicValue={formData.additionalInfo}
+              privateValue={privateFields.additionalInfo || ""}
+              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, additionalInfo: value }))}
+              onPrivateChangeAction={(value) => handlePrivateFieldChange("additionalInfo", value)}
+              fieldType="textarea"
+              placeholder="Any other information that might strengthen your proposal"
+              privatePlaceholder="Confidential additional information..."
+              rows={3}
+              hasPrivateField={enabledPrivateFields.additionalInfo}
+              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("additionalInfo", enabled)}
+              isProposalOwner={true}
+            />
           </div>
         );
 
@@ -996,27 +1120,38 @@ export default function CreateProposalPage() {
                   <p>{formData.description || "Not specified"}</p>
                 </div>
                 <Separator />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-sm font-medium flex items-center gap-1">
-                      <Calendar className="h-4 w-4" /> Timeline
-                    </p>
-                    <p>{formData.timeline || "Not specified"}</p>
+                {isCooperationProposal ? (
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <p className="text-sm font-medium flex items-center gap-1">
+                        <FileText className="h-4 w-4" /> Files
+                      </p>
+                      <p>{files.length} attached</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium flex items-center gap-1">
-                      <DollarSign className="h-4 w-4" /> Budget
-                    </p>
-                    <p>{formData.budget || "Not specified"}</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm font-medium flex items-center gap-1">
+                        <Calendar className="h-4 w-4" /> Timeline
+                      </p>
+                      <p>{formData.timeline || "Not specified"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium flex items-center gap-1">
+                        <DollarSign className="h-4 w-4" /> Budget
+                      </p>
+                      <p>{formData.budget || "Not specified"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium flex items-center gap-1">
+                        <FileText className="h-4 w-4" /> Files
+                      </p>
+                      <p>{files.length} attached</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium flex items-center gap-1">
-                      <FileText className="h-4 w-4" /> Files
-                    </p>
-                    <p>{files.length} attached</p>
-                  </div>
-                </div>
-                {useMilestones && milestones.length > 0 && (
+                )}
+                {!isCooperationProposal && useMilestones && milestones.length > 0 && (
                   <>
                     <Separator />
                     <div>
@@ -1132,6 +1267,8 @@ export default function CreateProposalPage() {
                   : "Describe your expertise and approach to implementing this smartject"
                 : currentStep === 4
                 ? "Define payment milestones for the project"
+                : isCooperationProposal
+                ? "Upload supporting documents and submit your cooperation proposal"
                 : "Upload supporting documents and review your proposal"}
             </CardDescription>
           </CardHeader>
@@ -1166,7 +1303,7 @@ export default function CreateProposalPage() {
                   onClick={nextStep}
                   disabled={currentStep === 1 && !proposalType}
                 >
-                  Next
+                  {currentStep === 1 && isCooperationProposal ? "Skip to Review" : "Next"}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (

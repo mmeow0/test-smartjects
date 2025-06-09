@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import { ProposalDocumentPreview } from "@/components/proposal-document-preview";
+import { ProposalNegotiations } from "@/components/proposal-negotiations";
+import { NDARequestForm } from "@/components/nda-request-form";
+import { NDARequestsManager } from "@/components/nda-requests-manager";
 import {
   ArrowLeft,
   Calendar,
@@ -28,9 +31,18 @@ import {
   ThumbsUp,
   CheckCircle,
   XCircle,
+  Shield,
+  Users,
+  Eye,
+  EyeOff,
+  AlertCircle,
 } from "lucide-react";
-import { proposalService } from "@/lib/services";
+import { proposalService } from "@/lib/services/proposal.service";
+import { ndaService } from "@/lib/services/nda.service";
+import { userService } from "@/lib/services/user.service";
 import { useProposal } from "@/hooks/use-proposal";
+import { useProposalNegotiations } from "@/hooks/use-proposal-negotiations";
+import type { UserType, NDARequest } from "@/lib/types";
 
 export default function ProposalDetailPage({
   params,
@@ -46,7 +58,36 @@ export default function ProposalDetailPage({
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState("details");
+  const [ndaSignaturesWithUsers, setNdaSignaturesWithUsers] = useState<Array<any>>([]);
+  const [loadingNdaSignatures, setLoadingNdaSignatures] = useState(false);
+  const [proposalOwner, setProposalOwner] = useState<UserType | null>(null);
+  const [loadingOwner, setLoadingOwner] = useState(false);
+  const [userNdaRequest, setUserNdaRequest] = useState<NDARequest | null>(null);
+  const [loadingUserRequest, setLoadingUserRequest] = useState(false);
+  const [databaseError, setDatabaseError] = useState<string | null>(null);
   const { proposal, isLoading, refetch } = useProposal(id);
+  const { conversations, completedConversations } = useProposalNegotiations(id);
+
+    // Fetch NDA signatures when proposal loads
+  useEffect(() => {
+    if (proposal?.ndaSignatures && proposal.ndaSignatures.length > 0) {
+      fetchNdaSignaturesWithUsers();
+    }
+  }, [proposal?.ndaSignatures]);
+
+  // Fetch proposal owner when proposal loads
+  useEffect(() => {
+    if (proposal?.userId) {
+      fetchProposalOwner();
+    }
+  }, [proposal?.userId]);
+
+  // Fetch user's NDA request when proposal loads
+  useEffect(() => {
+    if (proposal && user?.id) {
+      fetchUserNdaRequest();
+    }
+  }, [proposal?.id, user?.id]);
 
   const handlePostComment = async () => {
     if (!newComment.trim()) return;
@@ -86,6 +127,56 @@ export default function ProposalDetailPage({
   if (!proposal) {
     return <div>Proposal not found.</div>;
   }
+
+  // Helper function to display field value or "not specified"
+  const displayField = (value: string | undefined | null) => {
+    if (!value || value.trim() === "") {
+      return <span className="text-muted-foreground italic">not specified</span>;
+    }
+    return value;
+  };
+
+  const isProposalOwner = proposal.userId === user.id;
+  const hasNegotiations = conversations.length > 0 || completedConversations.length > 0;
+  const showNegotiationsTab = isProposalOwner || hasNegotiations;
+  
+  // Check user's NDA request status
+  const hasPendingRequest = userNdaRequest?.status === 'pending';
+  const hasRejectedRequest = userNdaRequest?.status === 'rejected';
+  const hasApprovedRequest = userNdaRequest?.status === 'approved';
+  
+  // Check if user has approved NDA (either from signatures list OR from approved request)
+  const hasApprovedNDA = proposal.ndaSignatures?.some(signature => signature.signerUserId === user.id) || hasApprovedRequest;
+  const hasPrivateFields = proposal.privateFields && Object.keys(proposal.privateFields).length > 0;
+  
+  // Only allow access to private fields if user is owner OR has approved NDA
+  const canViewPrivateFields = isProposalOwner || hasApprovedNDA;
+  
+  // Check if migration is needed based on database errors or missing NDA functionality
+  const migrationNeeded = hasPrivateFields && (
+    databaseError !== null || 
+    (userNdaRequest === null && !hasApprovedNDA && !isProposalOwner && databaseError === null)
+  );
+
+  // User can request NDA if they're not owner, don't have approved NDA, don't have any pending/rejected request, AND migration is applied
+  const canRequestNda = !isProposalOwner && !hasApprovedNDA && !userNdaRequest && hasPrivateFields && !migrationNeeded;
+
+  // Debug NDA access logic
+  console.log('=== NDA Access Debug Info ===');
+  console.log('User ID:', user?.id);
+  console.log('Is Proposal Owner:', isProposalOwner);
+  console.log('Proposal NDA Signatures:', proposal.ndaSignatures);
+  console.log('User NDA Request:', userNdaRequest);
+  console.log('Has Pending Request:', hasPendingRequest);
+  console.log('Has Rejected Request:', hasRejectedRequest);
+  console.log('Has Approved Request:', hasApprovedRequest);
+  console.log('Has Approved NDA (combined):', hasApprovedNDA);
+  console.log('Can View Private Fields:', canViewPrivateFields);
+  console.log('Can Request NDA:', canRequestNda);
+  console.log('Has Private Fields:', hasPrivateFields);
+  console.log('Migration Needed:', migrationNeeded);
+  console.log('============================');
+
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -133,6 +224,77 @@ export default function ProposalDetailPage({
     router.push(`/proposals/edit/${id}`);
   };
 
+  // Fetch NDA signatures with user details
+  const fetchNdaSignaturesWithUsers = async () => {
+    if (!proposal?.ndaSignatures || proposal.ndaSignatures.length === 0) {
+      return;
+    }
+    
+    setLoadingNdaSignatures(true);
+    try {
+      const signaturesWithUsers = await ndaService.getProposalSignaturesWithUsers(id);
+      setNdaSignaturesWithUsers(signaturesWithUsers);
+    } catch (error) {
+      console.error("Error fetching NDA signatures with users:", error);
+    } finally {
+      setLoadingNdaSignatures(false);
+    }
+  };
+
+  // Fetch user's NDA request status
+  const fetchUserNdaRequest = async () => {
+    if (!user?.id || isProposalOwner) return;
+    
+    setLoadingUserRequest(true);
+    try {
+      const request = await ndaService.getUserNDARequest(id, user.id);
+      setUserNdaRequest(request);
+      setDatabaseError(null); // Clear any previous errors
+    } catch (error: any) {
+      console.error("Error fetching user NDA request:", error);
+      if (error?.message?.includes('column "status"') || error?.message?.includes('migration required')) {
+        setDatabaseError(error.message);
+      }
+    } finally {
+      setLoadingUserRequest(false);
+    }
+  };
+
+  // Handle NDA request submission
+  const handleNdaRequestSubmitted = () => {
+    fetchUserNdaRequest();
+    refetch();
+    fetchNdaSignaturesWithUsers(); // Also refresh signatures list
+    setDatabaseError(null); // Clear any previous errors on successful submission
+  };
+
+  // Handle NDA requests update (for proposal owner)
+  const handleNdaRequestsUpdated = async () => {
+    // Add delay to ensure database is updated before refreshing
+    setTimeout(async () => {
+      console.log('Refreshing all NDA data after approval/rejection...');
+      await refetch();
+      await fetchNdaSignaturesWithUsers();
+      await fetchUserNdaRequest(); // Also refresh user's NDA request status
+      console.log('NDA data refresh completed');
+    }, 1000); // 1 second delay for database consistency
+  };
+
+  // Fetch proposal owner information
+  const fetchProposalOwner = async () => {
+    if (!proposal?.userId) return;
+    
+    setLoadingOwner(true);
+    try {
+      const owner = await userService.getUserById(proposal.userId);
+      setProposalOwner(owner);
+    } catch (error) {
+      console.error("Error fetching proposal owner:", error);
+    } finally {
+      setLoadingOwner(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="max-w-4xl mx-auto">
@@ -173,7 +335,7 @@ export default function ProposalDetailPage({
             <CardContent>
               <div className="flex items-center">
                 <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>{proposal.timeline}</span>
+                <span>{displayField(proposal.timeline)}</span>
               </div>
             </CardContent>
           </Card>
@@ -185,7 +347,7 @@ export default function ProposalDetailPage({
             <CardContent>
               <div className="flex items-center">
                 <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>{proposal.budget}</span>
+                <span>{displayField(proposal.budget)}</span>
               </div>
             </CardContent>
           </Card>
@@ -212,33 +374,69 @@ export default function ProposalDetailPage({
             <TabsTrigger value="comments">
               Comments ({proposal.comments.length})
             </TabsTrigger>
+            {showNegotiationsTab && (
+              <TabsTrigger value="negotiations">
+                Negotiations
+              </TabsTrigger>
+            )}
+            {isProposalOwner && hasPrivateFields && (
+              <TabsTrigger value="nda-management">
+                NDA Management
+              </TabsTrigger>
+            )}
           </TabsList>
+
+          {/* Migration Status Warning */}
+          {migrationNeeded && (
+            <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <div>
+                  <p className="font-medium text-red-900">Database Migration Required</p>
+                  <p className="text-sm text-red-700">
+                    The new NDA approval workflow requires database updates. NDA request functionality is disabled until migrations are applied.
+                    Please contact your administrator to apply the required database migrations.
+                    {databaseError && (
+                      <span className="block mt-1 font-mono text-xs">Error: {databaseError}</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <TabsContent value="details">
             <Card>
               <CardContent className="pt-6">
                 <div className="space-y-4">
                   <DetailSection title="Submitted By">
-                    <div>
-                      <p>{user?.name || "Unknown User"}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {user?.email || "unknown@example.com"}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src={isProposalOwner ? (user?.avatar || "/placeholder.svg") : (proposalOwner?.avatar || "/placeholder.svg")} />
+                        <AvatarFallback>
+                          {isProposalOwner ? (user?.name?.charAt(0) || 'U') : (proposalOwner?.name?.charAt(0) || 'U')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">
+                          {loadingOwner ? "Loading..." : (isProposalOwner ? (user?.name || "Unknown User") : (proposalOwner?.name || "Unknown User"))}
+                          {isProposalOwner && <span className="ml-2 text-xs text-blue-600">(You)</span>}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {loadingOwner ? "Loading..." : (isProposalOwner ? (user?.email || "unknown@example.com") : (proposalOwner?.email || "Email not available"))}
+                        </p>
+                      </div>
                     </div>
                   </DetailSection>
 
                   {/* Grid for compact info */}
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {proposal.timeline && (
-                      <DetailSection title="Timeline">
-                        {proposal.timeline}
-                      </DetailSection>
-                    )}
-                    {proposal.budget && (
-                      <DetailSection title="Budget">
-                        {proposal.budget}
-                      </DetailSection>
-                    )}
+                    <DetailSection title="Timeline">
+                      {displayField(proposal.timeline)}
+                    </DetailSection>
+                    <DetailSection title="Budget">
+                      {displayField(proposal.budget)}
+                    </DetailSection>
                     <DetailSection title="Submitted On">
                       {new Date(proposal.createdAt).toLocaleDateString()}
                     </DetailSection>
@@ -246,49 +444,500 @@ export default function ProposalDetailPage({
 
                   {/* Long Sections */}
                   <DetailSection title="Description">
-                    {proposal.description}
+                    {displayField(proposal.description)}
                   </DetailSection>
                   <DetailSection title="Project Scope">
-                    {proposal.scope}
+                    {displayField(proposal.scope)}
                   </DetailSection>
                   <DetailSection title="Deliverables">
-                    <ul className="list-disc pl-5 space-y-1">
-                      {Array.isArray(proposal.deliverables) ? (
-                        proposal.deliverables.map((item, i) => (
-                          <li key={i}>{item}</li>
-                        ))
-                      ) : (
-                        <li>{proposal.deliverables}</li>
-                      )}
-                    </ul>
+                    {proposal.deliverables && proposal.deliverables.toString().trim() !== "" ? (
+                      <ul className="list-disc pl-5 space-y-1">
+                        {Array.isArray(proposal.deliverables) ? (
+                          proposal.deliverables.map((item, i) => (
+                            <li key={i}>{item}</li>
+                          ))
+                        ) : (
+                          <li>{proposal.deliverables}</li>
+                        )}
+                      </ul>
+                    ) : (
+                      <span className="text-muted-foreground italic">not specified</span>
+                    )}
                   </DetailSection>
 
-                  {proposal.type === "need" && proposal.requirements && (
+                  {proposal.type === "need" && (
                     <DetailSection title="Requirements">
-                      {proposal.requirements}
+                      {displayField(proposal.requirements)}
                     </DetailSection>
                   )}
 
                   {proposal.type === "provide" && (
                     <>
                       <DetailSection title="Approach">
-                        {proposal.approach}
+                        {displayField(proposal.approach)}
                       </DetailSection>
                       <DetailSection title="Expertise">
-                        {proposal.expertise}
+                        {displayField(proposal.expertise)}
                       </DetailSection>
                       <DetailSection title="Team">
-                        {proposal.team}
+                        {displayField(proposal.team)}
                       </DetailSection>
                     </>
                   )}
 
-                  {proposal.additionalInfo && (
-                    <DetailSection title="Additional Info">
-                      {proposal.additionalInfo}
+                  <DetailSection title="Additional Info">
+                    {displayField(proposal.additionalInfo)}
+                  </DetailSection>
+
+                  {/* 
+                    NDA Section - Comprehensive NDA Management and Private Fields Access Control
+                    
+                    This section provides complete NDA (Non-Disclosure Agreement) functionality for proposals:
+                    
+                    Features implemented:
+                    1. NDA Overview Statistics - Shows count of private fields, signatures, and user access status
+                    2. Proposal Owner Display - Shows owner information with avatar and contact details
+                    3. NDA Signatures Management - Lists all users who have signed the NDA with timestamps
+                    4. Access Control - Determines who can view private fields (owner or NDA signers)
+                    5. Private Fields Display - Shows protected content only to authorized users
+                    6. NDA Signing Interface - Allows eligible users to sign NDA to gain access
+                    7. Activity Timeline - Tracks proposal creation, updates, and NDA signing history
+                    8. Loading States - Smooth UX with loading indicators for async operations
+                    
+                    Access Rules:
+                    - Proposal owner: Full access to all private fields automatically
+                    - Other users: Must sign NDA to view private fields
+                    - Anonymous users: Cannot see private content
+                    
+                    Private fields include: scope, timeline, budget, deliverables, requirements, 
+                    expertise, approach, team, and additional info (when marked as private)
+                  */}
+                  {(hasPrivateFields || (proposal.ndaSignatures && proposal.ndaSignatures.length > 0)) && (
+                    <DetailSection title="NDA & Private Information">
+                      <div className="space-y-6">
+                        {/* NDA Overview Stats */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <Card className="p-4">
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-5 w-5 text-blue-600" />
+                              <div>
+                                <p className="text-2xl font-bold text-blue-900">
+                                  {hasPrivateFields ? Object.keys(proposal.privateFields || {}).length : 0}
+                                </p>
+                                <p className="text-sm text-blue-700">Private Fields</p>
+                              </div>
+                            </div>
+                          </Card>
+                          <Card className="p-4">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-5 w-5 text-green-600" />
+                              <div>
+                                <p className="text-2xl font-bold text-green-900">
+                                  {proposal.ndaSignatures ? proposal.ndaSignatures.length : 0}
+                                </p>
+                                <p className="text-sm text-green-700">NDA Signatures</p>
+                              </div>
+                            </div>
+                          </Card>
+                          <Card className="p-4">
+                            <div className="flex items-center gap-2">
+                              {canViewPrivateFields ? (
+                                <Eye className="h-5 w-5 text-green-600" />
+                              ) : (
+                                <EyeOff className="h-5 w-5 text-orange-600" />
+                              )}
+                              <div>
+                                <p className="text-2xl font-bold text-gray-900">
+                                  {canViewPrivateFields ? "✓" : "✗"}
+                                </p>
+                                <p className="text-sm text-gray-700">Your Access</p>
+                              </div>
+                            </div>
+                          </Card>
+                        </div>
+                        {/* NDA Status Banner */}
+                        {hasPrivateFields && (
+                          <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-full bg-blue-100">
+                                <Shield className="h-5 w-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-blue-900">
+                                  NDA Protected Content
+                                </p>
+                                <p className="text-sm text-blue-700">
+                                  {Object.keys(proposal.privateFields || {}).length} private fields • 
+                                  {proposal.ndaSignatures ? proposal.ndaSignatures.length : 0} signatures • 
+                                  Updated {new Date(proposal.updatedAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <Badge variant={canViewPrivateFields ? "default" : "secondary"} 
+                                     className={canViewPrivateFields ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}>
+                                {canViewPrivateFields ? "Access Granted" : "NDA Required"}
+                              </Badge>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Access Control Section */}
+                        <div className="space-y-4">
+                          <h4 className="text-lg font-semibold flex items-center gap-2">
+                            <Users className="h-5 w-5" />
+                            Access & Permissions
+                          </h4>
+                          
+                          {/* Proposal Owner */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Badge variant="outline" className="text-xs">OWNER</Badge>
+                              <span className="font-medium">Proposal Owner</span>
+                            </div>
+                            <div className="p-3 rounded-lg border bg-blue-50 border-blue-200">
+                              {loadingOwner ? (
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-blue-200 animate-pulse"></div>
+                                  <div>
+                                    <div className="w-24 h-4 bg-blue-200 rounded animate-pulse mb-1"></div>
+                                    <div className="w-32 h-3 bg-blue-100 rounded animate-pulse"></div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="w-8 h-8">
+                                    <AvatarImage src={isProposalOwner ? (user?.avatar || "/placeholder.svg") : (proposalOwner?.avatar || "/placeholder.svg")} />
+                                    <AvatarFallback>
+                                      {isProposalOwner ? (user?.name?.charAt(0) || 'U') : (proposalOwner?.name?.charAt(0) || 'O')}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="text-sm font-medium text-blue-900">
+                                      {isProposalOwner ? (user?.name || "Unknown User") : (proposalOwner?.name || "Unknown User")}
+                                      {isProposalOwner && <span className="ml-2 text-xs">(You)</span>}
+                                    </p>
+                                    <p className="text-xs text-blue-700">
+                                      Proposal owner • Full access to all private fields
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* NDA Signatures */}
+                          {(proposal.ndaSignatures && proposal.ndaSignatures.length > 0) || loadingNdaSignatures ? (
+                            <div>
+                              <div className="flex items-center gap-2 mb-3">
+                                <Badge variant="outline" className="text-xs">SIGNERS</Badge>
+                                <span className="font-medium">
+                                  NDA Signatures 
+                                  {!loadingNdaSignatures && proposal.ndaSignatures && ` (${proposal.ndaSignatures.length})`}
+                                  {loadingNdaSignatures && " (Loading...)"}
+                                </span>
+                              </div>
+                              {loadingNdaSignatures ? (
+                                <div className="flex items-center gap-2 p-3 rounded-lg border bg-gray-50">
+                                  <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                                  <span className="text-sm text-muted-foreground">Loading signature details...</span>
+                                </div>
+                              ) : proposal.ndaSignatures && proposal.ndaSignatures.length > 0 ? (
+                                <div className="space-y-2">
+                                  {(ndaSignaturesWithUsers.length > 0 ? ndaSignaturesWithUsers : proposal.ndaSignatures).map((signature) => (
+                                    <div key={signature.id} className="flex items-center justify-between p-3 rounded-lg border bg-green-50 border-green-200">
+                                      <div className="flex items-center gap-3">
+                                        {signature.signerAvatar ? (
+                                          <Avatar className="w-8 h-8">
+                                            <AvatarImage src={signature.signerAvatar} />
+                                            <AvatarFallback>
+                                              {signature.signerName?.charAt(0) || 'U'}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                        ) : (
+                                          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                                            <CheckCircle className="h-4 w-4 text-green-600" />
+                                          </div>
+                                        )}
+                                        <div>
+                                          <p className="text-sm font-medium text-green-900">
+                                            {signature.signerName || `User ${signature.signerUserId}`}
+                                          </p>
+                                          <p className="text-xs text-green-700">
+                                            Signed: {new Date(signature.signedAt).toLocaleDateString()}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      {signature.signerUserId === user.id && (
+                                        <Badge variant="secondary" className="text-xs bg-green-200 text-green-800">You</Badge>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="p-3 rounded-lg border bg-gray-50">
+                                  <p className="text-sm text-muted-foreground">No NDA signatures yet</p>
+                                </div>
+                              )}
+                            </div>
+                          ) : null}
+                        </div>
+
+                        {/* Your Access Status */}
+                        <div>
+                          <h4 className="text-lg font-semibold flex items-center gap-2 mb-4">
+                            <Eye className="h-5 w-5" />
+                            Your Access Status
+                          </h4>
+                          
+                          {canViewPrivateFields ? (
+                            <div className="flex items-center gap-3 p-4 rounded-lg border-2 bg-green-50 border-green-200">
+                              <Eye className="h-5 w-5 text-green-600" />
+                              <div>
+                                <p className="font-medium text-green-900">Access Granted</p>
+                                <p className="text-sm text-green-700">
+                                  {isProposalOwner 
+                                    ? "You own this proposal and can view all private fields"
+                                    : "Your NDA request has been approved - you can view private fields"
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                          ) : hasPendingRequest ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-3 p-4 rounded-lg border-2 bg-yellow-50 border-yellow-200">
+                                <Clock className="h-5 w-5 text-yellow-600" />
+                                <div>
+                                  <p className="font-medium text-yellow-900">Request Pending Review</p>
+                                  <p className="text-sm text-yellow-700">
+                                    Your NDA request is awaiting approval from the proposal owner
+                                  </p>
+                                </div>
+                              </div>
+                              {userNdaRequest?.requestMessage && (
+                                <div className="p-3 rounded-lg bg-gray-50 border">
+                                  <p className="text-sm font-medium mb-1">Your Message:</p>
+                                  <p className="text-sm text-gray-700">{userNdaRequest.requestMessage}</p>
+                                </div>
+                              )}
+                            </div>
+                          ) : hasRejectedRequest ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-3 p-4 rounded-lg border-2 bg-red-50 border-red-200">
+                                <XCircle className="h-5 w-5 text-red-600" />
+                                <div>
+                                  <p className="font-medium text-red-900">Request Rejected</p>
+                                  <p className="text-sm text-red-700">
+                                    Your NDA request was rejected by the proposal owner
+                                  </p>
+                                </div>
+                              </div>
+                              {userNdaRequest?.rejectionReason && (
+                                <div className="p-3 rounded-lg bg-red-50 border border-red-200">
+                                  <p className="text-sm font-medium text-red-900 mb-1">Rejection Reason:</p>
+                                  <p className="text-sm text-red-700">{userNdaRequest.rejectionReason}</p>
+                                </div>
+                              )}
+                            </div>
+                          ) : migrationNeeded ? (
+                            <div className="flex items-center gap-3 p-4 rounded-lg border-2 bg-red-50 border-red-200">
+                              <AlertCircle className="h-5 w-5 text-red-600" />
+                              <div>
+                                <p className="font-medium text-red-900">Feature Unavailable</p>
+                                <p className="text-sm text-red-700">
+                                  NDA requests are disabled until database migrations are applied. Please contact your administrator.
+                                  {databaseError && (
+                                    <span className="block mt-1 font-mono text-xs">Database Error: {databaseError}</span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between p-4 rounded-lg border-2 border-dashed">
+                              <div className="flex items-center gap-2">
+                                <EyeOff className="h-4 w-4 text-orange-600" />
+                                <div>
+                                  <p className="font-medium text-orange-900">NDA Access Required</p>
+                                  <p className="text-sm text-orange-700">
+                                    Submit an NDA request to view private proposal details
+                                  </p>
+                                </div>
+                              </div>
+                              {canRequestNda && !migrationNeeded && (
+                                <div className="ml-4">
+                                  <NDARequestForm
+                                    proposalId={id}
+                                    proposalTitle={proposal.title}
+                                    onRequestSubmitted={handleNdaRequestSubmitted}
+                                    disabled={loadingUserRequest}
+                                  />
+                                </div>
+                              )}
+                              {migrationNeeded && (
+                                <div className="ml-4">
+                                  <Badge variant="destructive" className="text-xs">
+                                    Migration Required
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Private Fields Display */}
+                        {hasPrivateFields && canViewPrivateFields && (
+                          <div>
+                            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                              <Shield className="h-5 w-5" />
+                              Private Fields Content
+                              <Badge variant="secondary" className="ml-2">
+                                {Object.keys(proposal.privateFields || {}).length} fields unlocked
+                              </Badge>
+                            </h4>
+                            <div className="space-y-3 p-4 rounded-lg bg-amber-50 border border-amber-200">
+                              {proposal.privateFields?.scope && (
+                                <div>
+                                  <p className="font-medium text-sm text-amber-900">Private Scope:</p>
+                                  <p className="text-sm text-amber-800">{proposal.privateFields.scope}</p>
+                                </div>
+                              )}
+                              {proposal.privateFields?.timeline && (
+                                <div>
+                                  <p className="font-medium text-sm text-amber-900">Private Timeline:</p>
+                                  <p className="text-sm text-amber-800">{proposal.privateFields.timeline}</p>
+                                </div>
+                              )}
+                              {proposal.privateFields?.budget && (
+                                <div>
+                                  <p className="font-medium text-sm text-amber-900">Private Budget:</p>
+                                  <p className="text-sm text-amber-800">{proposal.privateFields.budget}</p>
+                                </div>
+                              )}
+                              {proposal.privateFields?.deliverables && (
+                                <div>
+                                  <p className="font-medium text-sm text-amber-900">Private Deliverables:</p>
+                                  <p className="text-sm text-amber-800">{proposal.privateFields.deliverables}</p>
+                                </div>
+                              )}
+                              {proposal.privateFields?.requirements && (
+                                <div>
+                                  <p className="font-medium text-sm text-amber-900">Private Requirements:</p>
+                                  <p className="text-sm text-amber-800">{proposal.privateFields.requirements}</p>
+                                </div>
+                              )}
+                              {proposal.privateFields?.expertise && (
+                                <div>
+                                  <p className="font-medium text-sm text-amber-900">Private Expertise:</p>
+                                  <p className="text-sm text-amber-800">{proposal.privateFields.expertise}</p>
+                                </div>
+                              )}
+                              {proposal.privateFields?.approach && (
+                                <div>
+                                  <p className="font-medium text-sm text-amber-900">Private Approach:</p>
+                                  <p className="text-sm text-amber-800">{proposal.privateFields.approach}</p>
+                                </div>
+                              )}
+                              {proposal.privateFields?.team && (
+                                <div>
+                                  <p className="font-medium text-sm text-amber-900">Private Team:</p>
+                                  <p className="text-sm text-amber-800">{proposal.privateFields.team}</p>
+                                </div>
+                              )}
+                              {proposal.privateFields?.additionalInfo && (
+                                <div>
+                                  <p className="font-medium text-sm text-amber-900">Private Additional Info:</p>
+                                  <p className="text-sm text-amber-800">{proposal.privateFields.additionalInfo}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* NDA Activity Timeline */}
+                        {proposal.ndaSignatures && proposal.ndaSignatures.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <h4 className="font-medium">NDA Activity Timeline</h4>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="p-3 rounded-lg border bg-amber-50 border-amber-200">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Calendar className="h-4 w-4 text-amber-600" />
+                                  <span className="text-sm font-medium text-amber-900">Proposal Created</span>
+                                </div>
+                                <p className="text-xs text-amber-700 ml-6">
+                                  {new Date(proposal.createdAt).toLocaleDateString()} at {new Date(proposal.createdAt).toLocaleTimeString()}
+                                </p>
+                              </div>
+                              
+                              {hasPrivateFields && (
+                                <div className="p-3 rounded-lg border bg-purple-50 border-purple-200">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Shield className="h-4 w-4 text-purple-600" />
+                                    <span className="text-sm font-medium text-purple-900">Private Fields Last Updated</span>
+                                  </div>
+                                  <p className="text-xs text-purple-700 ml-6">
+                                    {new Date(proposal.updatedAt).toLocaleDateString()} at {new Date(proposal.updatedAt).toLocaleTimeString()}
+                                  </p>
+                                </div>
+                              )}
+
+                              {(ndaSignaturesWithUsers.length > 0 ? ndaSignaturesWithUsers : proposal.ndaSignatures)
+                                .sort((a, b) => new Date(a.signedAt).getTime() - new Date(b.signedAt).getTime())
+                                .map((signature, index) => (
+                                <div key={signature.id} className="p-3 rounded-lg border bg-green-50 border-green-200">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <CheckCircle className="h-4 w-4 text-green-600" />
+                                    <span className="text-sm font-medium text-green-900">
+                                      NDA Signed by {signature.signerName || `User ${signature.signerUserId}`}
+                                      {signature.signerUserId === user.id && " (You)"}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-green-700 ml-6">
+                                    {new Date(signature.signedAt).toLocaleDateString()} at {new Date(signature.signedAt).toLocaleTimeString()}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Show private fields count when access denied */}
+                        {hasPrivateFields && !canViewPrivateFields && !hasPendingRequest && (
+                          <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Shield className="h-4 w-4 text-gray-600" />
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {Object.keys(proposal.privateFields || {}).length} Private Field(s) Available
+                                  </p>
+                                  <p className="text-xs text-gray-600">
+                                    Submit an NDA request to unlock detailed proposal information
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Last updated: {new Date(proposal.updatedAt).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                              {canRequestNda && (
+                                <div className="ml-4">
+                                  <NDARequestForm
+                                    proposalId={id}
+                                    proposalTitle={proposal.title}
+                                    onRequestSubmitted={handleNdaRequestSubmitted}
+                                    disabled={loadingUserRequest}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </DetailSection>
                   )}
-                  {proposal.milestones?.length > 0 && (
+                  {proposal.milestones && proposal.milestones.length > 0 && (
                     <DetailSection title="Milestones">
                       <div className="space-y-6">
                         {proposal.milestones.map((milestone, index) => (
@@ -300,7 +949,7 @@ export default function ProposalDetailPage({
                               {index + 1}. {milestone.name}
                             </h4>
                             <p className="text-sm text-muted-foreground mb-2">
-                              {milestone.description}
+                              {displayField(milestone.description)}
                             </p>
                             <div className="flex items-center gap-4 text-sm">
                               <span>
@@ -308,7 +957,7 @@ export default function ProposalDetailPage({
                                 {milestone.percentage}%
                               </span>
                               <span>
-                                <strong>Amount:</strong> {milestone.amount}
+                                <strong>Amount:</strong> {displayField(milestone.amount)}
                               </span>
                             </div>
 
@@ -499,6 +1148,26 @@ export default function ProposalDetailPage({
               </CardContent>
             </Card>
           </TabsContent>
+
+          {showNegotiationsTab && (
+            <TabsContent value="negotiations">
+              <ProposalNegotiations 
+                proposalId={proposal.id} 
+                isProposalOwner={isProposalOwner}
+              />
+            </TabsContent>
+          )}
+
+          {isProposalOwner && hasPrivateFields && (
+            <TabsContent value="nda-management">
+              <NDARequestsManager
+                proposalId={proposal.id}
+                proposalTitle={proposal.title}
+                isProposalOwner={isProposalOwner}
+                onRequestsUpdated={handleNdaRequestsUpdated}
+              />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

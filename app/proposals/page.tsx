@@ -76,6 +76,14 @@ export default function ProposalsPage() {
     return null;
   }
 
+  // Helper function to display field value or "not specified"
+  const displayField = (value: string | undefined | null) => {
+    if (!value || value.trim() === "") {
+      return <span className="text-muted-foreground italic">not specified</span>;
+    }
+    return value;
+  };
+
   const filterProposals = useCallback(
     (proposals: ProposalType[]) => {
       return proposals
@@ -228,12 +236,12 @@ export default function ProposalsPage() {
                     <div>
                       <p className="text-sm text-muted-foreground">Budget</p>
                       <p className="font-medium">
-                        ${proposal.budget?.toLocaleString()}
+                        {proposal.budget ? `$${proposal.budget.toLocaleString()}` : displayField(proposal.budget)}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Timeline</p>
-                      <p className="font-medium">{proposal.timeline}</p>
+                      <p className="font-medium">{displayField(proposal.timeline)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">
@@ -288,12 +296,12 @@ export default function ProposalsPage() {
                     <div>
                       <p className="text-sm text-muted-foreground">Budget</p>
                       <p className="font-medium">
-                        ${proposal.budget?.toLocaleString()}
+                        {proposal.budget ? `$${proposal.budget.toLocaleString()}` : displayField(proposal.budget)}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Timeline</p>
-                      <p className="font-medium">{proposal.timeline}</p>
+                      <p className="font-medium">{displayField(proposal.timeline)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">

@@ -36,6 +36,55 @@ export type UserType = {
   avatar?: string;
 };
 
+// NDA Signature type
+export type NDASignature = {
+  id: string;
+  proposalId: string;
+  signerUserId: string;
+  signedAt: string;
+  createdAt: string;
+};
+
+export type NDARequestFile = {
+  id: string;
+  ndaSignatureId: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  filePath: string;
+  uploadedAt: string;
+};
+
+export type NDARequest = {
+  id: string;
+  proposalId: string;
+  signerUserId: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requestMessage?: string;
+  pendingAt: string;
+  approvedAt?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+  approvedByUserId?: string;
+  signerName?: string;
+  signerEmail?: string;
+  signerAvatar?: string;
+  attachedFiles?: NDARequestFile[];
+};
+
+// Private fields structure for confidential information
+export type ProposalPrivateFields = {
+  scope?: string;
+  timeline?: string;
+  budget?: string;
+  deliverables?: string;
+  requirements?: string;
+  expertise?: string;
+  approach?: string;
+  team?: string;
+  additionalInfo?: string;
+};
+
 export type ProposalType = {
   id: string;
   smartjectId: string;
@@ -43,6 +92,7 @@ export type ProposalType = {
   type: "need" | "provide";
   title: string;
   description: string;
+  isCooperationProposal?: boolean;
   budget?: string;
   timeline?: string;
   scope?: string;
@@ -85,6 +135,10 @@ export type ProposalType = {
       completed: boolean;
     }[];
   }[];
+  // Private fields that require NDA to view
+  privateFields?: ProposalPrivateFields;
+  // NDA signatures for this proposal
+  ndaSignatures?: NDASignature[];
 };
 
 export type MilestoneType = {
@@ -308,6 +362,7 @@ export type Database = {
           team: string | null;
           additional_info: string | null;
           status: string;
+          is_cooperation_proposal: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -328,6 +383,7 @@ export type Database = {
           team?: string | null;
           additional_info?: string | null;
           status?: string;
+          is_cooperation_proposal?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -348,6 +404,7 @@ export type Database = {
           team?: string | null;
           additional_info?: string | null;
           status?: string;
+          is_cooperation_proposal?: boolean;
           created_at?: string;
           updated_at?: string;
         };
