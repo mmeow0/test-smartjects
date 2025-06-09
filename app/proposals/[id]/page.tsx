@@ -153,10 +153,7 @@ export default function ProposalDetailPage({
   const canViewPrivateFields = isProposalOwner || hasApprovedNDA;
   
   // Check if migration is needed based on database errors or missing NDA functionality
-  const migrationNeeded = hasPrivateFields && (
-    databaseError !== null || 
-    (userNdaRequest === null && !hasApprovedNDA && !isProposalOwner && databaseError === null)
-  );
+  const migrationNeeded = false;
 
   // User can request NDA if they're not owner, don't have approved NDA, don't have any pending/rejected request, AND migration is applied
   const canRequestNda = !isProposalOwner && !hasApprovedNDA && !userNdaRequest && hasPrivateFields && !migrationNeeded;
