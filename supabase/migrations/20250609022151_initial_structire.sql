@@ -99,7 +99,10 @@ create table "public"."contracts" (
     "budget" text not null,
     "scope" text not null,
     "created_at" timestamp with time zone default now(),
-    "updated_at" timestamp with time zone default now()
+    "updated_at" timestamp with time zone default now(),
+    "provider_signed" boolean default false,
+    "needer_signed" boolean default false,
+    "proposal_id" uuid
 );
 
 
@@ -139,7 +142,10 @@ create table "public"."matches" (
     "id" uuid not null default uuid_generate_v4(),
     "smartject_id" uuid,
     "status" text not null default 'new'::text,
-    "matched_date" timestamp with time zone default now()
+    "matched_date" timestamp with time zone default now(),
+    "provider_id" uuid,
+    "needer_id" uuid,
+    "updated_at" timestamp with time zone default now()
 );
 
 
@@ -169,6 +175,127 @@ create table "public"."milestones" (
 );
 
 
+create table "public"."nda_notifications" (
+    "id" uuid not null default gen_random_uuid(),
+    "nda_signature_id" uuid not null,
+    "recipient_user_id" uuid not null,
+    "type" character varying(50) not null,
+    "title" character varying(255) not null,
+    "message" text not null,
+    "read_at" timestamp with time zone,
+    "created_at" timestamp with time zone default now()
+);
+
+
+alter table "public"."nda_notifications" enable row level security;
+
+create table "public"."nda_request_files" (
+    "id" uuid not null default gen_random_uuid(),
+    "nda_signature_id" uuid not null,
+    "file_name" character varying(255) not null,
+    "file_size" bigint not null,
+    "file_type" character varying(100) not null,
+    "file_path" character varying(500) not null,
+    "uploaded_at" timestamp with time zone default now(),
+    "created_at" timestamp with time zone default now(),
+    "updated_at" timestamp with time zone default now()
+);
+
+
+alter table "public"."nda_request_files" enable row level security;
+
+create table "public"."negotiation_files" (
+    "id" uuid not null default gen_random_uuid(),
+    "negotiation_id" uuid,
+    "file_name" text not null,
+    "file_url" text not null,
+    "file_type" text not null,
+    "file_size" integer not null,
+    "uploaded_by" uuid,
+    "created_at" timestamp with time zone not null default timezone('utc'::text, now()),
+    "updated_at" timestamp with time zone not null default timezone('utc'::text, now())
+);
+
+
+alter table "public"."negotiation_files" enable row level security;
+
+create table "public"."negotiation_messages" (
+    "id" uuid not null default gen_random_uuid(),
+    "proposal_id" uuid not null,
+    "sender_id" uuid not null,
+    "content" text not null,
+    "is_counter_offer" boolean default false,
+    "counter_offer_budget" text,
+    "counter_offer_timeline" text,
+    "created_at" timestamp with time zone default now(),
+    "updated_at" timestamp with time zone default now()
+);
+
+
+alter table "public"."negotiation_messages" enable row level security;
+
+create table "public"."proposal_comments" (
+    "id" uuid not null default gen_random_uuid(),
+    "proposal_id" uuid,
+    "user_id" uuid,
+    "content" text not null,
+    "created_at" timestamp with time zone default now()
+);
+
+
+create table "public"."proposal_deliverables" (
+    "id" uuid not null default gen_random_uuid(),
+    "milestone_id" uuid,
+    "description" text not null,
+    "completed" boolean not null default false,
+    "created_at" timestamp with time zone default now()
+);
+
+
+create table "public"."proposal_files" (
+    "id" uuid not null default gen_random_uuid(),
+    "proposal_id" uuid,
+    "name" text not null,
+    "size" text,
+    "type" text,
+    "created_at" timestamp with time zone default now(),
+    "user_id" uuid,
+    "path" text
+);
+
+
+create table "public"."proposal_milestones" (
+    "id" uuid not null default gen_random_uuid(),
+    "proposal_id" uuid,
+    "name" text not null,
+    "description" text,
+    "status" text default 'pending'::text,
+    "created_at" timestamp with time zone default now(),
+    "updated_at" timestamp with time zone default now(),
+    "percentage" numeric,
+    "amount" text
+);
+
+
+create table "public"."proposal_nda_signatures" (
+    "id" uuid not null default gen_random_uuid(),
+    "proposal_id" uuid not null,
+    "signer_user_id" uuid not null,
+    "signed_at" timestamp with time zone not null default now(),
+    "created_at" timestamp with time zone not null default now(),
+    "updated_at" timestamp with time zone not null default now(),
+    "status" character varying(20) default 'pending'::character varying,
+    "approved_by_user_id" uuid,
+    "pending_at" timestamp with time zone default now(),
+    "approved_at" timestamp with time zone,
+    "rejected_at" timestamp with time zone,
+    "rejection_reason" text,
+    "request_message" text
+);
+
+
+alter table "public"."proposal_nda_signatures" enable row level security;
+
 create table "public"."proposals" (
     "id" uuid not null default uuid_generate_v4(),
     "user_id" uuid,
@@ -187,7 +314,11 @@ create table "public"."proposals" (
     "additional_info" text,
     "status" text not null default 'draft'::text,
     "created_at" timestamp with time zone default now(),
-    "updated_at" timestamp with time zone default now()
+    "updated_at" timestamp with time zone default now(),
+    "is_cooperation_proposal" boolean not null default false,
+    "private_fields" jsonb default '{}'::jsonb,
+    "private_fields_updated_at" timestamp with time zone,
+    "private_fields_version" integer default 1
 );
 
 
@@ -292,6 +423,44 @@ CREATE UNIQUE INDEX deliverables_pkey ON public.deliverables USING btree (id);
 
 CREATE UNIQUE INDEX document_versions_pkey ON public.document_versions USING btree (id);
 
+CREATE INDEX idx_matches_needer_id ON public.matches USING btree (needer_id);
+
+CREATE INDEX idx_matches_provider_id ON public.matches USING btree (provider_id);
+
+CREATE INDEX idx_matches_smartject_provider_needer ON public.matches USING btree (smartject_id, provider_id, needer_id);
+
+CREATE INDEX idx_nda_notifications_recipient ON public.nda_notifications USING btree (recipient_user_id);
+
+CREATE INDEX idx_nda_notifications_type ON public.nda_notifications USING btree (type);
+
+CREATE INDEX idx_nda_notifications_unread ON public.nda_notifications USING btree (recipient_user_id, read_at) WHERE (read_at IS NULL);
+
+CREATE INDEX idx_nda_request_files_signature_id ON public.nda_request_files USING btree (nda_signature_id);
+
+CREATE INDEX idx_nda_request_files_uploaded_at ON public.nda_request_files USING btree (uploaded_at);
+
+CREATE INDEX idx_negotiation_messages_created_at ON public.negotiation_messages USING btree (created_at);
+
+CREATE INDEX idx_negotiation_messages_proposal_id ON public.negotiation_messages USING btree (proposal_id);
+
+CREATE INDEX idx_negotiation_messages_sender_id ON public.negotiation_messages USING btree (sender_id);
+
+CREATE INDEX idx_proposal_nda_signatures_proposal_id ON public.proposal_nda_signatures USING btree (proposal_id);
+
+CREATE INDEX idx_proposal_nda_signatures_proposal_status ON public.proposal_nda_signatures USING btree (proposal_id, status);
+
+CREATE INDEX idx_proposal_nda_signatures_proposal_user ON public.proposal_nda_signatures USING btree (proposal_id, signer_user_id);
+
+CREATE INDEX idx_proposal_nda_signatures_signed_at ON public.proposal_nda_signatures USING btree (signed_at DESC);
+
+CREATE INDEX idx_proposal_nda_signatures_signer_user_id ON public.proposal_nda_signatures USING btree (signer_user_id);
+
+CREATE INDEX idx_proposal_nda_signatures_status ON public.proposal_nda_signatures USING btree (status);
+
+CREATE INDEX idx_proposal_nda_signatures_user_status ON public.proposal_nda_signatures USING btree (signer_user_id, status);
+
+CREATE INDEX idx_proposals_private_fields_updated ON public.proposals USING btree (private_fields_updated_at) WHERE (private_fields_updated_at IS NOT NULL);
+
 CREATE UNIQUE INDEX industries_name_key ON public.industries USING btree (name);
 
 CREATE UNIQUE INDEX industries_pkey ON public.industries USING btree (id);
@@ -300,9 +469,31 @@ CREATE UNIQUE INDEX match_proposals_pkey ON public.match_proposals USING btree (
 
 CREATE UNIQUE INDEX matches_pkey ON public.matches USING btree (id);
 
+CREATE UNIQUE INDEX matches_smartject_provider_needer_unique ON public.matches USING btree (smartject_id, provider_id, needer_id);
+
 CREATE UNIQUE INDEX messages_pkey ON public.messages USING btree (id);
 
 CREATE UNIQUE INDEX milestones_pkey ON public.milestones USING btree (id);
+
+CREATE UNIQUE INDEX nda_notifications_pkey ON public.nda_notifications USING btree (id);
+
+CREATE UNIQUE INDEX nda_request_files_pkey ON public.nda_request_files USING btree (id);
+
+CREATE UNIQUE INDEX negotiation_files_pkey ON public.negotiation_files USING btree (id);
+
+CREATE UNIQUE INDEX negotiation_messages_pkey ON public.negotiation_messages USING btree (id);
+
+CREATE UNIQUE INDEX proposal_comments_pkey ON public.proposal_comments USING btree (id);
+
+CREATE UNIQUE INDEX proposal_deliverables_pkey ON public.proposal_deliverables USING btree (id);
+
+CREATE UNIQUE INDEX proposal_files_pkey ON public.proposal_files USING btree (id);
+
+CREATE UNIQUE INDEX proposal_milestones_pkey ON public.proposal_milestones USING btree (id);
+
+CREATE UNIQUE INDEX proposal_nda_signatures_pkey ON public.proposal_nda_signatures USING btree (id);
+
+CREATE UNIQUE INDEX proposal_nda_signatures_proposal_id_signer_user_id_key ON public.proposal_nda_signatures USING btree (proposal_id, signer_user_id);
 
 CREATE UNIQUE INDEX proposals_pkey ON public.proposals USING btree (id);
 
@@ -365,6 +556,24 @@ alter table "public"."matches" add constraint "matches_pkey" PRIMARY KEY using i
 alter table "public"."messages" add constraint "messages_pkey" PRIMARY KEY using index "messages_pkey";
 
 alter table "public"."milestones" add constraint "milestones_pkey" PRIMARY KEY using index "milestones_pkey";
+
+alter table "public"."nda_notifications" add constraint "nda_notifications_pkey" PRIMARY KEY using index "nda_notifications_pkey";
+
+alter table "public"."nda_request_files" add constraint "nda_request_files_pkey" PRIMARY KEY using index "nda_request_files_pkey";
+
+alter table "public"."negotiation_files" add constraint "negotiation_files_pkey" PRIMARY KEY using index "negotiation_files_pkey";
+
+alter table "public"."negotiation_messages" add constraint "negotiation_messages_pkey" PRIMARY KEY using index "negotiation_messages_pkey";
+
+alter table "public"."proposal_comments" add constraint "proposal_comments_pkey" PRIMARY KEY using index "proposal_comments_pkey";
+
+alter table "public"."proposal_deliverables" add constraint "proposal_deliverables_pkey" PRIMARY KEY using index "proposal_deliverables_pkey";
+
+alter table "public"."proposal_files" add constraint "proposal_files_pkey" PRIMARY KEY using index "proposal_files_pkey";
+
+alter table "public"."proposal_milestones" add constraint "proposal_milestones_pkey" PRIMARY KEY using index "proposal_milestones_pkey";
+
+alter table "public"."proposal_nda_signatures" add constraint "proposal_nda_signatures_pkey" PRIMARY KEY using index "proposal_nda_signatures_pkey";
 
 alter table "public"."proposals" add constraint "proposals_pkey" PRIMARY KEY using index "proposals_pkey";
 
@@ -452,6 +661,10 @@ alter table "public"."contracts" add constraint "contracts_needer_id_fkey" FOREI
 
 alter table "public"."contracts" validate constraint "contracts_needer_id_fkey";
 
+alter table "public"."contracts" add constraint "contracts_proposal_id_fkey" FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE SET NULL not valid;
+
+alter table "public"."contracts" validate constraint "contracts_proposal_id_fkey";
+
 alter table "public"."contracts" add constraint "contracts_provider_id_fkey" FOREIGN KEY (provider_id) REFERENCES users(id) ON DELETE CASCADE not valid;
 
 alter table "public"."contracts" validate constraint "contracts_provider_id_fkey";
@@ -482,13 +695,19 @@ alter table "public"."match_proposals" add constraint "match_proposals_proposal_
 
 alter table "public"."match_proposals" validate constraint "match_proposals_proposal_id_fkey";
 
+alter table "public"."matches" add constraint "matches_needer_id_fkey" FOREIGN KEY (needer_id) REFERENCES users(id) ON DELETE CASCADE not valid;
+
+alter table "public"."matches" validate constraint "matches_needer_id_fkey";
+
+alter table "public"."matches" add constraint "matches_provider_id_fkey" FOREIGN KEY (provider_id) REFERENCES users(id) ON DELETE CASCADE not valid;
+
+alter table "public"."matches" validate constraint "matches_provider_id_fkey";
+
 alter table "public"."matches" add constraint "matches_smartject_id_fkey" FOREIGN KEY (smartject_id) REFERENCES smartjects(id) ON DELETE CASCADE not valid;
 
 alter table "public"."matches" validate constraint "matches_smartject_id_fkey";
 
-alter table "public"."matches" add constraint "matches_status_check" CHECK ((status = ANY (ARRAY['new'::text, 'in_negotiation'::text, 'contract_ready'::text, 'contract_signed'::text]))) not valid;
-
-alter table "public"."matches" validate constraint "matches_status_check";
+alter table "public"."matches" add constraint "matches_smartject_provider_needer_unique" UNIQUE using index "matches_smartject_provider_needer_unique";
 
 alter table "public"."messages" add constraint "messages_match_id_fkey" FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE not valid;
 
@@ -505,6 +724,84 @@ alter table "public"."milestones" validate constraint "milestones_proposal_id_fk
 alter table "public"."milestones" add constraint "milestones_status_check" CHECK ((status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'completed'::text, 'overdue'::text, 'pending_review'::text]))) not valid;
 
 alter table "public"."milestones" validate constraint "milestones_status_check";
+
+alter table "public"."nda_notifications" add constraint "nda_notifications_nda_signature_id_fkey" FOREIGN KEY (nda_signature_id) REFERENCES proposal_nda_signatures(id) ON DELETE CASCADE not valid;
+
+alter table "public"."nda_notifications" validate constraint "nda_notifications_nda_signature_id_fkey";
+
+alter table "public"."nda_notifications" add constraint "nda_notifications_recipient_user_id_fkey" FOREIGN KEY (recipient_user_id) REFERENCES users(id) not valid;
+
+alter table "public"."nda_notifications" validate constraint "nda_notifications_recipient_user_id_fkey";
+
+alter table "public"."nda_notifications" add constraint "nda_notifications_type_check" CHECK (((type)::text = ANY ((ARRAY['nda_request_submitted'::character varying, 'nda_approved'::character varying, 'nda_rejected'::character varying])::text[]))) not valid;
+
+alter table "public"."nda_notifications" validate constraint "nda_notifications_type_check";
+
+alter table "public"."nda_request_files" add constraint "nda_request_files_nda_signature_id_fkey" FOREIGN KEY (nda_signature_id) REFERENCES proposal_nda_signatures(id) ON DELETE CASCADE not valid;
+
+alter table "public"."nda_request_files" validate constraint "nda_request_files_nda_signature_id_fkey";
+
+alter table "public"."negotiation_files" add constraint "negotiation_files_negotiation_id_fkey" FOREIGN KEY (negotiation_id) REFERENCES negotiation_messages(id) ON DELETE CASCADE not valid;
+
+alter table "public"."negotiation_files" validate constraint "negotiation_files_negotiation_id_fkey";
+
+alter table "public"."negotiation_files" add constraint "negotiation_files_uploaded_by_fkey" FOREIGN KEY (uploaded_by) REFERENCES auth.users(id) ON DELETE SET NULL not valid;
+
+alter table "public"."negotiation_files" validate constraint "negotiation_files_uploaded_by_fkey";
+
+alter table "public"."negotiation_messages" add constraint "negotiation_messages_proposal_id_fkey" FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE CASCADE not valid;
+
+alter table "public"."negotiation_messages" validate constraint "negotiation_messages_proposal_id_fkey";
+
+alter table "public"."negotiation_messages" add constraint "negotiation_messages_sender_id_fkey" FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE not valid;
+
+alter table "public"."negotiation_messages" validate constraint "negotiation_messages_sender_id_fkey";
+
+alter table "public"."proposal_comments" add constraint "proposal_comments_proposal_id_fkey" FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE CASCADE not valid;
+
+alter table "public"."proposal_comments" validate constraint "proposal_comments_proposal_id_fkey";
+
+alter table "public"."proposal_comments" add constraint "proposal_comments_user_id_fkey" FOREIGN KEY (user_id) REFERENCES users(id) not valid;
+
+alter table "public"."proposal_comments" validate constraint "proposal_comments_user_id_fkey";
+
+alter table "public"."proposal_deliverables" add constraint "proposal_deliverables_milestone_id_fkey" FOREIGN KEY (milestone_id) REFERENCES proposal_milestones(id) ON DELETE CASCADE not valid;
+
+alter table "public"."proposal_deliverables" validate constraint "proposal_deliverables_milestone_id_fkey";
+
+alter table "public"."proposal_files" add constraint "fk_proposal" FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE CASCADE not valid;
+
+alter table "public"."proposal_files" validate constraint "fk_proposal";
+
+alter table "public"."proposal_files" add constraint "proposal_files_proposal_id_fkey" FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE CASCADE not valid;
+
+alter table "public"."proposal_files" validate constraint "proposal_files_proposal_id_fkey";
+
+alter table "public"."proposal_files" add constraint "proposal_files_user_id_fkey" FOREIGN KEY (user_id) REFERENCES auth.users(id) not valid;
+
+alter table "public"."proposal_files" validate constraint "proposal_files_user_id_fkey";
+
+alter table "public"."proposal_milestones" add constraint "proposal_milestones_proposal_id_fkey" FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE CASCADE not valid;
+
+alter table "public"."proposal_milestones" validate constraint "proposal_milestones_proposal_id_fkey";
+
+alter table "public"."proposal_nda_signatures" add constraint "proposal_nda_signatures_approved_by_user_id_fkey" FOREIGN KEY (approved_by_user_id) REFERENCES users(id) not valid;
+
+alter table "public"."proposal_nda_signatures" validate constraint "proposal_nda_signatures_approved_by_user_id_fkey";
+
+alter table "public"."proposal_nda_signatures" add constraint "proposal_nda_signatures_proposal_id_fkey" FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE CASCADE not valid;
+
+alter table "public"."proposal_nda_signatures" validate constraint "proposal_nda_signatures_proposal_id_fkey";
+
+alter table "public"."proposal_nda_signatures" add constraint "proposal_nda_signatures_proposal_id_signer_user_id_key" UNIQUE using index "proposal_nda_signatures_proposal_id_signer_user_id_key";
+
+alter table "public"."proposal_nda_signatures" add constraint "proposal_nda_signatures_signer_user_id_fkey" FOREIGN KEY (signer_user_id) REFERENCES users(id) ON DELETE CASCADE not valid;
+
+alter table "public"."proposal_nda_signatures" validate constraint "proposal_nda_signatures_signer_user_id_fkey";
+
+alter table "public"."proposal_nda_signatures" add constraint "proposal_nda_signatures_status_check" CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying])::text[]))) not valid;
+
+alter table "public"."proposal_nda_signatures" validate constraint "proposal_nda_signatures_status_check";
 
 alter table "public"."proposals" add constraint "proposals_smartject_id_fkey" FOREIGN KEY (smartject_id) REFERENCES smartjects(id) ON DELETE CASCADE not valid;
 
@@ -573,6 +870,119 @@ alter table "public"."votes" add constraint "votes_user_id_smartject_id_vote_typ
 alter table "public"."votes" add constraint "votes_vote_type_check" CHECK ((vote_type = ANY (ARRAY['believe'::text, 'need'::text, 'provide'::text]))) not valid;
 
 alter table "public"."votes" validate constraint "votes_vote_type_check";
+
+set check_function_bodies = off;
+
+CREATE OR REPLACE FUNCTION public.can_view_private_fields(proposal_row proposals)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+  -- Proposal owner can always view private fields
+  IF proposal_row.user_id = auth.uid() THEN
+    RETURN TRUE;
+  END IF;
+  
+  -- Check if user has signed NDA for this proposal
+  IF EXISTS (
+    SELECT 1 FROM proposal_nda_signatures 
+    WHERE proposal_id = proposal_row.id 
+    AND signer_user_id = auth.uid()
+  ) THEN
+    RETURN TRUE;
+  END IF;
+  
+  RETURN FALSE;
+END;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.create_nda_notification()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  -- Notification for NDA request submission
+  IF TG_OP = 'INSERT' AND NEW.status = 'pending' THEN
+    INSERT INTO nda_notifications (nda_signature_id, recipient_user_id, type, title, message)
+    SELECT 
+      NEW.id,
+      p.user_id,
+      'nda_request_submitted',
+      'New NDA Request',
+      'A user has requested access to private fields in your proposal: ' || p.title
+    FROM proposals p 
+    WHERE p.id = NEW.proposal_id;
+  END IF;
+
+  -- Notification for NDA approval
+  IF TG_OP = 'UPDATE' AND OLD.status = 'pending' AND NEW.status = 'approved' THEN
+    INSERT INTO nda_notifications (nda_signature_id, recipient_user_id, type, title, message)
+    SELECT 
+      NEW.id,
+      NEW.signer_user_id,
+      'nda_approved',
+      'NDA Request Approved',
+      'Your NDA request has been approved for proposal: ' || p.title
+    FROM proposals p 
+    WHERE p.id = NEW.proposal_id;
+  END IF;
+
+  -- Notification for NDA rejection
+  IF TG_OP = 'UPDATE' AND OLD.status = 'pending' AND NEW.status = 'rejected' THEN
+    INSERT INTO nda_notifications (nda_signature_id, recipient_user_id, type, title, message)
+    SELECT 
+      NEW.id,
+      NEW.signer_user_id,
+      'nda_rejected',
+      'NDA Request Rejected',
+      'Your NDA request has been rejected for proposal: ' || p.title ||
+      CASE WHEN NEW.rejection_reason IS NOT NULL THEN '. Reason: ' || NEW.rejection_reason ELSE '' END
+    FROM proposals p 
+    WHERE p.id = NEW.proposal_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$function$
+;
+
+create or replace view "public"."nda_requests_summary" as  SELECT pns.id,
+    pns.proposal_id,
+    pns.signer_user_id,
+    pns.status,
+    pns.request_message,
+    pns.pending_at,
+    pns.approved_at,
+    pns.rejected_at,
+    pns.rejection_reason,
+    pns.approved_by_user_id,
+    p.title AS proposal_title,
+    p.user_id AS proposal_owner_id,
+    u_signer.name AS signer_name,
+    u_signer.email AS signer_email,
+    u_signer.avatar_url AS signer_avatar,
+    u_approver.name AS approver_name,
+    count(nrf.id) AS attached_files_count
+   FROM ((((proposal_nda_signatures pns
+     JOIN proposals p ON ((p.id = pns.proposal_id)))
+     JOIN users u_signer ON ((u_signer.id = pns.signer_user_id)))
+     LEFT JOIN users u_approver ON ((u_approver.id = pns.approved_by_user_id)))
+     LEFT JOIN nda_request_files nrf ON ((nrf.nda_signature_id = pns.id)))
+  GROUP BY pns.id, pns.proposal_id, pns.signer_user_id, pns.status, pns.request_message, pns.pending_at, pns.approved_at, pns.rejected_at, pns.rejection_reason, pns.approved_by_user_id, p.title, p.user_id, u_signer.name, u_signer.email, u_signer.avatar_url, u_approver.name;
+
+
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    NEW.updated_at := NOW();
+    RETURN NEW;
+END;
+$function$
+;
 
 grant delete on table "public"."business_functions" to "anon";
 
@@ -1288,6 +1698,384 @@ grant truncate on table "public"."milestones" to "service_role";
 
 grant update on table "public"."milestones" to "service_role";
 
+grant delete on table "public"."nda_notifications" to "anon";
+
+grant insert on table "public"."nda_notifications" to "anon";
+
+grant references on table "public"."nda_notifications" to "anon";
+
+grant select on table "public"."nda_notifications" to "anon";
+
+grant trigger on table "public"."nda_notifications" to "anon";
+
+grant truncate on table "public"."nda_notifications" to "anon";
+
+grant update on table "public"."nda_notifications" to "anon";
+
+grant delete on table "public"."nda_notifications" to "authenticated";
+
+grant insert on table "public"."nda_notifications" to "authenticated";
+
+grant references on table "public"."nda_notifications" to "authenticated";
+
+grant select on table "public"."nda_notifications" to "authenticated";
+
+grant trigger on table "public"."nda_notifications" to "authenticated";
+
+grant truncate on table "public"."nda_notifications" to "authenticated";
+
+grant update on table "public"."nda_notifications" to "authenticated";
+
+grant delete on table "public"."nda_notifications" to "service_role";
+
+grant insert on table "public"."nda_notifications" to "service_role";
+
+grant references on table "public"."nda_notifications" to "service_role";
+
+grant select on table "public"."nda_notifications" to "service_role";
+
+grant trigger on table "public"."nda_notifications" to "service_role";
+
+grant truncate on table "public"."nda_notifications" to "service_role";
+
+grant update on table "public"."nda_notifications" to "service_role";
+
+grant delete on table "public"."nda_request_files" to "anon";
+
+grant insert on table "public"."nda_request_files" to "anon";
+
+grant references on table "public"."nda_request_files" to "anon";
+
+grant select on table "public"."nda_request_files" to "anon";
+
+grant trigger on table "public"."nda_request_files" to "anon";
+
+grant truncate on table "public"."nda_request_files" to "anon";
+
+grant update on table "public"."nda_request_files" to "anon";
+
+grant delete on table "public"."nda_request_files" to "authenticated";
+
+grant insert on table "public"."nda_request_files" to "authenticated";
+
+grant references on table "public"."nda_request_files" to "authenticated";
+
+grant select on table "public"."nda_request_files" to "authenticated";
+
+grant trigger on table "public"."nda_request_files" to "authenticated";
+
+grant truncate on table "public"."nda_request_files" to "authenticated";
+
+grant update on table "public"."nda_request_files" to "authenticated";
+
+grant delete on table "public"."nda_request_files" to "service_role";
+
+grant insert on table "public"."nda_request_files" to "service_role";
+
+grant references on table "public"."nda_request_files" to "service_role";
+
+grant select on table "public"."nda_request_files" to "service_role";
+
+grant trigger on table "public"."nda_request_files" to "service_role";
+
+grant truncate on table "public"."nda_request_files" to "service_role";
+
+grant update on table "public"."nda_request_files" to "service_role";
+
+grant delete on table "public"."negotiation_files" to "anon";
+
+grant insert on table "public"."negotiation_files" to "anon";
+
+grant references on table "public"."negotiation_files" to "anon";
+
+grant select on table "public"."negotiation_files" to "anon";
+
+grant trigger on table "public"."negotiation_files" to "anon";
+
+grant truncate on table "public"."negotiation_files" to "anon";
+
+grant update on table "public"."negotiation_files" to "anon";
+
+grant delete on table "public"."negotiation_files" to "authenticated";
+
+grant insert on table "public"."negotiation_files" to "authenticated";
+
+grant references on table "public"."negotiation_files" to "authenticated";
+
+grant select on table "public"."negotiation_files" to "authenticated";
+
+grant trigger on table "public"."negotiation_files" to "authenticated";
+
+grant truncate on table "public"."negotiation_files" to "authenticated";
+
+grant update on table "public"."negotiation_files" to "authenticated";
+
+grant delete on table "public"."negotiation_files" to "service_role";
+
+grant insert on table "public"."negotiation_files" to "service_role";
+
+grant references on table "public"."negotiation_files" to "service_role";
+
+grant select on table "public"."negotiation_files" to "service_role";
+
+grant trigger on table "public"."negotiation_files" to "service_role";
+
+grant truncate on table "public"."negotiation_files" to "service_role";
+
+grant update on table "public"."negotiation_files" to "service_role";
+
+grant delete on table "public"."negotiation_messages" to "anon";
+
+grant insert on table "public"."negotiation_messages" to "anon";
+
+grant references on table "public"."negotiation_messages" to "anon";
+
+grant select on table "public"."negotiation_messages" to "anon";
+
+grant trigger on table "public"."negotiation_messages" to "anon";
+
+grant truncate on table "public"."negotiation_messages" to "anon";
+
+grant update on table "public"."negotiation_messages" to "anon";
+
+grant delete on table "public"."negotiation_messages" to "authenticated";
+
+grant insert on table "public"."negotiation_messages" to "authenticated";
+
+grant references on table "public"."negotiation_messages" to "authenticated";
+
+grant select on table "public"."negotiation_messages" to "authenticated";
+
+grant trigger on table "public"."negotiation_messages" to "authenticated";
+
+grant truncate on table "public"."negotiation_messages" to "authenticated";
+
+grant update on table "public"."negotiation_messages" to "authenticated";
+
+grant delete on table "public"."negotiation_messages" to "service_role";
+
+grant insert on table "public"."negotiation_messages" to "service_role";
+
+grant references on table "public"."negotiation_messages" to "service_role";
+
+grant select on table "public"."negotiation_messages" to "service_role";
+
+grant trigger on table "public"."negotiation_messages" to "service_role";
+
+grant truncate on table "public"."negotiation_messages" to "service_role";
+
+grant update on table "public"."negotiation_messages" to "service_role";
+
+grant delete on table "public"."proposal_comments" to "anon";
+
+grant insert on table "public"."proposal_comments" to "anon";
+
+grant references on table "public"."proposal_comments" to "anon";
+
+grant select on table "public"."proposal_comments" to "anon";
+
+grant trigger on table "public"."proposal_comments" to "anon";
+
+grant truncate on table "public"."proposal_comments" to "anon";
+
+grant update on table "public"."proposal_comments" to "anon";
+
+grant delete on table "public"."proposal_comments" to "authenticated";
+
+grant insert on table "public"."proposal_comments" to "authenticated";
+
+grant references on table "public"."proposal_comments" to "authenticated";
+
+grant select on table "public"."proposal_comments" to "authenticated";
+
+grant trigger on table "public"."proposal_comments" to "authenticated";
+
+grant truncate on table "public"."proposal_comments" to "authenticated";
+
+grant update on table "public"."proposal_comments" to "authenticated";
+
+grant delete on table "public"."proposal_comments" to "service_role";
+
+grant insert on table "public"."proposal_comments" to "service_role";
+
+grant references on table "public"."proposal_comments" to "service_role";
+
+grant select on table "public"."proposal_comments" to "service_role";
+
+grant trigger on table "public"."proposal_comments" to "service_role";
+
+grant truncate on table "public"."proposal_comments" to "service_role";
+
+grant update on table "public"."proposal_comments" to "service_role";
+
+grant delete on table "public"."proposal_deliverables" to "anon";
+
+grant insert on table "public"."proposal_deliverables" to "anon";
+
+grant references on table "public"."proposal_deliverables" to "anon";
+
+grant select on table "public"."proposal_deliverables" to "anon";
+
+grant trigger on table "public"."proposal_deliverables" to "anon";
+
+grant truncate on table "public"."proposal_deliverables" to "anon";
+
+grant update on table "public"."proposal_deliverables" to "anon";
+
+grant delete on table "public"."proposal_deliverables" to "authenticated";
+
+grant insert on table "public"."proposal_deliverables" to "authenticated";
+
+grant references on table "public"."proposal_deliverables" to "authenticated";
+
+grant select on table "public"."proposal_deliverables" to "authenticated";
+
+grant trigger on table "public"."proposal_deliverables" to "authenticated";
+
+grant truncate on table "public"."proposal_deliverables" to "authenticated";
+
+grant update on table "public"."proposal_deliverables" to "authenticated";
+
+grant delete on table "public"."proposal_deliverables" to "service_role";
+
+grant insert on table "public"."proposal_deliverables" to "service_role";
+
+grant references on table "public"."proposal_deliverables" to "service_role";
+
+grant select on table "public"."proposal_deliverables" to "service_role";
+
+grant trigger on table "public"."proposal_deliverables" to "service_role";
+
+grant truncate on table "public"."proposal_deliverables" to "service_role";
+
+grant update on table "public"."proposal_deliverables" to "service_role";
+
+grant delete on table "public"."proposal_files" to "anon";
+
+grant insert on table "public"."proposal_files" to "anon";
+
+grant references on table "public"."proposal_files" to "anon";
+
+grant select on table "public"."proposal_files" to "anon";
+
+grant trigger on table "public"."proposal_files" to "anon";
+
+grant truncate on table "public"."proposal_files" to "anon";
+
+grant update on table "public"."proposal_files" to "anon";
+
+grant delete on table "public"."proposal_files" to "authenticated";
+
+grant insert on table "public"."proposal_files" to "authenticated";
+
+grant references on table "public"."proposal_files" to "authenticated";
+
+grant select on table "public"."proposal_files" to "authenticated";
+
+grant trigger on table "public"."proposal_files" to "authenticated";
+
+grant truncate on table "public"."proposal_files" to "authenticated";
+
+grant update on table "public"."proposal_files" to "authenticated";
+
+grant delete on table "public"."proposal_files" to "service_role";
+
+grant insert on table "public"."proposal_files" to "service_role";
+
+grant references on table "public"."proposal_files" to "service_role";
+
+grant select on table "public"."proposal_files" to "service_role";
+
+grant trigger on table "public"."proposal_files" to "service_role";
+
+grant truncate on table "public"."proposal_files" to "service_role";
+
+grant update on table "public"."proposal_files" to "service_role";
+
+grant delete on table "public"."proposal_milestones" to "anon";
+
+grant insert on table "public"."proposal_milestones" to "anon";
+
+grant references on table "public"."proposal_milestones" to "anon";
+
+grant select on table "public"."proposal_milestones" to "anon";
+
+grant trigger on table "public"."proposal_milestones" to "anon";
+
+grant truncate on table "public"."proposal_milestones" to "anon";
+
+grant update on table "public"."proposal_milestones" to "anon";
+
+grant delete on table "public"."proposal_milestones" to "authenticated";
+
+grant insert on table "public"."proposal_milestones" to "authenticated";
+
+grant references on table "public"."proposal_milestones" to "authenticated";
+
+grant select on table "public"."proposal_milestones" to "authenticated";
+
+grant trigger on table "public"."proposal_milestones" to "authenticated";
+
+grant truncate on table "public"."proposal_milestones" to "authenticated";
+
+grant update on table "public"."proposal_milestones" to "authenticated";
+
+grant delete on table "public"."proposal_milestones" to "service_role";
+
+grant insert on table "public"."proposal_milestones" to "service_role";
+
+grant references on table "public"."proposal_milestones" to "service_role";
+
+grant select on table "public"."proposal_milestones" to "service_role";
+
+grant trigger on table "public"."proposal_milestones" to "service_role";
+
+grant truncate on table "public"."proposal_milestones" to "service_role";
+
+grant update on table "public"."proposal_milestones" to "service_role";
+
+grant delete on table "public"."proposal_nda_signatures" to "anon";
+
+grant insert on table "public"."proposal_nda_signatures" to "anon";
+
+grant references on table "public"."proposal_nda_signatures" to "anon";
+
+grant select on table "public"."proposal_nda_signatures" to "anon";
+
+grant trigger on table "public"."proposal_nda_signatures" to "anon";
+
+grant truncate on table "public"."proposal_nda_signatures" to "anon";
+
+grant update on table "public"."proposal_nda_signatures" to "anon";
+
+grant delete on table "public"."proposal_nda_signatures" to "authenticated";
+
+grant insert on table "public"."proposal_nda_signatures" to "authenticated";
+
+grant references on table "public"."proposal_nda_signatures" to "authenticated";
+
+grant select on table "public"."proposal_nda_signatures" to "authenticated";
+
+grant trigger on table "public"."proposal_nda_signatures" to "authenticated";
+
+grant truncate on table "public"."proposal_nda_signatures" to "authenticated";
+
+grant update on table "public"."proposal_nda_signatures" to "authenticated";
+
+grant delete on table "public"."proposal_nda_signatures" to "service_role";
+
+grant insert on table "public"."proposal_nda_signatures" to "service_role";
+
+grant references on table "public"."proposal_nda_signatures" to "service_role";
+
+grant select on table "public"."proposal_nda_signatures" to "service_role";
+
+grant trigger on table "public"."proposal_nda_signatures" to "service_role";
+
+grant truncate on table "public"."proposal_nda_signatures" to "service_role";
+
+grant update on table "public"."proposal_nda_signatures" to "service_role";
+
 grant delete on table "public"."proposals" to "anon";
 
 grant insert on table "public"."proposals" to "anon";
@@ -1708,12 +2496,229 @@ grant truncate on table "public"."votes" to "service_role";
 
 grant update on table "public"."votes" to "service_role";
 
+create policy "Allow inserting any NDA notifications"
+on "public"."nda_notifications"
+as permissive
+for insert
+to public
+with check (true);
+
+
+create policy "Users can update their own notifications"
+on "public"."nda_notifications"
+as permissive
+for update
+to public
+using ((recipient_user_id = auth.uid()));
+
+
+create policy "Users can view their own notifications"
+on "public"."nda_notifications"
+as permissive
+for select
+to public
+using ((recipient_user_id = auth.uid()));
+
+
+create policy "Proposal owners can view NDA request files"
+on "public"."nda_request_files"
+as permissive
+for select
+to public
+using ((EXISTS ( SELECT 1
+   FROM (proposal_nda_signatures pns
+     JOIN proposals p ON ((p.id = pns.proposal_id)))
+  WHERE ((pns.id = nda_request_files.nda_signature_id) AND (p.user_id = auth.uid())))));
+
+
+create policy "Users can insert files for their own NDA requests"
+on "public"."nda_request_files"
+as permissive
+for insert
+to public
+with check ((EXISTS ( SELECT 1
+   FROM proposal_nda_signatures pns
+  WHERE ((pns.id = nda_request_files.nda_signature_id) AND (pns.signer_user_id = auth.uid())))));
+
+
+create policy "Users can view files for their own NDA requests"
+on "public"."nda_request_files"
+as permissive
+for select
+to public
+using ((EXISTS ( SELECT 1
+   FROM proposal_nda_signatures pns
+  WHERE ((pns.id = nda_request_files.nda_signature_id) AND (pns.signer_user_id = auth.uid())))));
+
+
+create policy "Users can delete their own files"
+on "public"."negotiation_files"
+as permissive
+for delete
+to public
+using ((uploaded_by = auth.uid()));
+
+
+create policy "Users can insert files for negotiations they are part of or aut"
+on "public"."negotiation_files"
+as permissive
+for insert
+to public
+with check ((EXISTS ( SELECT 1
+   FROM (negotiation_messages nm
+     JOIN proposals p ON ((p.id = nm.proposal_id)))
+  WHERE ((nm.id = negotiation_files.negotiation_id) AND ((nm.sender_id = auth.uid()) OR (p.user_id = auth.uid()))))));
+
+
+create policy "Users can insert files for negotiations they are part of"
+on "public"."negotiation_files"
+as permissive
+for insert
+to public
+with check ((EXISTS ( SELECT 1
+   FROM negotiation_messages nm
+  WHERE ((nm.id = negotiation_files.negotiation_id) AND (nm.sender_id = auth.uid())))));
+
+
+create policy "Users can view files for negotiations they are part of or autho"
+on "public"."negotiation_files"
+as permissive
+for select
+to public
+using ((EXISTS ( SELECT 1
+   FROM (negotiation_messages nm
+     JOIN proposals p ON ((p.id = nm.proposal_id)))
+  WHERE ((nm.id = negotiation_files.negotiation_id) AND ((nm.sender_id = auth.uid()) OR (p.user_id = auth.uid()))))));
+
+
+create policy "Users can view files for negotiations they are part of"
+on "public"."negotiation_files"
+as permissive
+for select
+to public
+using ((EXISTS ( SELECT 1
+   FROM negotiation_messages nm
+  WHERE ((nm.id = negotiation_files.negotiation_id) AND (nm.sender_id = auth.uid())))));
+
+
+create policy "Anyone can insert a message to proposal owner"
+on "public"."negotiation_messages"
+as permissive
+for insert
+to public
+with check (((sender_id = auth.uid()) AND (proposal_id IN ( SELECT proposals.id
+   FROM proposals))));
+
+
+create policy "Users can delete their own negotiation messages"
+on "public"."negotiation_messages"
+as permissive
+for delete
+to public
+using ((sender_id = auth.uid()));
+
+
+create policy "Users can update their own negotiation messages"
+on "public"."negotiation_messages"
+as permissive
+for update
+to public
+using ((sender_id = auth.uid()))
+with check ((sender_id = auth.uid()));
+
+
+create policy "Users can view their negotiation messages"
+on "public"."negotiation_messages"
+as permissive
+for select
+to public
+using (((sender_id = auth.uid()) OR (proposal_id IN ( SELECT proposals.id
+   FROM proposals
+  WHERE (proposals.user_id = auth.uid())))));
+
+
+create policy "Allow delete for owner"
+on "public"."proposal_files"
+as permissive
+for delete
+to public
+using ((user_id = auth.uid()));
+
+
+create policy "Allow insert for owner"
+on "public"."proposal_files"
+as permissive
+for insert
+to public
+with check ((user_id = auth.uid()));
+
+
+create policy "Allow read access to authenticated users"
+on "public"."proposal_files"
+as permissive
+for select
+to authenticated
+using (true);
+
+
+create policy "Allow update for owner"
+on "public"."proposal_files"
+as permissive
+for update
+to public
+using ((user_id = auth.uid()));
+
+
+create policy "Allow users to insert their own NDA request"
+on "public"."proposal_nda_signatures"
+as permissive
+for insert
+to public
+with check ((auth.uid() = signer_user_id));
+
+
+create policy "Proposal owners can view all signatures"
+on "public"."proposal_nda_signatures"
+as permissive
+for select
+to public
+using ((proposal_id IN ( SELECT proposals.id
+   FROM proposals
+  WHERE (proposals.user_id = auth.uid()))));
+
+
+create policy "Users can sign NDAs"
+on "public"."proposal_nda_signatures"
+as permissive
+for insert
+to public
+with check ((signer_user_id = auth.uid()));
+
+
+create policy "Users can view relevant NDA signatures"
+on "public"."proposal_nda_signatures"
+as permissive
+for select
+to public
+using (((signer_user_id = auth.uid()) OR (proposal_id IN ( SELECT proposals.id
+   FROM proposals
+  WHERE (proposals.user_id = auth.uid())))));
+
+
 create policy "Allow logged-in users to read their user row"
 on "public"."users"
 as permissive
 for select
 to public
 using ((auth.uid() = id));
+
+
+create policy "Public can see basic user info"
+on "public"."users"
+as permissive
+for select
+to public
+using (true);
 
 
 create policy "Users can insert own data"
@@ -1740,5 +2745,9 @@ for select
 to public
 using ((id = auth.uid()));
 
+
+CREATE TRIGGER update_negotiation_messages_updated_at BEFORE UPDATE ON public.negotiation_messages FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER nda_notification_trigger AFTER INSERT OR UPDATE ON public.proposal_nda_signatures FOR EACH ROW EXECUTE FUNCTION create_nda_notification();
 
 
