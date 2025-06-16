@@ -757,7 +757,7 @@ export default function DashboardPage() {
                     <p className="text-muted-foreground mb-4">
                       You don't have any matches yet.
                     </p>
-                    <Button onClick={() => router.push("/smartjects/hub")}>
+                    <Button onClick={() => router.push("/smartjects/discover")}>
                       Browse Smartjects
                     </Button>
                   </CardContent>
@@ -866,7 +866,7 @@ export default function DashboardPage() {
           ) : (
             <EmptyState
               message="You haven’t believed in any Smartjects yet."
-              href="/hub"
+              href="/discover"
               buttonText="Browse Smartjects"
             />
           )}

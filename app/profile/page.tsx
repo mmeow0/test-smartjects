@@ -352,7 +352,7 @@ export default function ProfilePage() {
                   ) : (
                     <EmptyState
                       message="You haven’t believed in any Smartjects yet."
-                      href="/hub"
+                      href="/discover"
                       buttonText="Browse Smartjects"
                     />
                   )}

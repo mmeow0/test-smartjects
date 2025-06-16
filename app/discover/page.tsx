@@ -123,7 +123,7 @@ export default function SmartjectsHubPage() {
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Smartjects Hub</h1>
+        <h1 className="text-3xl font-bold">Discover</h1>
         <p className="text-muted-foreground mb-4">
           Explore all available AI implementation projects
         </p>

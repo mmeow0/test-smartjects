@@ -117,7 +117,7 @@ export default function Home() {
             )}
             <div className="flex justify-center mt-8">
               <Button variant="outline" size="lg" asChild>
-                <a href="/hub">View More Smartjects</a>
+                <a href="/discover">View More Smartjects</a>
               </Button>
             </div>
           </TabsContent>
@@ -161,7 +161,7 @@ export default function Home() {
             )}
             <div className="flex justify-center mt-8">
               <Button variant="outline" size="lg" asChild>
-                <a href="/hub">View More Smartjects</a>
+                <a href="/discover">View More Smartjects</a>
               </Button>
             </div>
           </TabsContent>
@@ -205,7 +205,7 @@ export default function Home() {
             )}
             <div className="flex justify-center mt-8">
               <Button variant="outline" size="lg" asChild>
-                <a href="/hub">View More Smartjects</a>
+                <a href="/discover">View More Smartjects</a>
               </Button>
             </div>
           </TabsContent>
@@ -249,7 +249,7 @@ export default function Home() {
             )}
             <div className="flex justify-center mt-8">
               <Button variant="outline" size="lg" asChild>
-                <a href="/hub">View More Smartjects</a>
+                <a href="/discover">View More Smartjects</a>
               </Button>
             </div>
           </TabsContent>

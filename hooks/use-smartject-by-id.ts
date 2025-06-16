@@ -39,7 +39,7 @@ export function useSmartjectById(smartjectId?: string) {
             description: "Smartject not found",
             variant: "destructive",
           });
-          router.push("/hub");
+          router.push("/discover");
         }
       } catch (error) {
         console.error("Error fetching smartject:", error);

@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { usePathname } from "next/navigation"
-import Link from "next/link"
-import { Lightbulb, Menu, X, LogIn, UserPlus } from "lucide-react"
-import { useAuth } from "@/components/auth-provider"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useState } from "react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { Menu, X, LogIn, UserPlus } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,21 +14,27 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { NotificationBadge } from "@/components/notification-badge"
+} from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { NotificationBadge } from "@/components/notification-badge";
+import { Logo } from "./icons/Logo";
 
 export function TopNav() {
-  const pathname = usePathname()
-  const { user, isAuthenticated, logout } = useAuth()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const pathname = usePathname();
+  const { user, isAuthenticated, logout } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Main navigation items
   const navItems = [
-    { href: "/", label: "Smartjects", isMain: true },
-    { href: "/hub", label: "Smartjects Hub", isMain: true },
-  ]
+    { href: "/", label: "Home", isMain: true },
+    { href: "/discover", label: "Discover", isMain: true },
+  ];
 
   // Items only for authenticated users
   const authenticatedItems = [
@@ -37,17 +43,14 @@ export function TopNav() {
     { href: "/matches", label: "Matches", isMain: false },
     { href: "/negotiations", label: "Negotiations", isMain: false },
     { href: "/contracts", label: "Contracts", isMain: false },
-  ]
+  ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background">
-      <div className="container flex h-16 items-center justify-between">
+      <div className="container flex h-16 items-center justify-between pl-5">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <div className="bg-primary text-primary-foreground p-1 rounded">
-              <Lightbulb className="h-5 w-5" />
-            </div>
-            <span className="font-bold text-xl">Smartjects</span>
+            <Logo className="h-8" />
           </Link>
         </div>
 
@@ -59,7 +62,9 @@ export function TopNav() {
               key={item.href}
               href={item.href}
               className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary ${
-                pathname === item.href ? "text-primary" : "text-muted-foreground"
+                pathname === item.href
+                  ? "text-primary"
+                  : "text-muted-foreground"
               }`}
             >
               {item.label}
@@ -75,7 +80,9 @@ export function TopNav() {
                   key={item.href}
                   href={item.href}
                   className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary ${
-                    pathname === item.href ? "text-primary" : "text-muted-foreground"
+                    pathname === item.href
+                      ? "text-primary"
+                      : "text-muted-foreground"
                   }`}
                 >
                   {item.label}
@@ -95,12 +102,19 @@ export function TopNav() {
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2 h-8 px-2">
+                <Button
+                  variant="ghost"
+                  className="flex items-center gap-2 h-8 px-2"
+                >
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={user?.avatar || "/placeholder.svg"} />
-                    <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
+                    <AvatarFallback>
+                      {user?.name?.charAt(0) || "U"}
+                    </AvatarFallback>
                   </Avatar>
-                  <span className="hidden sm:inline">{user?.name || "User"}</span>
+                  <span className="hidden sm:inline">
+                    {user?.name || "User"}
+                  </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -138,7 +152,7 @@ export function TopNav() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => {
-                    logout()
+                    logout();
                   }}
                   className="cursor-pointer"
                 >
@@ -174,11 +188,12 @@ export function TopNav() {
             <SheetContent side="right" className="w-[80%] sm:w-[350px]">
               <div className="flex flex-col gap-6 py-6">
                 <div className="flex items-center justify-between">
-                  <Link href="/" className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
-                    <div className="bg-primary text-primary-foreground p-1 rounded">
-                      <Lightbulb className="h-5 w-5" />
-                    </div>
-                    <span className="font-bold text-xl">Smartjects</span>
+                  <Link
+                    href="/"
+                    className="flex items-center gap-2"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Logo className="h-8" />
                   </Link>
                   <SheetClose asChild>
                     <Button variant="ghost" size="icon">
@@ -195,7 +210,9 @@ export function TopNav() {
                       <Link
                         href={item.href}
                         className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary ${
-                          pathname === item.href ? "text-primary" : "text-muted-foreground"
+                          pathname === item.href
+                            ? "text-primary"
+                            : "text-muted-foreground"
                         }`}
                       >
                         {item.label}
@@ -212,7 +229,9 @@ export function TopNav() {
                           <Link
                             href={item.href}
                             className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary ${
-                              pathname === item.href ? "text-primary" : "text-muted-foreground"
+                              pathname === item.href
+                                ? "text-primary"
+                                : "text-muted-foreground"
                             }`}
                           >
                             {item.label}
@@ -225,14 +244,24 @@ export function TopNav() {
 
                 {!isAuthenticated && (
                   <div className="flex flex-col gap-2 mt-4">
-                    <Button variant="outline" className="w-full justify-start" asChild>
-                      <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      asChild
+                    >
+                      <Link
+                        href="/auth/login"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
                         <LogIn className="mr-2 h-4 w-4" />
                         Log in
                       </Link>
                     </Button>
                     <Button className="w-full justify-start" asChild>
-                      <Link href="/auth/register" onClick={() => setMobileMenuOpen(false)}>
+                      <Link
+                        href="/auth/register"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
                         <UserPlus className="mr-2 h-4 w-4" />
                         Sign up
                       </Link>
@@ -245,5 +274,5 @@ export function TopNav() {
         </div>
       </div>
     </header>
-  )
+  );
 }

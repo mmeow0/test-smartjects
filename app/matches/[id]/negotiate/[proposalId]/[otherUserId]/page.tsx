@@ -9,11 +9,9 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useAuth } from "@/components/auth-provider"
 import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { useToast } from "@/hooks/use-toast"
 import {
-  AlertCircle,
   ArrowLeft,
   Calendar,
   Check,
@@ -22,12 +20,8 @@ import {
   FileText,
   Handshake,
   MessageSquare,
-  Paperclip,
   Send,
   ThumbsUp,
-  CheckCircle2,
-  Circle,
-  ListChecks,
 } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"

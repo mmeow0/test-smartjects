@@ -305,7 +305,7 @@ export default function MatchesPage() {
                 <p className="text-muted-foreground text-center mb-6">
                   When providers match with your smartject needs, they'll appear here.
                 </p>
-                <Button onClick={() => router.push("/smartjects/hub")}>Browse Smartjects</Button>
+                <Button onClick={() => router.push("/smartjects/discover")}>Browse Smartjects</Button>
               </CardContent>
             </Card>
           )}
@@ -412,7 +412,7 @@ export default function MatchesPage() {
                 <p className="text-muted-foreground text-center mb-6">
                   When your proposals match with smartject needs, they'll appear here.
                 </p>
-                <Button onClick={() => router.push("/smartjects/hub")}>Browse Smartjects</Button>
+                <Button onClick={() => router.push("/smartjects/discover")}>Browse Smartjects</Button>
               </CardContent>
             </Card>
           )}
