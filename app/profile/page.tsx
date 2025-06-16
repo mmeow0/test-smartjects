@@ -45,7 +45,7 @@ export default function ProfilePage() {
     location: "",
     company: "",
     website: "",
-    createdAt: "",
+    joinDate: "",
   });
 
   const { smartjects, isLoading, refetch } = useUserSmartjects(user?.id);
@@ -62,7 +62,7 @@ export default function ProfilePage() {
         location: user?.location || "",
         company: user?.company || "",
         website: user?.website || "",
-        createdAt: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : "",
+        joinDate: user?.joinDate ? new Date(user.joinDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : "",
       });
     }
   }, [isAuthenticated, user, router, profileData.name]);
@@ -124,7 +124,7 @@ export default function ProfilePage() {
         location: user.location || "",
         company: user.company || "",
         website: user.website || "",
-        createdAt: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : "",
+        joinDate: user.joinDate ? new Date(user.joinDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : "",
       });
     }
     setIsEditing(false);
@@ -278,8 +278,8 @@ export default function ProfilePage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className={profileData.createdAt ? "" : "text-muted-foreground italic"}>
-                        {profileData.createdAt ? `Joined ${profileData.createdAt}` : "Join date not available"}
+                      <span className={profileData.joinDate ? "" : "text-muted-foreground italic"}>
+                        {profileData.joinDate ? `Joined ${profileData.joinDate}` : "Join date not available"}
                       </span>
                     </div>
                   </div>

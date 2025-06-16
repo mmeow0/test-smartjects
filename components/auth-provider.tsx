@@ -18,7 +18,7 @@ type UserType = {
   location?: string;
   company?: string;
   website?: string;
-  createdAt?: string;
+  joinDate?: string;
 };
 
 type AuthContextType = {
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         location: data.location ?? undefined,
         company: data.company ?? undefined,
         website: data.website ?? undefined,
-        createdAt: data.created_at ?? undefined,
+        joinDate: data.created_at ?? undefined,
       });
       setIsAuthenticated(true);
     } else {

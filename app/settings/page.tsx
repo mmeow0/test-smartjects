@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { useTheme } from "next-themes"
+import { userSettingsService } from "@/lib/services/user-settings.service"
+import type { UserSettingsType } from "@/lib/types"
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -28,28 +30,74 @@ export default function SettingsPage() {
     confirmPassword: "",
   })
 
-  const [notificationSettings, setNotificationSettings] = useState({
-    emailNotifications: true,
-    smartjectUpdates: true,
-    proposalMatches: true,
-    contractUpdates: true,
-    marketingEmails: false,
+  const [userSettings, setUserSettings] = useState<UserSettingsType | null>(null)
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true)
+  const [privacySettings, setPrivacySettings] = useState({
+    profileVisibility: "public" as "public" | "registered" | "private",
+    dataSharing: false,
   })
 
-  // Redirect if not authenticated
- useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login")
-    } else if (user?.email && accountSettings.email !== user.email) {
+  // Load user settings
+  useEffect(() => {
+    const loadUserSettings = async () => {
+      if (!user?.id) return
+
+      try {
+        setIsLoadingSettings(true)
+        const settings = await userSettingsService.getUserSettings(user.id)
+        
+        if (settings) {
+          setUserSettings(settings)
+          setPrivacySettings({
+            profileVisibility: settings.profileVisibility,
+            dataSharing: settings.dataSharing,
+          })
+          
+          // Sync theme with loaded settings
+          if (settings.theme !== theme) {
+            setTheme(settings.theme)
+          }
+        }
+      } catch (error) {
+        console.error("Error loading user settings:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load your settings. Please refresh the page.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingSettings(false)
+      }
+    }
+
+    if (isAuthenticated && user) {
+      loadUserSettings()
       setAccountSettings((prev) => ({
         ...prev,
         email: user.email,
       }))
+    } else if (!isAuthenticated) {
+      router.push("/auth/login")
     }
-  }, [isAuthenticated, router, user, accountSettings.email])
+  }, [isAuthenticated, router, user, theme, setTheme, toast])
 
   if (!isAuthenticated) {
     return null
+  }
+
+  if (isLoadingSettings) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-bold mb-6">Settings</h1>
+          <div className="space-y-4">
+            <div className="h-32 bg-muted animate-pulse rounded-lg" />
+            <div className="h-32 bg-muted animate-pulse rounded-lg" />
+            <div className="h-32 bg-muted animate-pulse rounded-lg" />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const handleAccountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,10 +106,16 @@ export default function SettingsPage() {
   }
 
   const handleNotificationChange = (name: string, checked: boolean) => {
-    setNotificationSettings((prev) => ({ ...prev, [name]: checked }))
+    if (!userSettings) return
+    
+    setUserSettings((prev) => prev ? { ...prev, [name as keyof UserSettingsType]: checked } : null)
   }
 
-  const handlePasswordUpdate = (e: React.FormEvent) => {
+  const handlePrivacyChange = (name: string, value: string | boolean) => {
+    setPrivacySettings((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (accountSettings.newPassword !== accountSettings.confirmPassword) {
@@ -73,47 +127,191 @@ export default function SettingsPage() {
       return
     }
 
-    // In a real app, we would call an API to update the password
-    toast({
-      title: "Password updated",
-      description: "Your password has been updated successfully.",
-    })
+    if (accountSettings.newPassword.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      })
+      return
+    }
 
-    setAccountSettings((prev) => ({
-      ...prev,
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    }))
+    try {
+      const success = await userSettingsService.updateUserPassword(accountSettings.newPassword)
+      
+      if (success) {
+        toast({
+          title: "Password updated",
+          description: "Your password has been updated successfully.",
+        })
+
+        setAccountSettings((prev) => ({
+          ...prev,
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        }))
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update password. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating password:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update password. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleEmailUpdate = (e: React.FormEvent) => {
+  const handleEmailUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // In a real app, we would call an API to update the email
-    toast({
-      title: "Email updated",
-      description: "Your email has been updated successfully.",
-    })
-  }
-
-  const handleNotificationSave = () => {
-    // In a real app, we would call an API to update notification preferences
-    toast({
-      title: "Notification preferences saved",
-      description: "Your notification preferences have been updated.",
-    })
-  }
-
-  const handleDeleteAccount = () => {
-    // In a real app, we would call an API to delete the account
-    if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+    if (accountSettings.email === user?.email) {
       toast({
-        title: "Account deleted",
-        description: "Your account has been deleted successfully.",
+        title: "No changes",
+        description: "Your email address is already up to date.",
       })
-      logout()
-      router.push("/")
+      return
+    }
+
+    try {
+      const success = await userSettingsService.updateUserEmail(accountSettings.email)
+      
+      if (success) {
+        toast({
+          title: "Email update initiated",
+          description: "Please check your new email address to confirm the change.",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update email. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating email:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update email. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleNotificationSave = async () => {
+    if (!user?.id || !userSettings) return
+
+    try {
+      const success = await userSettingsService.updateUserSettings(user.id, {
+        emailNotifications: userSettings.emailNotifications,
+        smartjectUpdates: userSettings.smartjectUpdates,
+        proposalMatches: userSettings.proposalMatches,
+        contractUpdates: userSettings.contractUpdates,
+        marketingEmails: userSettings.marketingEmails,
+      })
+
+      if (success) {
+        toast({
+          title: "Notification preferences saved",
+          description: "Your notification preferences have been updated.",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to save notification preferences. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error saving notification preferences:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save notification preferences. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!user?.id) return
+
+    if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+      try {
+        const success = await userSettingsService.deleteUserAccount(user.id)
+        
+        if (success) {
+          toast({
+            title: "Account deleted",
+            description: "Your account has been deleted successfully.",
+          })
+          await logout()
+          router.push("/")
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to delete account. Please try again.",
+            variant: "destructive",
+          })
+        }
+      } catch (error) {
+        console.error("Error deleting account:", error)
+        toast({
+          title: "Error",
+          description: "Failed to delete account. Please try again.",
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
+  const handleThemeChange = async (newTheme: string) => {
+    if (!user?.id) return
+
+    setTheme(newTheme)
+    
+    try {
+      await userSettingsService.updateUserSettings(user.id, {
+        theme: newTheme as "light" | "dark" | "system",
+      })
+    } catch (error) {
+      console.error("Error saving theme preference:", error)
+    }
+  }
+
+  const handlePrivacySave = async () => {
+    if (!user?.id) return
+
+    try {
+      const success = await userSettingsService.updateUserSettings(user.id, {
+        profileVisibility: privacySettings.profileVisibility,
+        dataSharing: privacySettings.dataSharing,
+      })
+
+      if (success) {
+        toast({
+          title: "Privacy settings saved",
+          description: "Your privacy settings have been updated.",
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to save privacy settings. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error saving privacy settings:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save privacy settings. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -257,7 +455,7 @@ export default function SettingsPage() {
                   </div>
                   <Switch
                     id="emailNotifications"
-                    checked={notificationSettings.emailNotifications}
+                    checked={userSettings?.emailNotifications ?? true}
                     onCheckedChange={(checked) => handleNotificationChange("emailNotifications", checked)}
                   />
                 </div>
@@ -269,7 +467,7 @@ export default function SettingsPage() {
                   </div>
                   <Switch
                     id="smartjectUpdates"
-                    checked={notificationSettings.smartjectUpdates}
+                    checked={userSettings?.smartjectUpdates ?? true}
                     onCheckedChange={(checked) => handleNotificationChange("smartjectUpdates", checked)}
                   />
                 </div>
@@ -281,7 +479,7 @@ export default function SettingsPage() {
                   </div>
                   <Switch
                     id="proposalMatches"
-                    checked={notificationSettings.proposalMatches}
+                    checked={userSettings?.proposalMatches ?? true}
                     onCheckedChange={(checked) => handleNotificationChange("proposalMatches", checked)}
                   />
                 </div>
@@ -293,7 +491,7 @@ export default function SettingsPage() {
                   </div>
                   <Switch
                     id="contractUpdates"
-                    checked={notificationSettings.contractUpdates}
+                    checked={userSettings?.contractUpdates ?? true}
                     onCheckedChange={(checked) => handleNotificationChange("contractUpdates", checked)}
                   />
                 </div>
@@ -305,7 +503,7 @@ export default function SettingsPage() {
                   </div>
                   <Switch
                     id="marketingEmails"
-                    checked={notificationSettings.marketingEmails}
+                    checked={userSettings?.marketingEmails ?? false}
                     onCheckedChange={(checked) => handleNotificationChange("marketingEmails", checked)}
                   />
                 </div>
@@ -325,7 +523,7 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="theme">Theme</Label>
-                  <Select value={theme} onValueChange={setTheme}>
+                  <Select value={theme} onValueChange={handleThemeChange}>
                     <SelectTrigger id="theme">
                       <SelectValue placeholder="Select theme" />
                     </SelectTrigger>
@@ -353,7 +551,10 @@ export default function SettingsPage() {
                     <Label htmlFor="profileVisibility">Profile Visibility</Label>
                     <p className="text-sm text-muted-foreground">Control who can see your profile</p>
                   </div>
-                  <Select defaultValue="public">
+                  <Select 
+                    value={privacySettings.profileVisibility} 
+                    onValueChange={(value) => handlePrivacyChange("profileVisibility", value)}
+                  >
                     <SelectTrigger id="profileVisibility" className="w-[180px]">
                       <SelectValue placeholder="Select visibility" />
                     </SelectTrigger>
@@ -370,7 +571,11 @@ export default function SettingsPage() {
                     <Label htmlFor="dataSharing">Data Sharing</Label>
                     <p className="text-sm text-muted-foreground">Allow sharing of your activity data</p>
                   </div>
-                  <Switch id="dataSharing" defaultChecked={false} />
+                  <Switch 
+                    id="dataSharing" 
+                    checked={privacySettings.dataSharing}
+                    onCheckedChange={(checked) => handlePrivacyChange("dataSharing", checked)}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -384,7 +589,7 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button>Save Privacy Settings</Button>
+                <Button onClick={handlePrivacySave}>Save Privacy Settings</Button>
               </CardFooter>
             </Card>
           </TabsContent>

@@ -38,7 +38,25 @@ export type UserType = {
   location?: string;
   company?: string;
   website?: string;
-  createdAt?: string;
+  joinDate?: string;
+};
+
+export type UserSettingsType = {
+  id: string;
+  userId: string;
+  // Notification settings
+  emailNotifications: boolean;
+  smartjectUpdates: boolean;
+  proposalMatches: boolean;
+  contractUpdates: boolean;
+  marketingEmails: boolean;
+  // Privacy settings
+  profileVisibility: "public" | "registered" | "private";
+  dataSharing: boolean;
+  // Appearance settings
+  theme: "light" | "dark" | "system";
+  createdAt: string;
+  updatedAt: string;
 };
 
 // NDA Signature type
@@ -299,7 +317,55 @@ export type Database = {
           name?: string | null;
           avatar_url?: string | null;
           account_type?: string;
+          created_at: string;
+          bio: string | null;
+          location: string | null;
+          company: string | null;
+          website: string | null;
+        };
+      };
+      user_settings: {
+        Row: {
+          id: string;
+          user_id: string;
+          email_notifications: boolean;
+          smartject_updates: boolean;
+          proposal_matches: boolean;
+          contract_updates: boolean;
+          marketing_emails: boolean;
+          profile_visibility: string;
+          data_sharing: boolean;
+          theme: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          email_notifications?: boolean;
+          smartject_updates?: boolean;
+          proposal_matches?: boolean;
+          contract_updates?: boolean;
+          marketing_emails?: boolean;
+          profile_visibility?: string;
+          data_sharing?: boolean;
+          theme?: string;
           created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          email_notifications?: boolean;
+          smartject_updates?: boolean;
+          proposal_matches?: boolean;
+          contract_updates?: boolean;
+          marketing_emails?: boolean;
+          profile_visibility?: string;
+          data_sharing?: boolean;
+          theme?: string;
+          created_at?: string;
+          updated_at?: string;
         };
       };
       smartjects: {
