@@ -1,15 +1,9 @@
 "use client";
 
-import { JSX, useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import {
   Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -23,16 +17,9 @@ import {
   Wrench,
   MessageSquare,
   ChevronRight,
-  Building,
-  Target,
-  Lightbulb,
   Factory,
-  LayoutDashboard,
   Plus,
-  Users,
-  MoreHorizontal,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import type { SmartjectType } from "@/lib/types";
@@ -314,6 +301,11 @@ export function SmartjectCard({
                   disabled={!isAuthenticated}
                   className={`flex items-center gap-1 hover:text-red-500 transition-colors ${
                     userVotes?.believe ? "text-red-500" : ""
+                  }
+                  ${
+                    !isAuthenticated
+                      ? "opacity-50 cursor-not-allowed pointer-events-none"
+                      : "hover:text-red-500"
                   }`}
                   onClick={() => handleVote("believe")}
                 >
@@ -336,9 +328,14 @@ export function SmartjectCard({
               <TooltipTrigger asChild>
                 <button
                   disabled={!isAuthenticated || user?.accountType === "free"}
-                  className={`flex items-center gap-1 hover:text-blue-500 transition-colors ${
-                    userVotes?.need ? "text-blue-500" : ""
-                  }`}
+                  className={`flex items-center gap-1 transition-colors
+                  ${userVotes?.need ? "text-blue-500" : ""}
+                  ${
+                    !isAuthenticated || user?.accountType === "free"
+                      ? "opacity-50 cursor-not-allowed pointer-events-none"
+                      : "hover:text-blue-500"
+                  }
+                `}
                   onClick={() => handleVote("need")}
                 >
                   <Briefcase className="h-4 w-4" />
@@ -358,6 +355,11 @@ export function SmartjectCard({
                   disabled={!isAuthenticated || user?.accountType === "free"}
                   className={`flex items-center gap-1 hover:text-green-500 transition-colors ${
                     userVotes?.provide ? "text-green-500" : ""
+                  }
+                  ${
+                    !isAuthenticated || user?.accountType === "free"
+                      ? "opacity-50 cursor-not-allowed pointer-events-none"
+                      : "hover:text-green-500"
                   }`}
                   onClick={() => handleVote("provide")}
                 >
