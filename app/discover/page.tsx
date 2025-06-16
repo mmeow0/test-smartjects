@@ -121,312 +121,314 @@ export default function SmartjectsHubPage() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Discover</h1>
-        <p className="text-muted-foreground mb-4">
-          Explore all available AI implementation projects
-        </p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Discover smartjects</h1>
+          <p className="text-gray-600 mb-4">
+            Explore all available AI implementation projects
+          </p>
 
-        {/* Search and Filter Bar */}
-        <Card className="p-4 bg-muted/30">
-          <div className="flex flex-col space-y-4">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search smartjects..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Active Filters Display */}
-            {totalFiltersCount > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  Active filters:
-                </span>
-                {selectedIndustries.map((industry) => (
-                  <Badge
-                    key={industry}
-                    variant="secondary"
-                    className="flex items-center gap-1"
-                  >
-                    <Building2 className="h-3 w-3 mr-1" />
-                    {industry}
-                    <X
-                      className="h-3 w-3 cursor-pointer ml-1"
-                      onClick={() => handleToggleIndustry(industry)}
-                    />
-                  </Badge>
-                ))}
-                {selectedTechnologies.map((tech) => (
-                  <Badge
-                    key={tech}
-                    variant="secondary"
-                    className="flex items-center gap-1"
-                  >
-                    <Cpu className="h-3 w-3 mr-1" />
-                    {tech}
-                    <X
-                      className="h-3 w-3 cursor-pointer ml-1"
-                      onClick={() => handleToggleTechnology(tech)}
-                    />
-                  </Badge>
-                ))}
-                {selectedFunctions.map((func) => (
-                  <Badge
-                    key={func}
-                    variant="secondary"
-                    className="flex items-center gap-1"
-                  >
-                    <Workflow className="h-3 w-3 mr-1" />
-                    {func}
-                    <X
-                      className="h-3 w-3 cursor-pointer ml-1"
-                      onClick={() => handleToggleFunction(func)}
-                    />
-                  </Badge>
-                ))}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedIndustries([]);
-                    setSelectedFunctions([]);
-                    setSelectedTechnologies([]);
-                  }}
-                  className="text-xs h-7 px-2"
-                >
-                  Clear all
-                </Button>
+          {/* Search and Filter Bar */}
+          <Card className="p-6 bg-white border border-gray-200">
+            <div className="flex flex-col space-y-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Input
+                  placeholder="Search here..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                />
               </div>
-            )}
 
-            {/* Collapsible Filter Section */}
-            <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <span className="text-sm font-medium">Filters</span>
-                  {totalFiltersCount > 0 && (
-                    <Badge variant="secondary" className="ml-2 h-5 px-2">
-                      {totalFiltersCount}
+              {/* Active Filters Display */}
+              {totalFiltersCount > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-gray-600">
+                    Active filters:
+                  </span>
+                  {selectedIndustries.map((industry) => (
+                    <Badge
+                      key={industry}
+                      variant="secondary"
+                      className="flex items-center gap-1 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    >
+                      <Building2 className="h-3 w-3 mr-1 text-orange-500" />
+                      {industry}
+                      <X
+                        className="h-3 w-3 cursor-pointer ml-1 hover:text-red-500"
+                        onClick={() => handleToggleIndustry(industry)}
+                      />
                     </Badge>
-                  )}
-                </div>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    {isFilterOpen ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
+                  ))}
+                  {selectedTechnologies.map((tech) => (
+                    <Badge
+                      key={tech}
+                      variant="secondary"
+                      className="flex items-center gap-1 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    >
+                      <Cpu className="h-3 w-3 mr-1 text-blue-500" />
+                      {tech}
+                      <X
+                        className="h-3 w-3 cursor-pointer ml-1 hover:text-red-500"
+                        onClick={() => handleToggleTechnology(tech)}
+                      />
+                    </Badge>
+                  ))}
+                  {selectedFunctions.map((func) => (
+                    <Badge
+                      key={func}
+                      variant="secondary"
+                      className="flex items-center gap-1 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    >
+                      <Workflow className="h-3 w-3 mr-1 text-cyan-600" />
+                      {func}
+                      <X
+                        className="h-3 w-3 cursor-pointer ml-1 hover:text-red-500"
+                        onClick={() => handleToggleFunction(func)}
+                      />
+                    </Badge>
+                  ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedIndustries([]);
+                      setSelectedFunctions([]);
+                      setSelectedTechnologies([]);
+                    }}
+                    className="text-xs h-7 px-2 text-gray-500 hover:text-gray-700"
+                  >
+                    Clear all
                   </Button>
-                </CollapsibleTrigger>
-              </div>
-
-              <CollapsibleContent className="pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Industries Filter */}
-                  <FilterCategory
-                    title="Industries"
-                    icon={<Building2 className="h-4 w-4 mr-2" />}
-                    options={filters.industries ?? []}
-                    selected={selectedIndustries}
-                    onToggle={(value) => handleToggleIndustry(value)}
-                  />
-
-                  {/* Technologies Filter */}
-                  <FilterCategory
-                    title="Technologies"
-                    icon={<Cpu className="h-4 w-4 mr-2" />}
-                    options={filters.technologies ?? []}
-                    selected={selectedTechnologies}
-                    onToggle={(value) => handleToggleTechnology(value)}
-                  />
-
-                  {/* Functions Filter */}
-                  <FilterCategory
-                    title="Functions"
-                    icon={<Workflow className="h-4 w-4 mr-2" />}
-                    options={filters.businessFunctions ?? []}
-                    selected={selectedFunctions}
-                    onToggle={(value) => handleToggleFunction(value)}
-                  />
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        </Card>
-      </div>
+              )}
 
-      <Tabs defaultValue="recent">
+              {/* Collapsible Filter Section */}
+              <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Filter className="h-4 w-4 mr-2 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">Filters</span>
+                    {totalFiltersCount > 0 && (
+                      <Badge variant="secondary" className="ml-2 h-5 px-2 bg-blue-100 text-blue-800">
+                        {totalFiltersCount}
+                      </Badge>
+                    )}
+                  </div>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700">
+                      {isFilterOpen ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+
+                <CollapsibleContent className="pt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Industries Filter */}
+                    <FilterCategory
+                      title="Industries"
+                      icon={<Building2 className="h-4 w-4 mr-2 text-orange-500" />}
+                      options={filters.industries ?? []}
+                      selected={selectedIndustries}
+                      onToggle={(value) => handleToggleIndustry(value)}
+                    />
+
+                    {/* Technologies Filter */}
+                    <FilterCategory
+                      title="Technologies"
+                      icon={<Cpu className="h-4 w-4 mr-2 text-blue-500" />}
+                      options={filters.technologies ?? []}
+                      selected={selectedTechnologies}
+                      onToggle={(value) => handleToggleTechnology(value)}
+                    />
+
+                    {/* Functions Filter */}
+                    <FilterCategory
+                      title="Functions"
+                      icon={<Workflow className="h-4 w-4 mr-2 text-cyan-600" />}
+                      options={filters.businessFunctions ?? []}
+                      selected={selectedFunctions}
+                      onToggle={(value) => handleToggleFunction(value)}
+                    />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="recent">
         <TabsList className="mb-6">
           <TabsTrigger value="recent">Recent</TabsTrigger>
           <TabsTrigger value="most-needed">Most Needed</TabsTrigger>
           <TabsTrigger value="most-provided">Most Provided</TabsTrigger>
           <TabsTrigger value="most-believed">Most Believed</TabsTrigger>
-        </TabsList>
+          </TabsList>
 
-        <TabsContent value="recent" className="space-y-4">
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array(6)
-                .fill(0)
-                .map((_, i) => (
-                  <Card key={i} className="h-[400px]">
-                    <div className="h-40 relative">
-                      <Skeleton className="h-full w-full" />
-                    </div>
-                    <div className="p-5 space-y-4">
-                      <Skeleton className="h-6 w-3/4" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
+          <TabsContent value="recent" className="space-y-4">
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array(6)
+                  .fill(0)
+                  .map((_, i) => (
+                    <Card key={i} className="h-[400px] bg-white border border-gray-200">
+                      <div className="h-40 relative">
+                        <Skeleton className="h-full w-full" />
                       </div>
-                      <div className="flex gap-2">
-                        <Skeleton className="h-8 w-20" />
-                        <Skeleton className="h-8 w-20" />
+                      <div className="p-5 space-y-4">
+                        <Skeleton className="h-6 w-3/4" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </div>
+                        <div className="flex gap-2">
+                          <Skeleton className="h-8 w-20" />
+                          <Skeleton className="h-8 w-20" />
+                        </div>
                       </div>
-                    </div>
-                  </Card>
+                    </Card>
+                  ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {recentSmartjects.map((smartject) => (
+                  <SmartjectCard
+                    key={smartject.id}
+                    smartject={smartject}
+                    onVoted={refetch}
+                    userVotes={smartject.userVotes}
+                  />
                 ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {recentSmartjects.map((smartject) => (
-                <SmartjectCard
-                  key={smartject.id}
-                  smartject={smartject}
-                  onVoted={refetch}
-                  userVotes={smartject.userVotes}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
+              </div>
+            )}
+          </TabsContent>
 
-        <TabsContent value="most-needed" className="space-y-4">
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array(6)
-                .fill(0)
-                .map((_, i) => (
-                  <Card key={i} className="h-[400px]">
-                    <div className="h-40 relative">
-                      <Skeleton className="h-full w-full" />
-                    </div>
-                    <div className="p-5 space-y-4">
-                      <Skeleton className="h-6 w-3/4" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
+          <TabsContent value="most-needed" className="space-y-4">
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array(6)
+                  .fill(0)
+                  .map((_, i) => (
+                    <Card key={i} className="h-[400px] bg-white border border-gray-200">
+                      <div className="h-40 relative">
+                        <Skeleton className="h-full w-full" />
                       </div>
-                      <div className="flex gap-2">
-                        <Skeleton className="h-8 w-20" />
-                        <Skeleton className="h-8 w-20" />
+                      <div className="p-5 space-y-4">
+                        <Skeleton className="h-6 w-3/4" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </div>
+                        <div className="flex gap-2">
+                          <Skeleton className="h-8 w-20" />
+                          <Skeleton className="h-8 w-20" />
+                        </div>
                       </div>
-                    </div>
-                  </Card>
+                    </Card>
+                  ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {mostNeededSmartjects.map((smartject) => (
+                  <SmartjectCard
+                    key={smartject.id}
+                    smartject={smartject}
+                    onVoted={refetch}
+                    userVotes={smartject.userVotes}
+                  />
                 ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {mostNeededSmartjects.map((smartject) => (
-                <SmartjectCard
-                  key={smartject.id}
-                  smartject={smartject}
-                  onVoted={refetch}
-                  userVotes={smartject.userVotes}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
+              </div>
+            )}
+          </TabsContent>
 
-        <TabsContent value="most-provided" className="space-y-4">
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array(6)
-                .fill(0)
-                .map((_, i) => (
-                  <Card key={i} className="h-[400px]">
-                    <div className="h-40 relative">
-                      <Skeleton className="h-full w-full" />
-                    </div>
-                    <div className="p-5 space-y-4">
-                      <Skeleton className="h-6 w-3/4" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
+          <TabsContent value="most-provided" className="space-y-4">
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array(6)
+                  .fill(0)
+                  .map((_, i) => (
+                    <Card key={i} className="h-[400px] bg-white border border-gray-200">
+                      <div className="h-40 relative">
+                        <Skeleton className="h-full w-full" />
                       </div>
-                      <div className="flex gap-2">
-                        <Skeleton className="h-8 w-20" />
-                        <Skeleton className="h-8 w-20" />
+                      <div className="p-5 space-y-4">
+                        <Skeleton className="h-6 w-3/4" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </div>
+                        <div className="flex gap-2">
+                          <Skeleton className="h-8 w-20" />
+                          <Skeleton className="h-8 w-20" />
+                        </div>
                       </div>
-                    </div>
-                  </Card>
+                    </Card>
+                  ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {mostProvidedSmartjects.map((smartject) => (
+                  <SmartjectCard
+                    key={smartject.id}
+                    smartject={smartject}
+                    onVoted={refetch}
+                    userVotes={smartject.userVotes}
+                  />
                 ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {mostProvidedSmartjects.map((smartject) => (
-                <SmartjectCard
-                  key={smartject.id}
-                  smartject={smartject}
-                  onVoted={refetch}
-                  userVotes={smartject.userVotes}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
+              </div>
+            )}
+          </TabsContent>
 
-        <TabsContent value="most-believed" className="space-y-4">
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array(6)
-                .fill(0)
-                .map((_, i) => (
-                  <Card key={i} className="h-[400px]">
-                    <div className="h-40 relative">
-                      <Skeleton className="h-full w-full" />
-                    </div>
-                    <div className="p-5 space-y-4">
-                      <Skeleton className="h-6 w-3/4" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
+          <TabsContent value="most-believed" className="space-y-4">
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array(6)
+                  .fill(0)
+                  .map((_, i) => (
+                    <Card key={i} className="h-[400px] bg-white border border-gray-200">
+                      <div className="h-40 relative">
+                        <Skeleton className="h-full w-full" />
                       </div>
-                      <div className="flex gap-2">
-                        <Skeleton className="h-8 w-20" />
-                        <Skeleton className="h-8 w-20" />
+                      <div className="p-5 space-y-4">
+                        <Skeleton className="h-6 w-3/4" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </div>
+                        <div className="flex gap-2">
+                          <Skeleton className="h-8 w-20" />
+                          <Skeleton className="h-8 w-20" />
+                        </div>
                       </div>
-                    </div>
-                  </Card>
+                    </Card>
+                  ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {mostBelievedSmartjects.map((smartject) => (
+                  <SmartjectCard
+                    key={smartject.id}
+                    smartject={smartject}
+                    onVoted={refetch}
+                    userVotes={smartject.userVotes}
+                  />
                 ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {mostBelievedSmartjects.map((smartject) => (
-                <SmartjectCard
-                  key={smartject.id}
-                  smartject={smartject}
-                  onVoted={refetch}
-                  userVotes={smartject.userVotes}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
