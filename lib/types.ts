@@ -34,6 +34,11 @@ export type UserType = {
   email: string;
   accountType: "free" | "paid";
   avatar?: string;
+  bio?: string;
+  location?: string;
+  company?: string;
+  website?: string;
+  createdAt?: string;
 };
 
 // NDA Signature type

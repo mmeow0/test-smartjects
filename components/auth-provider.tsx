@@ -14,6 +14,11 @@ type UserType = {
   email: string;
   accountType: "free" | "paid";
   avatar?: string;
+  bio?: string;
+  location?: string;
+  company?: string;
+  website?: string;
+  createdAt?: string;
 };
 
 type AuthContextType = {
@@ -24,6 +29,7 @@ type AuthContextType = {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   upgradeAccount: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   isLoading: boolean;
 };
 
@@ -40,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserProfile = async (authUser: User) => {
     const { data, error } = await supabase
       .from("users")
-      .select("id, name, email, account_type, avatar_url")
+      .select("id, name, email, account_type, avatar_url, bio, location, company, website, created_at")
       .eq("id", authUser.id)
       .maybeSingle();
 
@@ -52,6 +58,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: data.email,
         accountType: data.account_type,
         avatar: data.avatar_url ?? undefined,
+        bio: data.bio ?? undefined,
+        location: data.location ?? undefined,
+        company: data.company ?? undefined,
+        website: data.website ?? undefined,
+        createdAt: data.created_at ?? undefined,
       });
       setIsAuthenticated(true);
     } else {
@@ -344,6 +355,19 @@ const logout = async () => {
   router.push("/");
 };
 
+const refreshUser = async () => {
+  if (!session?.user) {
+    throw new Error("No authenticated user to refresh");
+  }
+
+  try {
+    await fetchUserProfile(session.user);
+  } catch (error) {
+    console.error("Error refreshing user profile:", error);
+    throw error;
+  }
+};
+
 
   return (
     <AuthContext.Provider
@@ -355,6 +379,7 @@ const logout = async () => {
         register,
         logout,
         upgradeAccount,
+        refreshUser,
         isLoading,
       }}
     >

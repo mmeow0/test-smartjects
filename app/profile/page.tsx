@@ -32,10 +32,11 @@ import { useToast } from "@/hooks/use-toast";
 import { SmartjectCard } from "@/components/smartject-card";
 import { useUserSmartjects } from "@/hooks/use-user-smartjects";
 import { Skeleton } from "@/components/ui/skeleton";
+import { userService } from "@/lib/services/user.service";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, refreshUser } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -44,7 +45,7 @@ export default function ProfilePage() {
     location: "",
     company: "",
     website: "",
-    joinDate: "",
+    createdAt: "",
   });
 
   const { smartjects, isLoading, refetch } = useUserSmartjects(user?.id);
@@ -56,12 +57,12 @@ export default function ProfilePage() {
     } else if (user && !profileData.name) {
       // Only set profile data if it hasn't been set yet
       setProfileData({
-        name: user?.name || "User Name",
-        bio: "AI implementation specialist with expertise in machine learning and computer vision.",
-        location: "San Francisco, CA",
-        company: "Tech Innovations Inc.",
-        website: "https://example.com",
-        joinDate: "January 2023",
+        name: user?.name || "",
+        bio: user?.bio || "",
+        location: user?.location || "",
+        company: user?.company || "",
+        website: user?.website || "",
+        createdAt: user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : "",
       });
     }
   }, [isAuthenticated, user, router, profileData.name]);
@@ -77,25 +78,53 @@ export default function ProfilePage() {
     setProfileData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
-    // In a real app, we would save the profile data to an API
-    toast({
-      title: "Profile updated",
-      description: "Your profile information has been updated successfully.",
-    });
-    setIsEditing(false);
+  const handleSave = async () => {
+    if (!user?.id) return;
+
+    try {
+      const success = await userService.updateUser(user.id, {
+        name: profileData.name,
+        bio: profileData.bio,
+        location: profileData.location,
+        company: profileData.company,
+        website: profileData.website,
+      });
+
+      if (success) {
+        // Refresh user data to reflect changes
+        await refreshUser();
+        toast({
+          title: "Profile updated",
+          description: "Your profile information has been updated successfully.",
+        });
+        setIsEditing(false);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update profile. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCancel = () => {
     // Reset form and exit edit mode
     if (user) {
       setProfileData({
-        name: user.name || "User Name",
-        bio: "AI implementation specialist with expertise in machine learning and computer vision.",
-        location: "San Francisco, CA",
-        company: "Tech Innovations Inc.",
-        website: "https://example.com",
-        joinDate: "January 2023",
+        name: user.name || "",
+        bio: user.bio || "",
+        location: user.location || "",
+        company: user.company || "",
+        website: user.website || "",
+        createdAt: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : "",
       });
     }
     setIsEditing(false);
@@ -226,7 +255,9 @@ export default function ProfilePage() {
                 <>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Bio</p>
-                    <p>{profileData.bio}</p>
+                    <p className={profileData.bio ? "" : "text-muted-foreground italic"}>
+                      {profileData.bio || "No bio added yet"}
+                    </p>
                   </div>
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2">
@@ -235,15 +266,21 @@ export default function ProfilePage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span>{profileData.location}</span>
+                      <span className={profileData.location ? "" : "text-muted-foreground italic"}>
+                        {profileData.location || "No location specified"}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Briefcase className="h-4 w-4 text-muted-foreground" />
-                      <span>{profileData.company}</span>
+                      <span className={profileData.company ? "" : "text-muted-foreground italic"}>
+                        {profileData.company || "No company specified"}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span>Joined {profileData.joinDate}</span>
+                      <span className={profileData.createdAt ? "" : "text-muted-foreground italic"}>
+                        {profileData.createdAt ? `Joined ${profileData.createdAt}` : "Join date not available"}
+                      </span>
                     </div>
                   </div>
                 </>
