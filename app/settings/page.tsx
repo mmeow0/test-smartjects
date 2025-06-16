@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/components/auth-provider"
+import { useRequireAuth } from "@/hooks/use-auth-guard"
 import { useToast } from "@/hooks/use-toast"
 import { useTheme } from "next-themes"
 import { userSettingsService } from "@/lib/services/user-settings.service"
@@ -19,7 +20,8 @@ import type { UserSettingsType } from "@/lib/types"
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { user, isAuthenticated, logout } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequireAuth()
+  const { logout } = useAuth()
   const { toast } = useToast()
   const { theme, setTheme } = useTheme()
 
@@ -70,18 +72,18 @@ export default function SettingsPage() {
       }
     }
 
-    if (isAuthenticated && user) {
+    if (canAccess && user) {
       loadUserSettings()
       setAccountSettings((prev) => ({
         ...prev,
         email: user.email,
       }))
-    } else if (!isAuthenticated) {
-      router.push("/auth/login")
+    } else if (authLoading || !canAccess) {
+      return
     }
-  }, [isAuthenticated, router, user, theme, setTheme, toast])
+  }, [authLoading, canAccess, user, theme, setTheme, toast])
 
-  if (!isAuthenticated) {
+  if (authLoading || !canAccess) {
     return null
   }
 

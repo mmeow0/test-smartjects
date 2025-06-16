@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { useAuth } from "@/components/auth-provider"
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { contractService } from "@/lib/services"
 import { ContractListType } from "@/lib/types"
 import { Calendar, Clock, Download, FileText, Search, Shield } from "lucide-react"
@@ -25,7 +25,7 @@ export default function ContractsPage() {
     }
   }
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [activeContracts, setActiveContracts] = useState<ContractListType[]>([])
@@ -33,19 +33,10 @@ export default function ContractsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Redirect if not authenticated or not a paid user
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login")
-    } else if (user?.accountType !== "paid") {
-      router.push("/upgrade")
-    }
-  }, [isAuthenticated, router, user])
-
   // Fetch contracts data
   useEffect(() => {
     const fetchContracts = async () => {
-      if (!user?.id) return
+      if (authLoading || !canAccess || !user?.id) return
       
       setLoading(true)
       setError(null)
@@ -61,12 +52,10 @@ export default function ContractsPage() {
       }
     }
 
-    if (isAuthenticated && user?.id && user?.accountType === "paid") {
-      fetchContracts()
-    }
-  }, [isAuthenticated, user])
+    fetchContracts()
+  }, [authLoading, canAccess, user])
 
-  if (!isAuthenticated || user?.accountType !== "paid") {
+  if (authLoading || !canAccess) {
     return null
   }
 

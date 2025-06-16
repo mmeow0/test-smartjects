@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/components/auth-provider";
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 import { negotiationService } from "@/lib/services";
 
 // Define types for negotiation data
@@ -71,7 +71,7 @@ interface NegotiationData {
 }
 
 export const useNegotiation = (matchId: string, proposalId: string) => {
-  const { user, isAuthenticated } = useAuth();
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -81,13 +81,8 @@ export const useNegotiation = (matchId: string, proposalId: string) => {
   const fetchNegotiationData = useCallback(async () => {
     setIsLoading(true);
 
-    if (!isAuthenticated) {
-      router.push("/auth/login");
-      return;
-    }
-
-    if (user?.accountType !== "paid") {
-      router.push("/upgrade");
+    if (authLoading || !canAccess) {
+      setIsLoading(false);
       return;
     }
 
@@ -113,7 +108,7 @@ export const useNegotiation = (matchId: string, proposalId: string) => {
     } finally {
       setIsLoading(false);
     }
-  }, [matchId, proposalId, isAuthenticated, user?.accountType, router, toast]);
+  }, [matchId, proposalId, authLoading, canAccess, router, toast]);
 
   const addMessage = useCallback(async (
     content: string,

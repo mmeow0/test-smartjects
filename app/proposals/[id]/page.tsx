@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/components/auth-provider";
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 import { useToast } from "@/hooks/use-toast";
 import { ProposalDocumentPreview } from "@/components/proposal-document-preview";
 import { ProposalNegotiations } from "@/components/proposal-negotiations";
@@ -54,7 +55,7 @@ export default function ProposalDetailPage({
   const [newComment, setNewComment] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState("details");
@@ -120,7 +121,7 @@ export default function ProposalDetailPage({
     }
   };
 
-  if (!isAuthenticated || user?.accountType !== "paid" || isLoading) {
+  if (authLoading || !canAccess || isLoading) {
     return null;
   }
 

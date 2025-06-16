@@ -9,26 +9,18 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/components/auth-provider"
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { useToast } from "@/hooks/use-toast"
 import { Bell, Calendar, DollarSign, MessageSquare, Search, Star, ThumbsUp, Users } from "lucide-react"
 
 export default function MatchesPage() {
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
 
-  // Redirect if not authenticated or not a paid user
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login")
-    } else if (user?.accountType !== "paid") {
-      router.push("/upgrade")
-    }
-  }, [isAuthenticated, router, user])
-
-  if (!isAuthenticated || user?.accountType !== "paid") {
+  if (authLoading || !canAccess) {
     return null
   }
 

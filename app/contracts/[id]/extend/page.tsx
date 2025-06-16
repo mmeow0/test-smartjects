@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/components/auth-provider"
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { ArrowLeft, Calendar, AlertTriangle, Clock, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
@@ -22,7 +22,7 @@ export default function TimelineExtensionPage({ params }: { params: Promise<{ id
   const { id } = use(params);
 
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -37,13 +37,7 @@ export default function TimelineExtensionPage({ params }: { params: Promise<{ id
   // Load contract data and check access
   useEffect(() => {
     const loadContract = async () => {
-      if (!isAuthenticated) {
-        router.push("/auth/login")
-        return
-      }
-      
-      if (user?.accountType !== "paid") {
-        router.push("/upgrade")
+      if (authLoading || !canAccess) {
         return
       }
 
@@ -82,10 +76,10 @@ export default function TimelineExtensionPage({ params }: { params: Promise<{ id
     }
 
     loadContract()
-  }, [isAuthenticated, user, id, router])
+  }, [authLoading, canAccess, user, id, router])
 
   // Redirect if not authenticated or not paid
-  if (!isAuthenticated || user?.accountType !== "paid") {
+  if (authLoading || !canAccess) {
     return null
   }
 

@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
-import { ArrowLeft, CheckCircle, Upload, FileText, Loader2, AlertTriangle, X } from "lucide-react"
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
+import { ArrowLeft, CheckCircle, Upload, FileText, Loader2, AlertCircle } from "lucide-react"
 import { contractService } from "@/lib/services"
 
 interface UploadFile {
@@ -25,7 +26,7 @@ export default function MilestoneCompletePage({ params }: { params: Promise<{ id
   const { id, milestoneId } = use(params);
   
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -41,15 +42,10 @@ export default function MilestoneCompletePage({ params }: { params: Promise<{ id
   const [confirmCompletion, setConfirmCompletion] = useState<boolean>(false)
 
   // Load milestone and contract data
+  // Load milestone data and check access
   useEffect(() => {
-    const loadData = async () => {
-      if (!isAuthenticated) {
-        router.push("/auth/login")
-        return
-      }
-      
-      if (user?.accountType !== "paid") {
-        router.push("/upgrade")
+    const loadMilestone = async () => {
+      if (authLoading || !canAccess) {
         return
       }
 
@@ -89,11 +85,11 @@ export default function MilestoneCompletePage({ params }: { params: Promise<{ id
       }
     }
 
-    loadData()
-  }, [isAuthenticated, user, id, milestoneId, router])
+    loadMilestone()
+  }, [authLoading, canAccess, user, id, milestoneId, router])
 
   // Redirect if not authenticated or not paid
-  if (!isAuthenticated || user?.accountType !== "paid") {
+  if (authLoading || !canAccess) {
     return null
   }
 

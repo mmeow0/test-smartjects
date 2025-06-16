@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -57,7 +58,7 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
   
   const router = useRouter()
   const { toast } = useToast()
-  const { user, isAuthenticated } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchProposalData = async () => {
@@ -197,17 +198,15 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
   const [totalPercentage, setTotalPercentage] = useState(0)
   const [newDeliverable, setNewDeliverable] = useState("")
 
-  // Redirect if not authenticated or not a paid user
+  // Load proposal data when authenticated
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login")
-    } else if (user?.accountType !== "paid") {
-      router.push("/upgrade")
-    } else {
-      // Fetch proposal data
-      fetchProposalData()
+    if (authLoading || !canAccess) {
+      return
     }
-  }, [isAuthenticated, router, user, id])
+    
+    // Fetch proposal data
+    fetchProposalData()
+  }, [authLoading, canAccess, user, id])
 
   // Calculate total percentage whenever milestones change
   useEffect(() => {
@@ -215,7 +214,7 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
     setTotalPercentage(total)
   }, [milestones])
 
-  if (!isAuthenticated || user?.accountType !== "paid") {
+  if (authLoading || !canAccess) {
     return null
   }
 

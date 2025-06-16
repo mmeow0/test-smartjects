@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/components/auth-provider"
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { useToast } from "@/hooks/use-toast"
 import {
   ArrowLeft,
@@ -64,7 +65,7 @@ export default function MilestoneDetailsPage({ params }: { params: Promise<{ id:
   const { id, milestoneId } = use(params);
   
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [isAddingComment, setIsAddingComment] = useState(false)
@@ -74,15 +75,10 @@ export default function MilestoneDetailsPage({ params }: { params: Promise<{ id:
   const [error, setError] = useState<string | null>(null)
 
   // Load milestone data
+  // Load milestone data and check access
   useEffect(() => {
     const loadMilestone = async () => {
-      if (!isAuthenticated) {
-        router.push("/auth/login")
-        return
-      }
-      
-      if (user?.accountType !== "paid") {
-        router.push("/upgrade")
+      if (authLoading || !canAccess) {
         return
       }
 
@@ -108,10 +104,10 @@ export default function MilestoneDetailsPage({ params }: { params: Promise<{ id:
     }
 
     loadMilestone()
-  }, [isAuthenticated, user, id, milestoneId, router])
+  }, [authLoading, canAccess, user, id, milestoneId, router])
 
   // Redirect if not authenticated or not paid
-  if (!isAuthenticated || user?.accountType !== "paid") {
+  if (authLoading || !canAccess) {
     return null
   }
 

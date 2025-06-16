@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast"
 
 export default function UpgradePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, isAuthenticated, upgradeAccount } = useAuth()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
@@ -17,7 +18,8 @@ export default function UpgradePage() {
 
   const handleUpgrade = async () => {
     if (!isAuthenticated) {
-      router.push("/auth/login")
+      const redirectUrl = `/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+      router.push(redirectUrl)
       return
     }
 
@@ -28,7 +30,8 @@ export default function UpgradePage() {
         title: "Account upgraded",
         description: "Your account has been successfully upgraded to the paid plan.",
       })
-      router.push("/dashboard")
+      const redirectTo = searchParams.get("redirect") || "/dashboard";
+      router.push(redirectTo)
     } catch (error) {
       toast({
         title: "Upgrade failed",

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/components/auth-provider";
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 import { ProposalType } from "@/lib/types";
 import { proposalService } from "@/lib/services";
 
 export const useProposal = (id: string) => {
-  const { user, isAuthenticated } = useAuth();
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -16,13 +16,8 @@ export const useProposal = (id: string) => {
   const fetchProposal = useCallback(async () => {
     setIsLoading(true);
 
-    if (!isAuthenticated) {
-      router.push("/auth/login");
-      return;
-    }
-
-    if (user?.accountType !== "paid") {
-      router.push("/upgrade");
+    if (authLoading || !canAccess) {
+      setIsLoading(false);
       return;
     }
 
@@ -48,7 +43,7 @@ export const useProposal = (id: string) => {
     } finally {
       setIsLoading(false);
     }
-  }, [id, isAuthenticated, user?.accountType, router, toast]);
+  }, [id, authLoading, canAccess, router, toast]);
 
   useEffect(() => {
     fetchProposal();

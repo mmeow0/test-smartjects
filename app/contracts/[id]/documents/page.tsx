@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useAuth } from "@/components/auth-provider"
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, Download, FileText, Upload, Loader2, Calendar, User } from "lucide-react"
 import { contractService } from "@/lib/services"
@@ -23,7 +23,7 @@ export default function ContractDocumentsPage({ params }: { params: Promise<{ id
   const { id } = use(params);
 
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
@@ -32,15 +32,10 @@ export default function ContractDocumentsPage({ params }: { params: Promise<{ id
   const [error, setError] = useState<string | null>(null)
 
   // Load contract and documents data
+  // Load contract data
   useEffect(() => {
-    const loadData = async () => {
-      if (!isAuthenticated) {
-        router.push("/auth/login")
-        return
-      }
-      
-      if (user?.accountType !== "paid") {
-        router.push("/upgrade")
+    const loadContract = async () => {
+      if (authLoading || !canAccess) {
         return
       }
 
@@ -70,11 +65,11 @@ export default function ContractDocumentsPage({ params }: { params: Promise<{ id
       }
     }
 
-    loadData()
-  }, [isAuthenticated, user, id, router])
+    loadContract()
+  }, [authLoading, canAccess, user, id, router])
 
   // Redirect if not authenticated or not paid
-  if (!isAuthenticated || user?.accountType !== "paid") {
+  if (authLoading || !canAccess) {
     return null
   }
 

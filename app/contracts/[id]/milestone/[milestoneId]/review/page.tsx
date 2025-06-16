@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/components/auth-provider"
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { useToast } from "@/hooks/use-toast"
 import {
   ArrowLeft,
@@ -71,7 +72,7 @@ export default function MilestoneReviewPage({ params }: { params: Promise<{ id: 
    const { id, milestoneId } = use(params);
    
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [feedback, setFeedback] = useState("")
@@ -80,24 +81,9 @@ export default function MilestoneReviewPage({ params }: { params: Promise<{ id: 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [milestone, setMilestone] = useState<Milestone | null>(null)
   const [contract, setContract] = useState<Contract | null>(null)
-  const [authChecked, setAuthChecked] = useState(false)
-
-  // Check authentication first
+  // Load milestone data
   useEffect(() => {
-    // Small delay to ensure auth state is loaded
-    const timer = setTimeout(() => {
-      setAuthChecked(true)
-    }, 500)
-
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Fetch mock data
-  useEffect(() => {
-    if (!authChecked) return
-
-    // Skip data loading if not authenticated
-    if (!isAuthenticated || (user && user.accountType !== "paid")) {
+    if (authLoading || !canAccess) {
       return
     }
 
@@ -180,28 +166,10 @@ export default function MilestoneReviewPage({ params }: { params: Promise<{ id: 
     setTimeout(() => {
       setIsLoading(false)
     }, 1000)
-  }, [authChecked, isAuthenticated, user, id, milestoneId])
-
-  // Handle redirects after auth check
-  useEffect(() => {
-    if (!authChecked) return
-
-    if (!isAuthenticated) {
-      console.log("Not authenticated, redirecting to login")
-      router.push("/auth/login")
-    } else if (user && user.accountType !== "paid") {
-      console.log("Not a paid user, redirecting to upgrade")
-      router.push("/upgrade")
-    }
-  }, [authChecked, isAuthenticated, user, router])
-
-  // Show loading state while checking auth
-  if (!authChecked) {
-    return null
-  }
+  }, [authLoading, canAccess, user, id, milestoneId])
 
   // If not authenticated or not a paid user, don't render anything (redirect will happen)
-  if (!isAuthenticated || (user && user.accountType !== "paid")) {
+  if (authLoading || !canAccess) {
     return null
   }
 

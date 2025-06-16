@@ -352,7 +352,13 @@ const logout = async () => {
   setIsAuthenticated(false);
   setIsLoading(false);
 
-  router.push("/");
+  // Clear browser history state and any query parameters
+  if (typeof window !== "undefined") {
+    window.history.replaceState(null, "", "/");
+  }
+  
+  // Clean navigation to homepage without any query parameters
+  router.replace("/");
 };
 
 const refreshUser = async () => {

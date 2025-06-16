@@ -31,12 +31,13 @@ import {
 } from "lucide-react"
 import { ContractDocumentPreview } from "@/components/contract-document-preview"
 import { contractService } from "@/lib/services"
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 
 export default function ContractDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
 
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [expandedMilestone, setExpandedMilestone] = useState<string | null>(null)
@@ -44,16 +45,11 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
   const [error, setError] = useState<string | null>(null)
   const [contract, setContract] = useState<any>(null)
 
-  // Load contract data and check access
+  // Load contract data
   useEffect(() => {
     const loadContract = async () => {
-      if (!isAuthenticated) {
-        router.push("/auth/login")
-        return
-      }
-      
-      if (user?.accountType !== "paid") {
-        router.push("/upgrade")
+      // Don't load while auth is still loading or access is denied
+      if (authLoading || !canAccess) {
         return
       }
 
@@ -100,10 +96,10 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
     }
 
     loadContract()
-  }, [isAuthenticated, router, user, id])
+  }, [authLoading, canAccess, router, id])
 
 
-  if (!isAuthenticated || user?.accountType !== "paid" || isLoading || isCheckingSigningStatus) {
+  if (authLoading || !canAccess || isLoading || isCheckingSigningStatus) {
     return (
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-center min-h-[400px]">

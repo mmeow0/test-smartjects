@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/components/auth-provider";
+import { useRequireAuth } from "@/hooks/use-auth-guard";
 import { useToast } from "@/hooks/use-toast";
 import { SmartjectCard } from "@/components/smartject-card";
 import { useUserSmartjects } from "@/hooks/use-user-smartjects";
@@ -36,7 +37,8 @@ import { userService } from "@/lib/services/user.service";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isAuthenticated, refreshUser } = useAuth();
+  const { isLoading: authLoading, user, canAccess } = useRequireAuth();
+  const { refreshUser } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -50,11 +52,13 @@ export default function ProfilePage() {
 
   const { smartjects, isLoading, refetch } = useUserSmartjects(user?.id);
 
-  // Redirect if not authenticated
+  // Set profile data when user is loaded
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login");
-    } else if (user && !profileData.name) {
+    if (authLoading || !canAccess) {
+      return;
+    }
+    
+    if (user && !profileData.name) {
       // Only set profile data if it hasn't been set yet
       setProfileData({
         name: user?.name || "",
@@ -65,9 +69,9 @@ export default function ProfilePage() {
         joinDate: user?.joinDate ? new Date(user.joinDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : "",
       });
     }
-  }, [isAuthenticated, user, router, profileData.name]);
+  }, [authLoading, canAccess, user, profileData.name]);
 
-  if (!isAuthenticated) {
+  if (authLoading || !canAccess) {
     return null;
   }
 

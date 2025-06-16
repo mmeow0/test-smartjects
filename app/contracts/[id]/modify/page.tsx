@@ -13,6 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { ArrowLeft, AlertTriangle, Loader2 } from "lucide-react"
 import { contractService } from "@/lib/services"
 
@@ -20,7 +21,7 @@ export default function ContractModificationPage({ params }: { params: Promise<{
   const { id } = use(params);
   
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -35,13 +36,7 @@ export default function ContractModificationPage({ params }: { params: Promise<{
   // Load contract data and check access
   useEffect(() => {
     const loadContract = async () => {
-      if (!isAuthenticated) {
-        router.push("/auth/login")
-        return
-      }
-      
-      if (user?.accountType !== "paid") {
-        router.push("/upgrade")
+      if (authLoading || !canAccess) {
         return
       }
 
@@ -68,10 +63,10 @@ export default function ContractModificationPage({ params }: { params: Promise<{
     }
 
     loadContract()
-  }, [isAuthenticated, user, id, router])
+  }, [authLoading, canAccess, user, id, router])
 
   // Redirect if not authenticated or not paid
-  if (!isAuthenticated || user?.accountType !== "paid") {
+  if (authLoading || !canAccess) {
     return null
   }
 

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/components/auth-provider"
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { useToast } from "@/hooks/use-toast"
 import {
   MessageSquare,
@@ -41,7 +42,7 @@ interface UserConversation {
 
 export default function NegotiationsPage() {
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const { toast } = useToast()
 
   const [conversations, setConversations] = useState<UserConversation[]>([])
@@ -50,18 +51,12 @@ export default function NegotiationsPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login")
-      return
-    }
-    
-    if (user?.accountType !== "paid") {
-      router.push("/upgrade")
+    if (authLoading || !canAccess) {
       return
     }
 
     fetchNegotiations()
-  }, [isAuthenticated, user, router])
+  }, [authLoading, canAccess])
 
 
 const getUserNegotiations = async (userId: string) => {
@@ -363,7 +358,7 @@ const getUserNegotiations = async (userId: string) => {
     }
   }
 
-  if (!isAuthenticated || user?.accountType !== "paid") {
+  if (authLoading || !canAccess || isLoading) {
     return null
   }
 

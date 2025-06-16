@@ -7,38 +7,15 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/components/auth-provider"
+import { useRequireAuth } from "@/hooks/use-auth-guard"
 import { ArrowRight, Calendar, CheckCircle, Clock, DollarSign, FileText, MessageSquare, Users } from "lucide-react"
 
 export default function MatchDetailPage() {
   const router = useRouter()
   const params = useParams()
-  const { isAuthenticated, user } = useAuth()
-  const [loading, setLoading] = useState(true)
-  const [authChecked, setAuthChecked] = useState(false)
+  const { isLoading: authLoading, user, canAccess } = useRequireAuth()
 
-  // Authentication check with delay to ensure auth state is loaded
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setAuthChecked(true)
-      console.log("Auth check completed, isAuthenticated:", isAuthenticated)
-    }, 500)
-
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Redirect if not authenticated after auth check
-  useEffect(() => {
-    if (authChecked) {
-      if (!isAuthenticated) {
-        console.log("Not authenticated, redirecting to login")
-        router.push("/auth/login")
-      } else {
-        setLoading(false)
-      }
-    }
-  }, [authChecked, isAuthenticated, router])
-
-  if (!authChecked || loading) {
+  if (authLoading || !canAccess) {
     return null
   }
 

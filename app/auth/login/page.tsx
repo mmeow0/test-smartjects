@@ -3,7 +3,7 @@
 import type React from "react";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -39,8 +40,11 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
-    if (isAuthenticated) router.push("/dashboard");
-  }, [isAuthenticated]);
+    if (isAuthenticated) {
+      const redirectTo = searchParams.get("redirect") || "/dashboard";
+      router.push(redirectTo);
+    }
+  }, [isAuthenticated, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +56,8 @@ export default function LoginPage() {
         title: "Login successful",
         description: "Welcome back to Smartjects!",
       });
-      router.push("/dashboard");
+      const redirectTo = searchParams.get("redirect") || "/dashboard";
+      router.push(redirectTo);
     } catch (error: any) {
       toast({
         title: "Login failed",

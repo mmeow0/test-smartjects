@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/components/auth-provider"
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { useToast } from "@/hooks/use-toast"
 import {
   AlertCircle,
@@ -119,7 +120,7 @@ export default function NegotiatePage({
   const { proposal, isLoading, refetch } = useProposal(proposalId);
 
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const { toast } = useToast()
 
   // State for negotiation data
@@ -179,7 +180,7 @@ export default function NegotiatePage({
   // Fetch negotiation data and check for multiple users
   useEffect(() => {
     const fetchNegotiationData = async () => {
-      if (!isAuthenticated || user?.accountType !== "paid") {
+      if (authLoading || !canAccess) {
         return
       }
       
@@ -274,17 +275,14 @@ export default function NegotiatePage({
       }
     }
 
-    fetchNegotiationData()
-  }, [id, proposalId, isAuthenticated, user, toast, router])
-
-  // Redirect if not authenticated or not a paid user
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login")
-    } else if (user?.accountType !== "paid") {
-      router.push("/upgrade")
+    if (authLoading || !canAccess) {
+      return
     }
-  }, [isAuthenticated, router, user])
+    
+    fetchNegotiationData()
+  }, [id, proposalId, authLoading, canAccess, user, toast, router])
+
+
 
   // Calculate total percentage whenever milestones change
   useEffect(() => {
@@ -312,7 +310,7 @@ export default function NegotiatePage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (!isAuthenticated || user?.accountType !== "paid" || isLoading || negotiationLoading) {
+  if (authLoading || !canAccess || isLoading || negotiationLoading) {
     return null
   }
 

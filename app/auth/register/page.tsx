@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +17,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { register } = useAuth()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
@@ -53,7 +54,8 @@ export default function RegisterPage() {
         title: "Registration successful",
         description: "Welcome to Smartjects!",
       })
-      router.push("/dashboard")
+      const redirectTo = searchParams.get("redirect") || "/dashboard";
+      router.push(redirectTo)
     } catch (error: any) {
       toast({
         title: "Registration failed",

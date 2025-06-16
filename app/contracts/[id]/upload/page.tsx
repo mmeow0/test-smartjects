@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/components/auth-provider"
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, Upload, FileText, X, Loader2, AlertCircle, CheckCircle } from "lucide-react"
 import { contractService } from "@/lib/services"
@@ -24,7 +25,7 @@ export default function ContractUploadPage({ params }: { params: Promise<{ id: s
   const { id } = use(params);
 
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [contract, setContract] = useState<any>(null)
@@ -34,15 +35,10 @@ export default function ContractUploadPage({ params }: { params: Promise<{ id: s
   const [description, setDescription] = useState("")
 
   // Load contract data
+  // Load contract data and check access
   useEffect(() => {
     const loadContract = async () => {
-      if (!isAuthenticated) {
-        router.push("/auth/login")
-        return
-      }
-      
-      if (user?.accountType !== "paid") {
-        router.push("/upgrade")
+      if (authLoading || !canAccess) {
         return
       }
 
@@ -69,10 +65,10 @@ export default function ContractUploadPage({ params }: { params: Promise<{ id: s
     }
 
     loadContract()
-  }, [isAuthenticated, user, id, router])
+  }, [authLoading, canAccess, user, id, router])
 
   // Redirect if not authenticated or not paid
-  if (!isAuthenticated || user?.accountType !== "paid") {
+  if (authLoading || !canAccess) {
     return null
   }
 

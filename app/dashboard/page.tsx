@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { SmartjectCard } from "@/components/smartject-card";
 import { useAuth } from "@/components/auth-provider";
+import { useRequireAuth } from "@/hooks/use-auth-guard";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight,
@@ -62,7 +63,7 @@ interface UserConversation {
 // Update the dashboard page to include proposals, matches, and contracts
 export default function DashboardPage() {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const { isLoading: authLoading, user, canAccess } = useRequireAuth();
 
   const { smartjects, isLoading, refetch } = useUserSmartjects(user?.id);
 
@@ -321,16 +322,16 @@ export default function DashboardPage() {
     }
   };
 
-  // Redirect if not authenticated
+  // Load dashboard data
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login");
-    } else {
-      setLoading(false);
+    if (authLoading || !canAccess) {
+      return;
     }
+    
+    setLoading(false);
 
     const fetchProposals = async () => {
-      if (!isAuthenticated || user?.accountType !== "paid") return;
+      if (!user?.id) return;
 
       try {
         const allProposals = await proposalService.getProposalsByUserId(
@@ -339,17 +340,17 @@ export default function DashboardPage() {
 
         setProposals(allProposals);
       } catch (error) {
+        console.error("Error fetching proposals:", error);
         toast({
           title: "Error",
           description: "Failed to load proposals",
           variant: "destructive",
         });
-        console.error("Error fetching proposals:", error);
       }
     };
 
     const fetchContracts = async () => {
-      if (!isAuthenticated || user?.accountType !== "paid") return;
+      if (!user?.id) return;
 
       try {
         const contractsData = await contractService.getUserContracts(user.id);
@@ -367,9 +368,9 @@ export default function DashboardPage() {
     fetchContracts();
     fetchProposals();
     getUserNegotiations();
-  }, [isAuthenticated, router]);
+  }, [authLoading, canAccess, user]);
 
-  if (!isAuthenticated || loading) {
+  if (authLoading || !canAccess || loading) {
     return null;
   }
 

@@ -7,30 +7,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/components/auth-provider"
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { ArrowLeft, Calendar, Check, DollarSign, FileText, MessageSquare, Star, Users } from "lucide-react"
 
 export default function CompareProposalsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   
   const router = useRouter()
-  const { isAuthenticated, user } = useAuth()
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const [isLoading, setIsLoading] = useState(true)
 
-  // Redirect if not authenticated or not a paid user
+  // Load data when authenticated
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login")
-    } else if (user?.accountType !== "paid") {
-      router.push("/upgrade")
-    } else {
-      // Simulate loading data
-      setTimeout(() => {
-        setIsLoading(false)
-      }, 1000)
+    if (authLoading || !canAccess) {
+      return
     }
-  }, [isAuthenticated, router, user])
+    
+    // Simulate loading data
+    setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+  }, [authLoading, canAccess])
 
-  if (!isAuthenticated || user?.accountType !== "paid" || isLoading) {
+  if (authLoading || !canAccess || isLoading) {
     return null
   }
 

@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -79,7 +80,7 @@ export default function CreateProposalPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { user, isAuthenticated } = useAuth();
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
   const smartjectId = searchParams.get("smartjectId");
 
   useEffect(() => {
@@ -189,14 +190,12 @@ export default function CreateProposalPage() {
     setTotalPercentage(total);
   }, [milestones]);
 
-  // Redirect if not authenticated or not a paid user
+  // Load smartject data when authenticated
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login");
-    } else if (user?.accountType !== "paid") {
-      router.push("/upgrade");
+    if (authLoading || !canAccess) {
+      return;
     }
-  }, [isAuthenticated, router, user]);
+  }, [authLoading, canAccess]);
 
   // Load smartject data if ID is provided
   useEffect(() => {
@@ -246,7 +245,7 @@ export default function CreateProposalPage() {
     }
   }, [formData.timeline, projectStartDate]);
 
-  if (!isAuthenticated || user?.accountType !== "paid") {
+  if (authLoading || !canAccess) {
     return null;
   }
 

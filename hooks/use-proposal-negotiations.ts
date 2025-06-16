@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "@/components/auth-provider";
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 import { useToast } from "@/hooks/use-toast";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
@@ -170,7 +170,7 @@ const getProposalNegotiations = async (proposalId: string, userId: string) => {
 };
 
 export const useProposalNegotiations = (proposalId: string) => {
-  const { user, isAuthenticated } = useAuth();
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
   const { toast } = useToast();
   
   const [conversations, setConversations] = useState<UserConversation[]>([]);
@@ -178,7 +178,7 @@ export const useProposalNegotiations = (proposalId: string) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchNegotiations = useCallback(async () => {
-    if (!isAuthenticated || !user?.id || !proposalId) {
+    if (authLoading || !canAccess || !user?.id || !proposalId) {
       setIsLoading(false);
       return;
     }
@@ -198,7 +198,7 @@ export const useProposalNegotiations = (proposalId: string) => {
     } finally {
       setIsLoading(false);
     }
-  }, [proposalId, user?.id, isAuthenticated, toast]);
+  }, [proposalId, user?.id, authLoading, canAccess, toast]);
 
   useEffect(() => {
     fetchNegotiations();

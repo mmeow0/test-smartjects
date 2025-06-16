@@ -30,28 +30,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/components/auth-provider";
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 import { proposalService } from "@/lib/services";
 import { ProposalType } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ProposalsPage() {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
   const [proposals, setProposals] = useState<ProposalType[]>([]);
   const { toast } = useToast();
-  // Redirect if not authenticated or not a paid user
+  // Load proposals when authenticated
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login");
-    } else if (user?.accountType !== "paid") {
-      router.push("/upgrade");
-    }
-
     const fetchProposals = async () => {
-      if (!isAuthenticated || user?.accountType !== "paid") return;
+      if (authLoading || !canAccess || !user?.id) {
+        return;
+      }
 
       try {
         const allProposals = await proposalService.getProposalsByUserId(
@@ -70,19 +67,7 @@ export default function ProposalsPage() {
     };
 
     fetchProposals();
-  }, [isAuthenticated, router, user]);
-
-  if (!isAuthenticated || user?.accountType !== "paid") {
-    return null;
-  }
-
-  // Helper function to display field value or "not specified"
-  const displayField = (value: string | undefined | null) => {
-    if (!value || value.trim() === "") {
-      return <span className="text-muted-foreground italic">not specified</span>;
-    }
-    return value;
-  };
+  }, [authLoading, canAccess, user, toast]);
 
   const filterProposals = useCallback(
     (proposals: ProposalType[]) => {
@@ -103,13 +88,25 @@ export default function ProposalsPage() {
 
           return true;
         })
-        .sort(
-          (a, b) =>
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        );
+        .sort((a, b) => {
+          // Sort by date (newest first)
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
     },
     [searchTerm, statusFilter]
   );
+
+  if (authLoading || !canAccess) {
+    return null
+  }
+
+  // Helper function to display field value or "not specified"
+  const displayField = (value: string | undefined | null) => {
+    if (!value || value.trim() === "") {
+      return <span className="text-muted-foreground italic">not specified</span>;
+    }
+    return value;
+  };
 
   const needProposals = proposals.filter(
     (proposal) => proposal.type === "need"

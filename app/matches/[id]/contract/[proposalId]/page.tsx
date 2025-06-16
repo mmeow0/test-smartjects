@@ -14,6 +14,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/components/auth-provider";
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 import { useToast } from "@/hooks/use-toast";
 import { contractService } from "@/lib/services";
 import {
@@ -33,7 +34,7 @@ export default function ContractPage({
   const { id, proposalId } = use(params);
 
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -43,13 +44,7 @@ export default function ContractPage({
 
   // Fetch contract data and handle authentication
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login");
-      return;
-    }
-    
-    if (user?.accountType !== "paid") {
-      router.push("/upgrade");
+    if (authLoading || !canAccess) {
       return;
     }
 
@@ -75,9 +70,9 @@ export default function ContractPage({
     };
 
     fetchContractData();
-  }, [isAuthenticated, router, user, id, proposalId]);
+  }, [authLoading, canAccess, user, id, proposalId]);
 
-  if (!isAuthenticated || user?.accountType !== "paid") {
+  if (authLoading || !canAccess) {
     return null;
   }
 
