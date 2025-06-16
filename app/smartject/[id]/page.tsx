@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type React from "react";
 
-import { useState, useEffect, useRef, use } from "react";
+import { useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -40,14 +40,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/components/auth-provider";
 import {
-  smartjectService,
   commentService,
   voteService,
-  proposalService,
 } from "@/lib/services";
-import type { SmartjectType, CommentType, ProposalType } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useSmartjectById } from "@/hooks/use-smartject-by-id";
 
@@ -278,18 +276,61 @@ export default function SmartjectDetailPage({
               )}
 
               {/* Tabs for different content sections */}
-              <Tabs defaultValue="details" className="w-full">
-                <TabsList className="w-full mb-6">
-                  <TabsTrigger value="details" className="flex-1">
-                    Details
-                  </TabsTrigger>
-                  <TabsTrigger value="need" className="flex-1">
-                    Need Proposals ({needProposals.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="provide" className="flex-1">
-                    Provide Proposals ({provideProposals.length})
-                  </TabsTrigger>
-                </TabsList>
+              <TooltipProvider>
+                <Tabs defaultValue="details" className="w-full">
+                  <TabsList className="w-full mb-6">
+                    <TabsTrigger value="details" className="flex-1">
+                      Details
+                    </TabsTrigger>
+                    
+                    {/* Need Proposals tab - disabled if user hasn't voted "provide" */}
+                    {!smartject.userVotes?.provide ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex-1">
+                            <TabsTrigger 
+                              value="need" 
+                              className="flex-1 w-full opacity-50 cursor-not-allowed" 
+                              disabled
+                            >
+                              Need Proposals ({needProposals.length})
+                            </TabsTrigger>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>This tab is available only for users who voted "I Provide"</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <TabsTrigger value="need" className="flex-1">
+                        Need Proposals ({needProposals.length})
+                      </TabsTrigger>
+                    )}
+
+                    {/* Provide Proposals tab - disabled if user hasn't voted "need" */}
+                    {!smartject.userVotes?.need ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex-1">
+                            <TabsTrigger 
+                              value="provide" 
+                              className="flex-1 w-full opacity-50 cursor-not-allowed" 
+                              disabled
+                            >
+                              Provide Proposals ({provideProposals.length})
+                            </TabsTrigger>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>This tab is available only for users who voted "I Need"</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <TabsTrigger value="provide" className="flex-1">
+                        Provide Proposals ({provideProposals.length})
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
 
                 <TabsContent value="details">
                   <div className="space-y-6">
@@ -654,7 +695,8 @@ export default function SmartjectDetailPage({
                     </div>
                   )}
                 </TabsContent>
-              </Tabs>
+                </Tabs>
+              </TooltipProvider>
             </CardContent>
             <CardFooter className="flex justify-between border-t pt-6">
               <div className="flex gap-2">
