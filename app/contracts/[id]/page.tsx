@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -254,9 +255,9 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
           </div>
           <p className="text-muted-foreground">
             Contract for{" "}
-            <a href={`/smartject/${contract?.smartjectId}`} className="text-primary hover:underline">
+            <Link href={`/smartject/${contract?.smartjectId}`} className="text-primary hover:underline">
               {contract?.smartjectTitle}
-            </a>
+            </Link>
           </p>
         </div>
       </div>
@@ -403,45 +404,53 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
           </CardHeader>
           <CardContent className="space-y-4">
             {contract?.status === "active" && nextMilestone?.status === "in_progress" && isProvider && (
-              <Button className="w-full justify-between" asChild>
-                <a href={`/contracts/${id}/milestone/${nextMilestone?.id}/complete`}>
-                  Mark Current Milestone Complete
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </a>
+              <Button 
+                className="w-full justify-between" 
+                onClick={() => router.push(`/contracts/${id}/milestone/${nextMilestone?.id}/complete`)}
+              >
+                Mark Current Milestone Complete
+                <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
             )}
 
             {contract?.status === "active" && nextMilestone?.status === "in_progress" && !isProvider && (
-              <Button className="w-full justify-between" asChild>
-                <a href={`/contracts/${id}/milestone/${nextMilestone?.id}/review`}>
-                  Review Current Milestone
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </a>
+              <Button 
+                className="w-full justify-between" 
+                onClick={() => router.push(`/contracts/${id}/milestone/${nextMilestone?.id}/review`)}
+              >
+                Review Current Milestone
+                <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
             )}
 
             {contract?.status === "active" && (
-              <Button variant="outline" className="w-full justify-between" asChild>
-                <a href={`/contracts/${id}/messages`}>
-                  View Messages
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </a>
+              <Button 
+                variant="outline" 
+                className="w-full justify-between" 
+                onClick={() => router.push(`/contracts/${id}/messages`)}
+              >
+                View Messages
+                <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
             )}
 
-            <Button variant="outline" className="w-full justify-between" asChild>
-              <a href={`/contracts/${id}/documents`}>
-                View All Documents
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </a>
+            <Button 
+              variant="outline" 
+              className="w-full justify-between" 
+              onClick={() => router.push(`/contracts/${id}/documents`)}
+            >
+              View All Documents
+              <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
 
             {contract?.status === "active" && (
-              <Button variant="outline" className="w-full justify-between" asChild>
-                <a href={`/contracts/${id}/schedule-meeting`}>
-                  Schedule Meeting
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </a>
+              <Button 
+                variant="outline" 
+                className="w-full justify-between" 
+                onClick={() => router.push(`/contracts/${id}/schedule-meeting`)}
+              >
+                Schedule Meeting
+                <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
             )}
 
@@ -559,22 +568,28 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
                             {milestone.status === "in_progress" && (
                               <>
                                 {isProvider ? (
-                                  <Button size="sm" asChild>
-                                    <a href={`/contracts/${id}/milestone/${milestone.id}/complete`}>
-                                      Mark as Complete
-                                    </a>
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => router.push(`/contracts/${id}/milestone/${milestone.id}/complete`)}
+                                  >
+                                    Mark as Complete
                                   </Button>
                                 ) : (
-                                  <Button size="sm" asChild>
-                                    <a href={`/contracts/${id}/milestone/${milestone.id}/review`}>
-                                      Review Milestone
-                                    </a>
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => router.push(`/contracts/${id}/milestone/${milestone.id}/review`)}
+                                  >
+                                    Review Milestone
                                   </Button>
                                 )}
                               </>
                             )}
-                            <Button variant="outline" size="sm" asChild>
-                              <a href={`/contracts/${id}/milestone/${milestone.id}`}>View Details</a>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => router.push(`/contracts/${id}/milestone/${milestone.id}`)}
+                            >
+                              View Details
                             </Button>
                           </div>
                         </div>
@@ -691,23 +706,29 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button variant="outline" className="justify-start" asChild>
-                <a href={`/contracts/${id}/extend`}>
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Request Timeline Extension
-                </a>
+              <Button 
+                variant="outline" 
+                className="justify-start" 
+                onClick={() => router.push(`/contracts/${id}/extend`)}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Request Timeline Extension
               </Button>
-              <Button variant="outline" className="justify-start" asChild>
-                <a href={`/contracts/${id}/modify`}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Request Contract Modification
-                </a>
+              <Button 
+                variant="outline" 
+                className="justify-start" 
+                onClick={() => router.push(`/contracts/${id}/modify`)}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Request Contract Modification
               </Button>
-              <Button variant="outline" className="justify-start" asChild>
-                <a href={`/contracts/${id}/dispute`}>
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Initiate Dispute Resolution
-                </a>
+              <Button 
+                variant="outline" 
+                className="justify-start" 
+                onClick={() => router.push(`/contracts/${id}/dispute`)}
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Initiate Dispute Resolution
               </Button>
             </div>
           </CardContent>
@@ -733,8 +754,8 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
                   <Download className="h-4 w-4 mr-2" />
                   Download Contract
                 </Button>
-                <Button asChild>
-                  <a href="/contracts/new">Start New Contract</a>
+                <Button onClick={() => router.push("/contracts/new")}>
+                  Start New Contract
                 </Button>
               </div>
             </div>

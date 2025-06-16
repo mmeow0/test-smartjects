@@ -837,4 +837,479 @@ export const contractService = {
       return { activeContracts: [], completedContracts: [] };
     }
   },
+
+  // Get contract messages
+  async getContractMessages(contractId: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        console.error("No authenticated user");
+        return [];
+      }
+
+      // Verify user has access to this contract
+      const { data: contractData } = await supabase
+        .from("contracts")
+        .select("provider_id, needer_id")
+        .eq("id", contractId)
+        .single();
+
+      if (!contractData || (contractData.provider_id !== currentUser.id && contractData.needer_id !== currentUser.id)) {
+        console.error("User does not have access to this contract");
+        return [];
+      }
+
+      const { data: messages, error } = await supabase
+        .from("contract_messages")
+        .select(`
+          *,
+          user:users(id, name),
+          contract_message_attachments(id, name, type, size, url)
+        `)
+        .eq("contract_id", contractId)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching contract messages:", error);
+        return [];
+      }
+
+      return messages?.map(message => ({
+        id: message.id,
+        sender: {
+          id: (message.user as any)?.id || "",
+          name: (message.user as any)?.name || "Unknown User",
+          avatar: "",
+        },
+        content: message.content,
+        timestamp: message.created_at,
+        attachments: (message.contract_message_attachments as any)?.map((attachment: any) => ({
+          name: attachment.name,
+          type: attachment.type,
+          size: attachment.size,
+          url: attachment.url,
+        })) || [],
+      })) || [];
+    } catch (error) {
+      console.error("Error in getContractMessages:", error);
+      return [];
+    }
+  },
+
+  // Send contract message
+  async sendContractMessage(contractId: string, content: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Verify user has access to this contract
+      const { data: contractData } = await supabase
+        .from("contracts")
+        .select("provider_id, needer_id")
+        .eq("id", contractId)
+        .single();
+
+      if (!contractData || (contractData.provider_id !== currentUser.id && contractData.needer_id !== currentUser.id)) {
+        throw new Error("User does not have access to this contract");
+      }
+
+      const { data, error } = await supabase
+        .from("contract_messages")
+        .insert({
+          contract_id: contractId,
+          user_id: currentUser.id,
+          content: content,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error sending contract message:", error);
+      throw error;
+    }
+  },
+
+  // Get contract documents
+  async getContractDocuments(contractId: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        console.error("No authenticated user");
+        return [];
+      }
+
+      // Verify user has access to this contract
+      const { data: contractData } = await supabase
+        .from("contracts")
+        .select("provider_id, needer_id")
+        .eq("id", contractId)
+        .single();
+
+      if (!contractData || (contractData.provider_id !== currentUser.id && contractData.needer_id !== currentUser.id)) {
+        console.error("User does not have access to this contract");
+        return [];
+      }
+
+      const { data: documents, error } = await supabase
+        .from("contract_documents")
+        .select(`
+          *,
+          uploaded_by_user:users!contract_documents_uploaded_by_fkey(name)
+        `)
+        .eq("contract_id", contractId)
+        .order("uploaded_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching contract documents:", error);
+        return [];
+      }
+
+      return documents?.map(doc => ({
+        id: doc.id,
+        name: doc.name,
+        type: doc.type,
+        size: doc.size,
+        url: doc.url,
+        uploadedAt: doc.uploaded_at,
+        uploadedBy: (doc.uploaded_by_user as any)?.name || "Unknown User",
+      })) || [];
+    } catch (error) {
+      console.error("Error in getContractDocuments:", error);
+      return [];
+    }
+  },
+
+  // Submit contract modification request
+  async submitModificationRequest(contractId: string, modificationType: string, reason: string, details: string, urgency: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Verify user has access to this contract
+      const { data: contractData } = await supabase
+        .from("contracts")
+        .select("provider_id, needer_id, provider:users!contracts_provider_id_fkey(name), needer:users!contracts_needer_id_fkey(name)")
+        .eq("id", contractId)
+        .single();
+
+      if (!contractData || (contractData.provider_id !== currentUser.id && contractData.needer_id !== currentUser.id)) {
+        throw new Error("User does not have access to this contract");
+      }
+
+      // Insert modification request into database
+      const { data: modificationRequest, error: modificationError } = await supabase
+        .from("contract_modification_requests")
+        .insert({
+          contract_id: contractId,
+          requested_by: currentUser.id,
+          modification_type: modificationType,
+          reason: reason,
+          details: details,
+          urgency: urgency,
+        })
+        .select()
+        .single();
+
+      if (modificationError) {
+        throw modificationError;
+      }
+
+      // Log the modification request as an activity
+      const description = `Contract modification requested: ${modificationType} - ${reason}`;
+      
+      const { error: activityError } = await supabase
+        .from("contract_activities")
+        .insert({
+          contract_id: contractId,
+          type: "modification_requested",
+          description: description,
+          user_id: currentUser.id,
+        });
+
+      if (activityError) {
+        console.error("Error logging modification activity:", activityError);
+      }
+
+      // Send a message about the modification request
+      const isProvider = currentUser.id === contractData.provider_id;
+      const otherPartyName = isProvider ? (contractData.needer as any)?.name : (contractData.provider as any)?.name;
+      
+      const messageContent = `I have submitted a contract modification request for ${modificationType}.\n\nReason: ${reason}\n\nDetails: ${details}\n\nUrgency: ${urgency}\n\nPlease review and let me know your thoughts.`;
+
+      await this.sendContractMessage(contractId, messageContent);
+
+      return modificationRequest;
+    } catch (error) {
+      console.error("Error submitting modification request:", error);
+      throw error;
+    }
+  },
+
+  // Submit timeline extension request
+  async submitTimelineExtensionRequest(contractId: string, newEndDate: Date, reason: string, details: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Verify user has access to this contract
+      const { data: contractData } = await supabase
+        .from("contracts")
+        .select("provider_id, needer_id, end_date, provider:users!contracts_provider_id_fkey(name), needer:users!contracts_needer_id_fkey(name)")
+        .eq("id", contractId)
+        .single();
+
+      if (!contractData || (contractData.provider_id !== currentUser.id && contractData.needer_id !== currentUser.id)) {
+        throw new Error("User does not have access to this contract");
+      }
+
+      const currentEndDate = new Date(contractData.end_date);
+      const extensionDays = Math.round((newEndDate.getTime() - currentEndDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Insert extension request into database
+      const { data: extensionRequest, error: extensionError } = await supabase
+        .from("contract_extension_requests")
+        .insert({
+          contract_id: contractId,
+          requested_by: currentUser.id,
+          current_end_date: contractData.end_date,
+          new_end_date: newEndDate.toISOString(),
+          extension_days: extensionDays,
+          reason: reason,
+          details: details,
+        })
+        .select()
+        .single();
+
+      if (extensionError) {
+        throw extensionError;
+      }
+
+      // Log the extension request as an activity
+      const description = `Timeline extension requested: ${extensionDays} days (new end date: ${newEndDate.toDateString()})`;
+      
+      const { error: activityError } = await supabase
+        .from("contract_activities")
+        .insert({
+          contract_id: contractId,
+          type: "timeline_extension_requested",
+          description: description,
+          user_id: currentUser.id,
+        });
+
+      if (activityError) {
+        console.error("Error logging extension activity:", activityError);
+      }
+
+      // Send a message about the extension request
+      const isProvider = currentUser.id === contractData.provider_id;
+      const otherPartyName = isProvider ? (contractData.needer as any)?.name : (contractData.provider as any)?.name;
+      
+      const messageContent = `I have submitted a timeline extension request.\n\nNew End Date: ${newEndDate.toDateString()}\nExtension: ${extensionDays} days\n\nReason: ${reason}\n\nDetails: ${details}\n\nPlease review and let me know if you approve this extension.`;
+
+      await this.sendContractMessage(contractId, messageContent);
+
+      return extensionRequest;
+    } catch (error) {
+      console.error("Error submitting timeline extension request:", error);
+      throw error;
+    }
+  },
+
+  // Get milestone details by ID
+  async getMilestoneById(contractId: string, milestoneId: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        console.error("No authenticated user");
+        return null;
+      }
+
+      // Verify user has access to this contract
+      const { data: contractData } = await supabase
+        .from("contracts")
+        .select("provider_id, needer_id, title")
+        .eq("id", contractId)
+        .single();
+
+      if (!contractData || (contractData.provider_id !== currentUser.id && contractData.needer_id !== currentUser.id)) {
+        console.error("User does not have access to this contract");
+        return null;
+      }
+
+      // Get milestone data with deliverables
+      const { data: milestoneData, error: milestoneError } = await supabase
+        .from("contract_milestones")
+        .select(`
+          *,
+          contract_milestone_deliverables(id, description, completed, created_at, updated_at)
+        `)
+        .eq("id", milestoneId)
+        .eq("contract_id", contractId)
+        .single();
+
+      if (milestoneError || !milestoneData) {
+        console.error("Error fetching milestone:", milestoneError);
+        return null;
+      }
+
+      // Get milestone comments
+      const { data: comments } = await supabase
+        .from("contract_milestone_comments")
+        .select(`
+          *,
+          user:users(name)
+        `)
+        .eq("milestone_id", milestoneId)
+        .order("created_at", { ascending: true });
+
+      // Get milestone documents (if any exist)
+      const { data: documents } = await supabase
+        .from("contract_documents")
+        .select("*")
+        .eq("contract_id", contractId)
+        .ilike("name", `%milestone%${milestoneData.name}%`);
+
+      // Transform milestone data
+      const milestone = {
+        id: milestoneData.id,
+        contractId: contractId,
+        contractTitle: contractData.title,
+        name: milestoneData.name,
+        description: milestoneData.description,
+        percentage: milestoneData.percentage,
+        amount: milestoneData.amount,
+        dueDate: milestoneData.due_date,
+        status: milestoneData.status,
+        completedDate: milestoneData.completed_date,
+        deliverables: (milestoneData.contract_milestone_deliverables as any)?.map((deliverable: any) => ({
+          id: deliverable.id,
+          name: deliverable.description,
+          description: deliverable.description,
+          status: deliverable.completed ? "completed" : "pending",
+          completedDate: deliverable.completed ? deliverable.updated_at : null,
+        })) || [],
+        comments: comments?.map(comment => ({
+          id: comment.id,
+          user: (comment.user as any)?.name || "Unknown User",
+          content: comment.content,
+          date: comment.created_at,
+        })) || [],
+        documents: documents?.map(doc => ({
+          id: doc.id,
+          name: doc.name,
+          type: doc.type,
+          size: doc.size,
+          url: doc.url,
+          uploadedAt: doc.uploaded_at,
+        })) || [],
+        canReview: currentUser.id === contractData.provider_id || currentUser.id === contractData.needer_id,
+        userRole: currentUser.id === contractData.provider_id ? "provider" : "needer",
+      };
+
+      return milestone;
+    } catch (error) {
+      console.error("Error in getMilestoneById:", error);
+      return null;
+    }
+  },
+
+  // Add comment to milestone
+  async addMilestoneComment(milestoneId: string, content: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      const { data, error } = await supabase
+        .from("contract_milestone_comments")
+        .insert({
+          milestone_id: milestoneId,
+          user_id: currentUser.id,
+          content: content,
+        })
+        .select(`
+          *,
+          user:users(name)
+        `)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return {
+        id: data.id,
+        user: (data.user as any)?.name || "Unknown User",
+        content: data.content,
+        date: data.created_at,
+      };
+    } catch (error) {
+      console.error("Error adding milestone comment:", error);
+      throw error;
+    }
+  },
+
+  // Update milestone status
+  async updateMilestoneStatus(milestoneId: string, status: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      const updateData: any = {
+        status: status,
+        updated_at: new Date().toISOString(),
+      };
+
+      // If marking as completed, set completed_date
+      if (status === "completed") {
+        updateData.completed_date = new Date().toISOString();
+      }
+
+      const { data, error } = await supabase
+        .from("contract_milestones")
+        .update(updateData)
+        .eq("id", milestoneId)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error updating milestone status:", error);
+      throw error;
+    }
+  },
 };

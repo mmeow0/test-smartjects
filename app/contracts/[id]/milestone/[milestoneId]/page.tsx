@@ -19,231 +19,235 @@ import {
   FileText,
   MessageSquare,
   XCircle,
+  Loader2,
+  Download,
 } from "lucide-react"
+import { contractService } from "@/lib/services"
+
+interface Milestone {
+  id: string
+  contractId: string
+  contractTitle: string
+  name: string
+  description: string
+  percentage: number
+  amount: string
+  dueDate: string
+  status: string
+  completedDate?: string
+  deliverables: Array<{
+    id: string
+    name: string
+    description: string
+    status: string
+    completedDate?: string
+  }>
+  comments: Array<{
+    id: string
+    user: string
+    content: string
+    date: string
+  }>
+  documents: Array<{
+    id: string
+    name: string
+    type: string
+    size: string
+    url: string
+    uploadedAt: string
+  }>
+  canReview: boolean
+  userRole: string
+}
 
 export default function MilestoneDetailsPage({ params }: { params: Promise<{ id: string; milestoneId: string }> }) {
-   const { id, milestoneId } = use(params);
-   
+  const { id, milestoneId } = use(params);
+  
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
+  const [isAddingComment, setIsAddingComment] = useState(false)
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [comment, setComment] = useState("")
-  const [authChecked, setAuthChecked] = useState(false)
+  const [milestone, setMilestone] = useState<Milestone | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  // Check authentication first
+  // Load milestone data
   useEffect(() => {
-    // Small delay to ensure auth state is loaded
-    const timer = setTimeout(() => {
-      setAuthChecked(true)
-    }, 500)
+    const loadMilestone = async () => {
+      if (!isAuthenticated) {
+        router.push("/auth/login")
+        return
+      }
+      
+      if (user?.accountType !== "paid") {
+        router.push("/upgrade")
+        return
+      }
 
-    return () => clearTimeout(timer)
-  }, [])
+      setIsLoading(true)
+      setError(null)
 
-  // Handle redirects after auth check
-  useEffect(() => {
-    if (!authChecked) return
+      try {
+        const milestoneData = await contractService.getMilestoneById(id, milestoneId)
+        
+        if (!milestoneData) {
+          setError("Milestone not found or access denied")
+          setIsLoading(false)
+          return
+        }
 
-    if (!isAuthenticated) {
-      console.log("Not authenticated, redirecting to login")
-      router.push("/auth/login")
-    } else if (user && user.accountType !== "paid") {
-      console.log("Not a paid user, redirecting to upgrade")
-      router.push("/upgrade")
-    } else {
-      // Simulate loading data
-      setTimeout(() => {
+        setMilestone(milestoneData)
         setIsLoading(false)
-      }, 1000)
+      } catch (error) {
+        console.error("Error loading milestone:", error)
+        setError("Failed to load milestone data")
+        setIsLoading(false)
+      }
     }
-  }, [authChecked, isAuthenticated, router, user])
 
-  // Show loading state while checking auth
-  if (!authChecked) {
+    loadMilestone()
+  }, [isAuthenticated, user, id, milestoneId, router])
+
+  // Redirect if not authenticated or not paid
+  if (!isAuthenticated || user?.accountType !== "paid") {
     return null
   }
 
-  // If not authenticated or not a paid user, don't render anything (redirect will happen)
-  if (!isAuthenticated || (user && user.accountType !== "paid") || isLoading) {
-    return null
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center">
+          <Card className="w-full max-w-4xl">
+            <CardHeader className="text-center">
+              <CardTitle>Loading...</CardTitle>
+              <CardDescription>Please wait while we load your milestone details.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
-  // Mock milestone data
-  const milestone = {
-    id: milestoneId,
-    contractId: id,
-    name: "Midpoint Delivery",
-    description: "Data integration and initial model development",
-    percentage: 30,
-    amount: "$5,250",
-    status: "pending_review", // completed, in_progress, pending, pending_review, overdue
-    deliverables: [
-      {
-        name: "Data integration framework",
-        description: "Framework for integrating with SAP and WMS systems",
-        status: "completed",
-        completedDate: "2024-02-10",
-      },
-      {
-        name: "Initial ML model prototype",
-        description: "First version of the machine learning model with basic prediction capabilities",
-        status: "completed",
-        completedDate: "2024-02-15",
-      },
-    ],
-    documents: [
-      {
-        name: "Data Integration Documentation.pdf",
-        type: "pdf",
-        size: "1.8 MB",
-        uploadedAt: "2024-02-10",
-      },
-      {
-        name: "Integration Test Results.xlsx",
-        type: "xlsx",
-        size: "950 KB",
-        uploadedAt: "2024-02-12",
-      },
-    ],
-    comments: [
-      {
-        id: "comment-1",
-        user: {
-          name: "Tech Solutions Inc.",
-          avatar: "",
-        },
-        content: "Data integration framework is complete. Working on ML model prototype.",
-        createdAt: "2024-02-10",
-      },
-      {
-        id: "comment-2",
-        user: {
-          name: "Global Logistics Corp",
-          avatar: "",
-        },
-        content: "The integration looks good. Looking forward to seeing the ML model prototype.",
-        createdAt: "2024-02-11",
-      },
-    ],
+  // Error state
+  if (error || !milestone) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center">
+          <Card className="w-full max-w-4xl">
+            <CardHeader className="text-center">
+              <CardTitle>Error</CardTitle>
+              <CardDescription>{error || "Milestone not found"}</CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center py-4">
+              <Button onClick={() => router.back()}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Go Back
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
-  // Contract info
-  const contract = {
-    id: id,
-    title: "AI-Powered Supply Chain Optimization Implementation",
-    provider: {
-      id: "user-101",
-      name: "Tech Solutions Inc.",
-    },
-    needer: {
-      id: "user-201",
-      name: "Global Logistics Corp",
-    },
+  const handleAddComment = async () => {
+    if (!comment.trim() || isAddingComment) return
+
+    setIsAddingComment(true)
+
+    try {
+      const newComment = await contractService.addMilestoneComment(milestoneId, comment.trim())
+      
+      setMilestone(prev => prev ? {
+        ...prev,
+        comments: [...prev.comments, newComment]
+      } : null)
+
+      setComment("")
+      
+      toast({
+        title: "Comment added",
+        description: "Your comment has been added successfully.",
+      })
+    } catch (error) {
+      console.error("Error adding comment:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add comment. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsAddingComment(false)
+    }
   }
 
-  // Determine if the user is the provider or needer
-  const isProvider = user?.id === contract.provider.id
+  const handleStatusUpdate = async (newStatus: string) => {
+    if (isUpdatingStatus) return
 
-  const handleAddComment = () => {
-    if (!comment.trim()) return
+    setIsUpdatingStatus(true)
 
-    // In a real app, we would call an API to add the comment
-    toast({
-      title: "Comment added",
-      description: "Your comment has been added successfully.",
-    })
+    try {
+      await contractService.updateMilestoneStatus(milestoneId, newStatus)
+      
+      setMilestone(prev => prev ? {
+        ...prev,
+        status: newStatus,
+        completedDate: newStatus === "completed" ? new Date().toISOString() : prev.completedDate
+      } : null)
 
-    // Clear the comment input
-    setComment("")
+      toast({
+        title: "Status updated",
+        description: `Milestone status updated to ${newStatus}.`,
+      })
+    } catch (error) {
+      console.error("Error updating status:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update status. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdatingStatus(false)
+    }
   }
 
-  const handleMarkAsComplete = () => {
-    // In a real app, we would call an API to mark the milestone as complete
-    toast({
-      title: "Milestone marked as complete",
-      description: "The milestone has been marked as complete and is pending review.",
-    })
-
-    // Update to redirect to the contract details page
-    router.push(`/contracts/${id}`)
-  }
-
-  const handleApprove = () => {
-    // In a real app, we would call an API to approve the milestone
-    toast({
-      title: "Milestone approved",
-      description: "The milestone has been approved and payment will be processed.",
-    })
-
-    router.push(`/contracts/${id}`)
-  }
-
-  const handleReject = () => {
-    // In a real app, we would call an API to reject the milestone
-    toast({
-      title: "Milestone rejected",
-      description: "The milestone has been rejected. Please provide feedback.",
-    })
-
-    router.push(`/contracts/${id}/milestone/${milestoneId}/reject`)
-  }
-
-  const getMilestoneStatusBadge = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
-        return (
-          <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
-            <CheckCircle className="h-3 w-3" /> Completed
-          </Badge>
-        )
+        return "bg-green-100 text-green-800"
       case "in_progress":
-        return (
-          <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
-            <Clock className="h-3 w-3" /> In Progress
-          </Badge>
-        )
-      case "pending":
-        return (
-          <Badge variant="outline" className="flex items-center gap-1">
-            <Clock className="h-3 w-3" /> Pending
-          </Badge>
-        )
+        return "bg-blue-100 text-blue-800"
       case "pending_review":
-        return (
-          <Badge className="bg-amber-100 text-amber-800 flex items-center gap-1">
-            <Clock className="h-3 w-3" /> Pending Review
-          </Badge>
-        )
+        return "bg-yellow-100 text-yellow-800"
       case "overdue":
-        return (
-          <Badge variant="destructive" className="flex items-center gap-1">
-            <XCircle className="h-3 w-3" /> Overdue
-          </Badge>
-        )
+        return "bg-red-100 text-red-800"
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return "bg-gray-100 text-gray-800"
     }
   }
 
-  const getDeliverableStatusBadge = (status: string) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed":
-        return (
-          <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
-            <Check className="h-3 w-3" /> Completed
-          </Badge>
-        )
+        return <CheckCircle className="h-4 w-4" />
       case "in_progress":
-        return (
-          <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
-            <Clock className="h-3 w-3" /> In Progress
-          </Badge>
-        )
+        return <Clock className="h-4 w-4" />
+      case "pending_review":
+        return <MessageSquare className="h-4 w-4" />
+      case "overdue":
+        return <XCircle className="h-4 w-4" />
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Clock className="h-4 w-4" />
     }
   }
+
+  const isOverdue = new Date(milestone.dueDate) < new Date() && milestone.status !== "completed"
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -253,257 +257,234 @@ export default function MilestoneDetailsPage({ params }: { params: Promise<{ id:
           Back
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Milestone Details</h1>
+          <h1 className="text-2xl font-bold">{milestone.name}</h1>
           <p className="text-muted-foreground">
-            For contract: <span className="font-medium">{contract.title}</span>
+            For contract: <span className="font-medium">{milestone.contractTitle}</span>
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Milestone Overview */}
         <div className="lg:col-span-2">
-          <Card className="mb-6">
+          <Card>
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle>{milestone.name}</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    {milestone.name}
+                    <Badge className={`${getStatusColor(milestone.status)} border-0`}>
+                      {getStatusIcon(milestone.status)}
+                      <span className="ml-1 capitalize">{milestone.status.replace('_', ' ')}</span>
+                    </Badge>
+                    {isOverdue && (
+                      <Badge variant="destructive">
+                        <XCircle className="h-3 w-3 mr-1" />
+                        Overdue
+                      </Badge>
+                    )}
+                  </CardTitle>
                   <CardDescription>{milestone.description}</CardDescription>
                 </div>
-                {getMilestoneStatusBadge(milestone.status)}
               </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground flex items-center">
-                    <DollarSign className="h-4 w-4 mr-1" /> Amount
-                  </p>
-                  <p className="font-medium">{milestone.amount}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm text-muted-foreground flex items-center">
-                    <FileText className="h-4 w-4 mr-1" /> Percentage
-                  </p>
-                  <p className="font-medium">{milestone.percentage}% of total</p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h3 className="text-lg font-medium mb-4">Deliverables</h3>
-                <div className="space-y-4">
-                  {milestone.deliverables.map((deliverable, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="font-medium">{deliverable.name}</h4>
-                          <p className="text-sm text-muted-foreground">{deliverable.description}</p>
-                        </div>
-                        {getDeliverableStatusBadge(deliverable.status)}
-                      </div>
-                      {deliverable.status === "completed" && deliverable.completedDate && (
-                        <p className="text-sm">
-                          Completed on{" "}
-                          <span className="font-medium">
-                            {new Date(deliverable.completedDate).toLocaleDateString()}
-                          </span>
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h3 className="text-lg font-medium mb-4">Documents</h3>
-                <div className="space-y-2">
-                  {milestone.documents.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-md">
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 mr-3 text-blue-500" />
-                        <div>
-                          <p className="font-medium">{doc.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Uploaded on {new Date(doc.uploadedAt).toLocaleDateString()} • {doc.size}
-                          </p>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="sm">
-                        Download
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" asChild>
-                <a href={`/contracts/${id}/milestone/${milestoneId}/upload`}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Upload Document
-                </a>
-              </Button>
-              {milestone.status === "in_progress" && (
-                <>
-                  {isProvider ? (
-                    <Button onClick={handleMarkAsComplete}>
-                      <Check className="h-4 w-4 mr-2" />
-                      Mark as Complete
-                    </Button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={handleReject}>
-                        <XCircle className="h-4 w-4 mr-2" />
-                        Reject
-                      </Button>
-                      <Button onClick={handleApprove}>
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Approve
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-              {milestone.status === "pending_review" && !isProvider && (
-                <Button onClick={() => router.push(`/contracts/${id}/milestone/${milestoneId}/review`)}>
-                  <Check className="h-4 w-4 mr-2" />
-                  Review Milestone
-                </Button>
-              )}
-            </CardFooter>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Comments</CardTitle>
-              <CardDescription>Discussion about this milestone</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 mb-4">
-                {milestone.comments.map((comment) => (
-                  <div key={comment.id} className="p-4 border rounded-lg">
-                    <div className="flex justify-between mb-2">
-                      <span className="font-medium">{comment.user.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(comment.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <p className="text-sm">{comment.content}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-4">
-                <Textarea
-                  placeholder="Add a comment..."
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  className="min-h-[100px]"
-                />
-                <div className="flex justify-end">
-                  <Button onClick={handleAddComment} disabled={!comment.trim()}>
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Add Comment
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div>
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Milestone Status</CardTitle>
-              <CardDescription>Current status and next steps</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span className="text-sm">Status</span>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Payment</p>
+                    <p className="font-medium">{milestone.amount}</p>
+                  </div>
                 </div>
-                {getMilestoneStatusBadge(milestone.status)}
-              </div>
-             
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span className="text-sm">Payment Amount</span>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Due Date</p>
+                    <p className="font-medium">
+                      {new Date(milestone.dueDate).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
-                <span className="text-sm font-medium">{milestone.amount}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span className="text-sm">Documents</span>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Progress</p>
+                    <p className="font-medium">{milestone.percentage}%</p>
+                  </div>
                 </div>
-                <span className="text-sm font-medium">{milestone.documents.length} uploaded</span>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <MessageSquare className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span className="text-sm">Comments</span>
-                </div>
-                <span className="text-sm font-medium">{milestone.comments.length} comments</span>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Common tasks for this milestone</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start" asChild>
-                <a href={`/contracts/${id}/milestone/${milestoneId}/upload`}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Upload Document
-                </a>
-              </Button>
-              <Button variant="outline" className="w-full justify-start" onClick={handleAddComment}>
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Add Comment
-              </Button>
-              {milestone.status === "in_progress" && (
-                <>
-                  {isProvider ? (
-                    <Button className="w-full justify-start" onClick={handleMarkAsComplete}>
-                      <Check className="h-4 w-4 mr-2" />
-                      Mark as Complete
-                    </Button>
-                  ) : (
-                    <>
-                      <Button className="w-full justify-start" onClick={handleApprove}>
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Approve Milestone
-                      </Button>
-                      <Button variant="outline" className="w-full justify-start" onClick={handleReject}>
-                        <XCircle className="h-4 w-4 mr-2" />
-                        Reject Milestone
-                      </Button>
-                    </>
-                  )}
-                </>
+              {milestone.completedDate && (
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <Check className="h-4 w-4" />
+                  <span>Completed on {new Date(milestone.completedDate).toLocaleDateString()}</span>
+                </div>
               )}
-              {milestone.status === "pending_review" && !isProvider && (
-                <Button
-                  className="w-full justify-start"
-                  onClick={() => router.push(`/contracts/${id}/milestone/${milestoneId}/review`)}
-                >
-                  <Check className="h-4 w-4 mr-2" />
-                  Review Milestone
-                </Button>
+
+              {milestone.canReview && milestone.status !== "completed" && (
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    size="sm"
+                    onClick={() => handleStatusUpdate("in_progress")}
+                    disabled={isUpdatingStatus}
+                    variant={milestone.status === "in_progress" ? "default" : "outline"}
+                  >
+                    {isUpdatingStatus ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Mark In Progress"
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleStatusUpdate("pending_review")}
+                    disabled={isUpdatingStatus}
+                    variant={milestone.status === "pending_review" ? "default" : "outline"}
+                  >
+                    Request Review
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleStatusUpdate("completed")}
+                    disabled={isUpdatingStatus}
+                    variant="outline"
+                  >
+                    Mark Complete
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
         </div>
+
+        {/* Milestone Info */}
+        <div className="space-y-6">
+          {/* Deliverables */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Deliverables</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {milestone.deliverables.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No deliverables defined for this milestone.</p>
+              ) : (
+                <div className="space-y-3">
+                  {milestone.deliverables.map((deliverable) => (
+                    <div key={deliverable.id} className="flex items-start gap-3">
+                      <div className="mt-1">
+                        {deliverable.status === "completed" ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{deliverable.name}</p>
+                        <p className="text-xs text-muted-foreground">{deliverable.description}</p>
+                        {deliverable.completedDate && (
+                          <p className="text-xs text-green-600 mt-1">
+                            Completed {new Date(deliverable.completedDate).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Documents */}
+          {milestone.documents.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Documents</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {milestone.documents.map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">{doc.name}</p>
+                          <p className="text-xs text-muted-foreground">{doc.size}</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="ghost">
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
+
+      {/* Comments Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Comments & Updates</CardTitle>
+          <CardDescription>
+            Communicate with the other party about this milestone
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {milestone.comments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No comments yet. Be the first to add a comment!</p>
+            </div>
+          ) : (
+            <div className="space-y-4 mb-6">
+              {milestone.comments.map((comment) => (
+                <div key={comment.id} className="border-l-2 border-muted pl-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="font-medium text-sm">{comment.user}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(comment.date).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+        <CardFooter>
+          <div className="w-full space-y-3">
+            <Textarea
+              placeholder="Add a comment about this milestone..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              disabled={isAddingComment}
+              className="min-h-[80px]"
+            />
+            <div className="flex justify-end">
+              <Button
+                onClick={handleAddComment}
+                disabled={!comment.trim() || isAddingComment}
+                size="sm"
+              >
+                {isAddingComment ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Add Comment
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   )
 }

@@ -13,7 +13,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
-import { ArrowLeft, AlertTriangle } from "lucide-react"
+import { ArrowLeft, AlertTriangle, Loader2 } from "lucide-react"
+import { contractService } from "@/lib/services"
 
 export default function ContractModificationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -28,52 +29,54 @@ export default function ContractModificationPage({ params }: { params: Promise<{
   const [details, setDetails] = useState<string>("")
   const [urgency, setUrgency] = useState<string>("normal")
   const [agreeToTerms, setAgreeToTerms] = useState<boolean>(false)
-  const [authChecked, setAuthChecked] = useState(false)
-
-  // Mock contract data
   const [contract, setContract] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  // Redirect if not authenticated
+  // Load contract data and check access
   useEffect(() => {
-    // Add a small delay to ensure auth state is loaded from localStorage
-    const checkAuth = setTimeout(() => {
-      console.log("Auth check in modify page:", isAuthenticated, user)
-      setAuthChecked(true)
-
-      if (isAuthenticated && user) {
-        // Simulate loading data
-        setTimeout(() => {
-          setContract({
-            id: id,
-            title: "AI-Powered Supply Chain Optimization Implementation",
-            status: "active",
-            provider: {
-              name: "Tech Solutions Inc.",
-            },
-            needer: {
-              name: "Global Logistics Corp",
-            },
-          })
-          setIsLoading(false)
-        }, 1000)
-      }
-    }, 500)
-
-    return () => clearTimeout(checkAuth)
-  }, [isAuthenticated, user, id])
-
-  // Add a separate effect for redirects that only runs after auth is checked
-  useEffect(() => {
-    if (authChecked) {
+    const loadContract = async () => {
       if (!isAuthenticated) {
         router.push("/auth/login")
-      } else if (user?.accountType !== "paid") {
+        return
+      }
+      
+      if (user?.accountType !== "paid") {
         router.push("/upgrade")
+        return
+      }
+
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const contractData = await contractService.getContractById(id)
+        
+        if (!contractData) {
+          setError("Contract not found or access denied")
+          setIsLoading(false)
+          return
+        }
+
+        setContract(contractData)
+        setIsLoading(false)
+        
+      } catch (error) {
+        console.error("Error loading contract:", error)
+        setError("Failed to load contract data")
+        setIsLoading(false)
       }
     }
-  }, [authChecked, isAuthenticated, user, router])
 
-  if (!authChecked || isLoading || !isAuthenticated) {
+    loadContract()
+  }, [isAuthenticated, user, id, router])
+
+  // Redirect if not authenticated or not paid
+  if (!isAuthenticated || user?.accountType !== "paid") {
+    return null
+  }
+
+  // Loading state
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center">
@@ -82,6 +85,31 @@ export default function ContractModificationPage({ params }: { params: Promise<{
               <CardTitle>Loading...</CardTitle>
               <CardDescription>Please wait while we load your contract details.</CardDescription>
             </CardHeader>
+            <CardContent className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error || !contract) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center">
+          <Card className="w-full max-w-3xl">
+            <CardHeader className="text-center">
+              <CardTitle>Error</CardTitle>
+              <CardDescription>{error || "Contract not found"}</CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center py-4">
+              <Button onClick={() => router.back()}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Go Back
+              </Button>
+            </CardContent>
           </Card>
         </div>
       </div>
@@ -102,15 +130,25 @@ export default function ContractModificationPage({ params }: { params: Promise<{
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await contractService.submitModificationRequest(id, modificationType, reason, details, urgency)
+      
       toast({
         title: "Modification request submitted",
         description: "Your contract modification request has been sent to the other party for review.",
       })
-      setIsSubmitting(false)
+      
       router.push(`/contracts/${id}`)
-    }, 1500)
+    } catch (error) {
+      console.error("Error submitting modification request:", error)
+      toast({
+        title: "Error",
+        description: "Failed to submit modification request. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -187,6 +225,7 @@ export default function ContractModificationPage({ params }: { params: Promise<{
                   onChange={(e) => setReason(e.target.value)}
                   className="mt-1"
                   required
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -199,12 +238,19 @@ export default function ContractModificationPage({ params }: { params: Promise<{
                   onChange={(e) => setDetails(e.target.value)}
                   className="mt-1 min-h-[150px]"
                   required
+                  disabled={isSubmitting}
                 />
               </div>
 
               <div>
                 <Label htmlFor="urgency">Urgency Level</Label>
-                <RadioGroup id="urgency" value={urgency} onValueChange={setUrgency} className="mt-2 space-y-2">
+                <RadioGroup 
+                  id="urgency" 
+                  value={urgency} 
+                  onValueChange={setUrgency} 
+                  className="mt-2 space-y-2"
+                  disabled={isSubmitting}
+                >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="low" id="low" />
                     <Label htmlFor="low" className="cursor-pointer">
@@ -249,6 +295,7 @@ export default function ContractModificationPage({ params }: { params: Promise<{
                   id="terms"
                   checked={agreeToTerms}
                   onCheckedChange={(checked) => setAgreeToTerms(checked as boolean)}
+                  disabled={isSubmitting}
                 />
                 <Label htmlFor="terms" className="text-sm cursor-pointer">
                   I understand that this request will be sent to {contract.provider.name} and {contract.needer.name} for
@@ -258,11 +305,18 @@ export default function ContractModificationPage({ params }: { params: Promise<{
             </div>
 
             <div className="flex justify-end gap-3">
-              <Button variant="outline" type="button" onClick={() => router.back()}>
+              <Button variant="outline" type="button" onClick={() => router.back()} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting || !agreeToTerms}>
-                {isSubmitting ? "Submitting..." : "Submit Modification Request"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Modification Request"
+                )}
               </Button>
             </div>
           </form>

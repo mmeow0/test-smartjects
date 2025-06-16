@@ -12,10 +12,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
-import { ArrowLeft, Calendar, AlertTriangle, Clock } from "lucide-react"
+import { ArrowLeft, Calendar, AlertTriangle, Clock, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { contractService } from "@/lib/services"
 
 export default function TimelineExtensionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -30,63 +31,66 @@ export default function TimelineExtensionPage({ params }: { params: Promise<{ id
   const [currentEndDate, setCurrentEndDate] = useState<Date | null>(null)
   const [newEndDate, setNewEndDate] = useState<Date | null>(null)
   const [agreeToTerms, setAgreeToTerms] = useState<boolean>(false)
-  const [authChecked, setAuthChecked] = useState(false)
-
-  // Mock contract data
   const [contract, setContract] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  // Redirect if not authenticated
+  // Load contract data and check access
   useEffect(() => {
-    // Add a small delay to ensure auth state is loaded from localStorage
-    const checkAuth = setTimeout(() => {
-      console.log("Auth check in extend page:", isAuthenticated, user)
-      setAuthChecked(true)
-
-      if (isAuthenticated && user) {
-        // Simulate loading data
-        setTimeout(() => {
-          const mockEndDate = new Date()
-          mockEndDate.setMonth(mockEndDate.getMonth() + 2)
-
-          setContract({
-            id,
-            title: "AI-Powered Supply Chain Optimization Implementation",
-            status: "active",
-            endDate: mockEndDate.toISOString(),
-            provider: {
-              name: "Tech Solutions Inc.",
-            },
-            needer: {
-              name: "Global Logistics Corp",
-            },
-          })
-          setCurrentEndDate(mockEndDate)
-
-          // Set default new end date to 2 weeks after current end date
-          const defaultNewEndDate = new Date(mockEndDate)
-          defaultNewEndDate.setDate(defaultNewEndDate.getDate() + 14)
-          setNewEndDate(defaultNewEndDate)
-
-          setIsLoading(false)
-        }, 1000)
-      }
-    }, 500)
-
-    return () => clearTimeout(checkAuth)
-  }, [isAuthenticated, user, id])
-
-  // Add a separate effect for redirects that only runs after auth is checked
-  useEffect(() => {
-    if (authChecked) {
+    const loadContract = async () => {
       if (!isAuthenticated) {
         router.push("/auth/login")
-      } else if (user?.accountType !== "paid") {
+        return
+      }
+      
+      if (user?.accountType !== "paid") {
         router.push("/upgrade")
+        return
+      }
+
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const contractData = await contractService.getContractById(id)
+        
+        if (!contractData) {
+          setError("Contract not found or access denied")
+          setIsLoading(false)
+          return
+        }
+
+        setContract(contractData)
+        
+        // Set current end date from contract data
+        if (contractData.endDate) {
+          const endDate = new Date(contractData.endDate)
+          setCurrentEndDate(endDate)
+
+          // Set default new end date to 2 weeks after current end date
+          const defaultNewEndDate = new Date(endDate)
+          defaultNewEndDate.setDate(defaultNewEndDate.getDate() + 14)
+          setNewEndDate(defaultNewEndDate)
+        }
+
+        setIsLoading(false)
+        
+      } catch (error) {
+        console.error("Error loading contract:", error)
+        setError("Failed to load contract data")
+        setIsLoading(false)
       }
     }
-  }, [authChecked, isAuthenticated, user, router])
 
-  if (!authChecked || isLoading || !isAuthenticated) {
+    loadContract()
+  }, [isAuthenticated, user, id, router])
+
+  // Redirect if not authenticated or not paid
+  if (!isAuthenticated || user?.accountType !== "paid") {
+    return null
+  }
+
+  // Loading state
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center">
@@ -95,6 +99,31 @@ export default function TimelineExtensionPage({ params }: { params: Promise<{ id
               <CardTitle>Loading...</CardTitle>
               <CardDescription>Please wait while we load your contract details.</CardDescription>
             </CardHeader>
+            <CardContent className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error || !contract) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center">
+          <Card className="w-full max-w-3xl">
+            <CardHeader className="text-center">
+              <CardTitle>Error</CardTitle>
+              <CardDescription>{error || "Contract not found"}</CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center py-4">
+              <Button onClick={() => router.back()}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Go Back
+              </Button>
+            </CardContent>
           </Card>
         </div>
       </div>
@@ -124,15 +153,25 @@ export default function TimelineExtensionPage({ params }: { params: Promise<{ id
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await contractService.submitTimelineExtensionRequest(id, newEndDate, reason, details)
+      
       toast({
         title: "Extension request submitted",
         description: "Your timeline extension request has been sent to the other party for review.",
       })
-      setIsSubmitting(false)
+      
       router.push(`/contracts/${id}`)
-    }, 1500)
+    } catch (error) {
+      console.error("Error submitting extension request:", error)
+      toast({
+        title: "Error",
+        description: "Failed to submit extension request. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const extensionDays =
@@ -181,6 +220,7 @@ export default function TimelineExtensionPage({ params }: { params: Promise<{ id
                         variant="outline"
                         className="w-full justify-start text-left font-normal mt-1"
                         id="newEndDate"
+                        disabled={isSubmitting}
                       >
                         <Calendar className="mr-2 h-4 w-4" />
                         {newEndDate ? format(newEndDate, "PPP") : "Select a date"}
@@ -221,6 +261,7 @@ export default function TimelineExtensionPage({ params }: { params: Promise<{ id
                   onChange={(e) => setReason(e.target.value)}
                   className="mt-1"
                   required
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -233,6 +274,7 @@ export default function TimelineExtensionPage({ params }: { params: Promise<{ id
                   onChange={(e) => setDetails(e.target.value)}
                   className="mt-1 min-h-[150px]"
                   required
+                  disabled={isSubmitting}
                 />
               </div>
 
@@ -253,6 +295,7 @@ export default function TimelineExtensionPage({ params }: { params: Promise<{ id
                   id="terms"
                   checked={agreeToTerms}
                   onCheckedChange={(checked) => setAgreeToTerms(checked as boolean)}
+                  disabled={isSubmitting}
                 />
                 <Label htmlFor="terms" className="text-sm cursor-pointer">
                   I understand that this request will be sent to {contract.provider.name} and {contract.needer.name} for
@@ -262,11 +305,18 @@ export default function TimelineExtensionPage({ params }: { params: Promise<{ id
             </div>
 
             <div className="flex justify-end gap-3">
-              <Button variant="outline" type="button" onClick={() => router.back()}>
+              <Button variant="outline" type="button" onClick={() => router.back()} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting || !agreeToTerms || !newEndDate}>
-                {isSubmitting ? "Submitting..." : "Submit Extension Request"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  "Submit Extension Request"
+                )}
               </Button>
             </div>
           </form>
