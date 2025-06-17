@@ -171,15 +171,7 @@ export default function CreateProposalPage() {
   const [totalPercentage, setTotalPercentage] = useState(0);
   const [newDeliverable, setNewDeliverable] = useState("");
 
-  // Project timeline dates
-  const [projectStartDate, setProjectStartDate] = useState<Date>(
-    () => new Date()
-  );
-  const [projectEndDate, setProjectEndDate] = useState<Date>(() => {
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + 3); // Default 3 months
-    return endDate;
-  });
+
 
   // Calculate total percentage whenever milestones change
   useEffect(() => {
@@ -229,21 +221,7 @@ export default function CreateProposalPage() {
     fetchSmartject();
   }, [smartjectId, toast]);
 
-  // Update project end date when timeline changes
-  useEffect(() => {
-    if (formData.timeline) {
-      const durationMatch = formData.timeline.match(/(\d+(\.\d+)?)/);
-      if (durationMatch) {
-        const durationMonths = Number.parseFloat(durationMatch[1]);
-        const end = new Date(projectStartDate);
-        end.setMonth(end.getMonth() + Math.floor(durationMonths));
-        // Handle partial months
-        const remainingDays = Math.round((durationMonths % 1) * 30);
-        end.setDate(end.getDate() + remainingDays);
-        setProjectEndDate(end);
-      }
-    }
-  }, [formData.timeline, projectStartDate]);
+
 
   if (authLoading || !canAccess) {
     return null;
@@ -1187,6 +1165,10 @@ export default function CreateProposalPage() {
                 userEmail={user?.email || "user@example.com"}
                 createdAt={new Date().toISOString()}
                 versions={draftVersions}
+                milestones={milestones}
+                files={files.map(f => f.name)}
+                organizationName={user?.organizationName}
+                contactPhone={user?.phone}
               />
             </div>
           </div>
@@ -1300,7 +1282,10 @@ export default function CreateProposalPage() {
               {currentStep < 5 ? (
                 <Button
                   onClick={nextStep}
-                  disabled={currentStep === 1 && !proposalType}
+                  disabled={
+                    (currentStep === 1 && !proposalType) ||
+                    (currentStep === 4 && useMilestones && totalPercentage !== 100)
+                  }
                 >
                   {currentStep === 1 && isCooperationProposal ? "Skip to Review" : "Next"}
                   <ArrowRight className="h-4 w-4 ml-2" />

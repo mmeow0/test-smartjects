@@ -1093,6 +1093,10 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                 userEmail={user?.email || "user@example.com"}
                 createdAt={new Date().toISOString()}
                 versions={documentVersions}
+                milestones={milestones}
+                files={files.map(f => f.name)}
+                organizationName={user?.organizationName}
+                contactPhone={user?.phone}
               />
             </div>
           </div>
@@ -1185,7 +1189,10 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                 {isSaving ? "Saving..." : "Save Draft"}
               </Button>
               {currentStep < 5 ? (
-                <Button onClick={nextStep}>
+                <Button 
+                  onClick={nextStep}
+                  disabled={currentStep === 4 && useMilestones && totalPercentage !== 100}
+                >
                   {currentStep === 1 && isCooperationProposal ? "Skip to Review" : "Next"}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>

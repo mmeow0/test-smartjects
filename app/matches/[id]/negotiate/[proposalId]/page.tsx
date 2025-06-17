@@ -9,7 +9,6 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useAuth } from "@/components/auth-provider"
 import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -23,7 +22,6 @@ import {
   FileText,
   Handshake,
   MessageSquare,
-  Paperclip,
   Send,
   ThumbsUp,
   CheckCircle2,
@@ -34,9 +32,7 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { useProposal } from "@/hooks/use-proposal"
 import { negotiationService } from "@/lib/services/negotiation.service"
-import { ndaService } from "@/lib/services/nda.service"
 import { getSupabaseBrowserClient } from "@/lib/supabase"
-import { NDAManager } from "@/components/private-field-manager/nda-manager"
 import type { NDASignature } from "@/lib/types"
 
 // Define deliverable type
@@ -107,8 +103,6 @@ interface NegotiationData {
   files: NegotiationFile[]
 }
 
-// Define mock data outside the component to prevent recreation on each render
-
 
 export default function NegotiatePage({
   params,
@@ -142,16 +136,6 @@ export default function NegotiatePage({
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadingFile, setUploadingFile] = useState(false)
   const [messageFiles, setMessageFiles] = useState<File[]>([])
-  const [ndaSignatures, setNdaSignatures] = useState<NDASignature[]>([])
-  const [canViewPrivateFields, setCanViewPrivateFields] = useState(false)
-
-  const handleNDASignatureUpdate = (signatures: NDASignature[]) => {
-    setNdaSignatures(signatures)
-    // Refresh the ability to view private fields
-    if (user && proposal) {
-      ndaService.canViewPrivateFields(proposalId, user.id, proposal.userId).then(setCanViewPrivateFields)
-    }
-  }
 
   // Extract the timeline string once to avoid recalculations
   const currentTimelineStr = useMemo(() => {
@@ -159,23 +143,6 @@ export default function NegotiatePage({
     const lastMessage = negotiation.messages?.[negotiation.messages.length - 1]
     return lastMessage?.isCounterOffer ? lastMessage.counterOffer?.timeline : negotiation.currentProposal?.timeline
   }, [negotiation])
-
-  // Load NDA signatures when proposal is loaded
-  useEffect(() => {
-    const loadNDASignatures = async () => {
-      if (proposal && user) {
-        const signatures = await ndaService.getProposalSignatures(proposalId)
-        setNdaSignatures(signatures)
-        
-        // Check if current user can view private fields
-        const canView = await ndaService.canViewPrivateFields(proposalId, user.id, proposal.userId)
-        setCanViewPrivateFields(canView)
-      }
-    }
-    
-    loadNDASignatures()
-  }, [proposal, proposalId, user])
-
 
   // Fetch negotiation data and check for multiple users
   useEffect(() => {
@@ -1035,142 +1002,6 @@ export default function NegotiatePage({
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Right Sidebar */}
-        <div className="lg:col-span-1">
-          <div className="space-y-6">
-            {/* NDA Manager */}
-            {proposal && (
-              <NDAManager
-                proposalId={proposalId}
-                proposalOwnerId={proposal.userId}
-                signatures={ndaSignatures}
-                onSignatureUpdateAction={handleNDASignatureUpdate}
-                isNegotiationActive={true}
-              />
-            )}
-
-            {/* Current Proposal Summary */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Current Terms
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Budget</p>
-                  <p className="font-medium">
-                    {negotiation?.currentProposal?.budget || "Not specified"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Timeline</p>
-                  <p className="font-medium">
-                    {currentTimelineStr || "Not specified"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Scope</p>
-                  <p className="text-sm">
-                    {negotiation?.currentProposal?.scope || "Not specified"}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Negotiation Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Messages</span>
-                    <span className="font-medium">{negotiation?.messages?.length || 0}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Started</span>
-                    <span className="font-medium">
-                      {negotiation?.messages?.[0] ? 
-                        new Date(negotiation.messages[0].timestamp).toLocaleDateString() : 
-                        "N/A"
-                      }
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Last Activity</span>
-                    <span className="font-medium">
-                      {negotiation?.messages?.length ? 
-                        new Date(negotiation.messages[negotiation.messages.length - 1].timestamp).toLocaleDateString() : 
-                        "N/A"
-                      }
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Files Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Paperclip className="h-4 w-4" />
-                  Files
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {negotiation?.files?.length ? (
-                  <div className="space-y-2">
-                    {negotiation.files.map((file) => (
-                      <div key={file.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
-                        <div className="flex items-center space-x-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <a 
-                            href={file.file_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline truncate"
-                          >
-                            {file.file_name}
-                          </a>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {(file.file_size / 1024).toFixed(1)} KB
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No files uploaded yet</p>
-                )}
-                
-                {/* File Upload */}
-                <div className="mt-4 space-y-2">
-                  <Input
-                    type="file"
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    disabled={uploadingFile}
-                    className="text-sm"
-                  />
-                  <Button
-                    onClick={handleFileUpload}
-                    disabled={!selectedFile || uploadingFile}
-                    size="sm"
-                    className="w-full"
-                  >
-                    {uploadingFile ? "Uploading..." : "Upload File"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </div>
     </div>

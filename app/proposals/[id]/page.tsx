@@ -14,7 +14,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuth } from "@/components/auth-provider";
 import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 import { useToast } from "@/hooks/use-toast";
 import { ProposalDocumentPreview } from "@/components/proposal-document-preview";
@@ -29,7 +28,6 @@ import {
   FileText,
   MessageSquare,
   Pencil,
-  ThumbsUp,
   CheckCircle,
   XCircle,
   Shield,
@@ -208,14 +206,6 @@ export default function ProposalDetailPage({
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
-  };
-
-  const handleAccept = () => {
-    toast({
-      title: "Proposal accepted",
-      description:
-        "You have accepted this proposal. A smart contract will be generated.",
-    });
   };
 
   const handleEdit = () => {
@@ -1008,6 +998,10 @@ export default function ProposalDetailPage({
                   userName={user?.name || "User Name"}
                   userEmail={user?.email || "user@example.com"}
                   createdAt={proposal.createdAt}
+                  milestones={proposal.milestones || []}
+                  files={proposal.files?.map(f => f.name) || []}
+                  organizationName={user?.organizationName}
+                  contactPhone={user?.phone}
                 />
                 {proposal.userId === user.id && (
                   <Button variant="outline" onClick={handleEdit}>
@@ -1019,10 +1013,6 @@ export default function ProposalDetailPage({
                   proposal.status === "submitted" &&
                   proposal.type !== "provide" && (
                     <div className="flex gap-2">
-                      <Button variant="secondary" onClick={handleAccept}>
-                        <ThumbsUp className="h-4 w-4 mr-2" />
-                        Accept
-                      </Button>
                       <Button
                         onClick={() =>
                           router.push(`/matches/new/negotiate/${proposal.id}`)
