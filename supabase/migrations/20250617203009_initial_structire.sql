@@ -43,6 +43,39 @@ create table "public"."contract_documents" (
 );
 
 
+create table "public"."contract_extension_requests" (
+    "id" uuid not null default uuid_generate_v4(),
+    "contract_id" uuid not null,
+    "requested_by" uuid not null,
+    "current_end_date" timestamp with time zone not null,
+    "new_end_date" timestamp with time zone not null,
+    "extension_days" integer not null,
+    "reason" text not null,
+    "details" text not null,
+    "status" text not null default 'pending'::text,
+    "responded_by" uuid,
+    "response_message" text,
+    "responded_at" timestamp with time zone,
+    "created_at" timestamp with time zone default now(),
+    "updated_at" timestamp with time zone default now()
+);
+
+
+alter table "public"."contract_extension_requests" enable row level security;
+
+create table "public"."contract_message_attachments" (
+    "id" uuid not null default uuid_generate_v4(),
+    "message_id" uuid not null,
+    "name" text not null,
+    "type" text not null,
+    "size" text not null,
+    "url" text not null,
+    "created_at" timestamp with time zone default now()
+);
+
+
+alter table "public"."contract_message_attachments" enable row level security;
+
 create table "public"."contract_messages" (
     "id" uuid not null default uuid_generate_v4(),
     "contract_id" uuid,
@@ -71,6 +104,33 @@ create table "public"."contract_milestone_deliverables" (
 );
 
 
+create table "public"."contract_milestone_messages" (
+    "id" uuid not null default uuid_generate_v4(),
+    "milestone_id" uuid not null,
+    "sender_id" uuid not null,
+    "content" text not null,
+    "message_type" text not null default 'general'::text,
+    "created_at" timestamp with time zone default now(),
+    "updated_at" timestamp with time zone default now()
+);
+
+
+alter table "public"."contract_milestone_messages" enable row level security;
+
+create table "public"."contract_milestone_status_history" (
+    "id" uuid not null default uuid_generate_v4(),
+    "milestone_id" uuid not null,
+    "changed_by" uuid not null,
+    "old_status" text,
+    "new_status" text not null,
+    "action_type" text not null,
+    "comments" text,
+    "created_at" timestamp with time zone default now()
+);
+
+
+alter table "public"."contract_milestone_status_history" enable row level security;
+
 create table "public"."contract_milestones" (
     "id" uuid not null default uuid_generate_v4(),
     "contract_id" uuid,
@@ -82,9 +142,37 @@ create table "public"."contract_milestones" (
     "status" text not null default 'pending'::text,
     "completed_date" timestamp with time zone,
     "created_at" timestamp with time zone default now(),
+    "updated_at" timestamp with time zone default now(),
+    "submitted_for_review" boolean default false,
+    "submitted_at" timestamp with time zone,
+    "submitted_by" uuid,
+    "reviewed_at" timestamp with time zone,
+    "reviewed_by" uuid,
+    "review_status" text,
+    "review_comments" text
+);
+
+
+alter table "public"."contract_milestones" enable row level security;
+
+create table "public"."contract_modification_requests" (
+    "id" uuid not null default uuid_generate_v4(),
+    "contract_id" uuid not null,
+    "requested_by" uuid not null,
+    "modification_type" text not null,
+    "reason" text not null,
+    "details" text not null,
+    "urgency" text not null default 'normal'::text,
+    "status" text not null default 'pending'::text,
+    "responded_by" uuid,
+    "response_message" text,
+    "responded_at" timestamp with time zone,
+    "created_at" timestamp with time zone default now(),
     "updated_at" timestamp with time zone default now()
 );
 
+
+alter table "public"."contract_modification_requests" enable row level security;
 
 create table "public"."contracts" (
     "id" uuid not null default uuid_generate_v4(),
@@ -105,6 +193,8 @@ create table "public"."contracts" (
     "proposal_id" uuid
 );
 
+
+alter table "public"."contracts" enable row level security;
 
 create table "public"."deliverables" (
     "id" uuid not null default uuid_generate_v4(),
@@ -233,15 +323,6 @@ create table "public"."negotiation_messages" (
 
 
 alter table "public"."negotiation_messages" enable row level security;
-
-create table "public"."proposal_comments" (
-    "id" uuid not null default gen_random_uuid(),
-    "proposal_id" uuid,
-    "user_id" uuid,
-    "content" text not null,
-    "created_at" timestamp with time zone default now()
-);
-
 
 create table "public"."proposal_deliverables" (
     "id" uuid not null default gen_random_uuid(),
@@ -376,13 +457,35 @@ create table "public"."technologies" (
 );
 
 
+create table "public"."user_settings" (
+    "id" uuid not null default gen_random_uuid(),
+    "user_id" uuid not null,
+    "email_notifications" boolean default true,
+    "smartject_updates" boolean default true,
+    "proposal_matches" boolean default true,
+    "contract_updates" boolean default true,
+    "marketing_emails" boolean default false,
+    "profile_visibility" text default 'public'::text,
+    "data_sharing" boolean default false,
+    "theme" text default 'system'::text,
+    "created_at" timestamp with time zone default now(),
+    "updated_at" timestamp with time zone default now()
+);
+
+
+alter table "public"."user_settings" enable row level security;
+
 create table "public"."users" (
     "id" uuid not null default uuid_generate_v4(),
     "email" text not null,
     "name" text,
     "avatar_url" text,
     "account_type" text not null default 'free'::text,
-    "created_at" timestamp with time zone default now()
+    "created_at" timestamp with time zone default now(),
+    "bio" text,
+    "location" text,
+    "company" text,
+    "website" text
 );
 
 
@@ -409,6 +512,10 @@ CREATE UNIQUE INDEX contract_deliverables_pkey ON public.contract_deliverables U
 
 CREATE UNIQUE INDEX contract_documents_pkey ON public.contract_documents USING btree (id);
 
+CREATE UNIQUE INDEX contract_extension_requests_pkey ON public.contract_extension_requests USING btree (id);
+
+CREATE UNIQUE INDEX contract_message_attachments_pkey ON public.contract_message_attachments USING btree (id);
+
 CREATE UNIQUE INDEX contract_messages_pkey ON public.contract_messages USING btree (id);
 
 CREATE UNIQUE INDEX contract_milestone_comments_pkey ON public.contract_milestone_comments USING btree (id);
@@ -417,11 +524,21 @@ CREATE UNIQUE INDEX contract_milestone_deliverables_pkey ON public.contract_mile
 
 CREATE UNIQUE INDEX contract_milestones_pkey ON public.contract_milestones USING btree (id);
 
+CREATE UNIQUE INDEX contract_modification_requests_pkey ON public.contract_modification_requests USING btree (id);
+
 CREATE UNIQUE INDEX contracts_pkey ON public.contracts USING btree (id);
 
 CREATE UNIQUE INDEX deliverables_pkey ON public.deliverables USING btree (id);
 
 CREATE UNIQUE INDEX document_versions_pkey ON public.document_versions USING btree (id);
+
+CREATE INDEX idx_contract_milestone_messages_milestone_id ON public.contract_milestone_messages USING btree (milestone_id);
+
+CREATE INDEX idx_contract_milestone_messages_sender_id ON public.contract_milestone_messages USING btree (sender_id);
+
+CREATE INDEX idx_contract_milestone_status_history_changed_by ON public.contract_milestone_status_history USING btree (changed_by);
+
+CREATE INDEX idx_contract_milestone_status_history_milestone_id ON public.contract_milestone_status_history USING btree (milestone_id);
 
 CREATE INDEX idx_matches_needer_id ON public.matches USING btree (needer_id);
 
@@ -483,8 +600,6 @@ CREATE UNIQUE INDEX negotiation_files_pkey ON public.negotiation_files USING btr
 
 CREATE UNIQUE INDEX negotiation_messages_pkey ON public.negotiation_messages USING btree (id);
 
-CREATE UNIQUE INDEX proposal_comments_pkey ON public.proposal_comments USING btree (id);
-
 CREATE UNIQUE INDEX proposal_deliverables_pkey ON public.proposal_deliverables USING btree (id);
 
 CREATE UNIQUE INDEX proposal_files_pkey ON public.proposal_files USING btree (id);
@@ -515,6 +630,10 @@ CREATE UNIQUE INDEX technologies_name_key ON public.technologies USING btree (na
 
 CREATE UNIQUE INDEX technologies_pkey ON public.technologies USING btree (id);
 
+CREATE UNIQUE INDEX user_settings_pkey ON public.user_settings USING btree (id);
+
+CREATE UNIQUE INDEX user_settings_user_id_key ON public.user_settings USING btree (user_id);
+
 CREATE UNIQUE INDEX users_email_key ON public.users USING btree (email);
 
 CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id);
@@ -533,6 +652,10 @@ alter table "public"."contract_deliverables" add constraint "contract_deliverabl
 
 alter table "public"."contract_documents" add constraint "contract_documents_pkey" PRIMARY KEY using index "contract_documents_pkey";
 
+alter table "public"."contract_extension_requests" add constraint "contract_extension_requests_pkey" PRIMARY KEY using index "contract_extension_requests_pkey";
+
+alter table "public"."contract_message_attachments" add constraint "contract_message_attachments_pkey" PRIMARY KEY using index "contract_message_attachments_pkey";
+
 alter table "public"."contract_messages" add constraint "contract_messages_pkey" PRIMARY KEY using index "contract_messages_pkey";
 
 alter table "public"."contract_milestone_comments" add constraint "contract_milestone_comments_pkey" PRIMARY KEY using index "contract_milestone_comments_pkey";
@@ -540,6 +663,8 @@ alter table "public"."contract_milestone_comments" add constraint "contract_mile
 alter table "public"."contract_milestone_deliverables" add constraint "contract_milestone_deliverables_pkey" PRIMARY KEY using index "contract_milestone_deliverables_pkey";
 
 alter table "public"."contract_milestones" add constraint "contract_milestones_pkey" PRIMARY KEY using index "contract_milestones_pkey";
+
+alter table "public"."contract_modification_requests" add constraint "contract_modification_requests_pkey" PRIMARY KEY using index "contract_modification_requests_pkey";
 
 alter table "public"."contracts" add constraint "contracts_pkey" PRIMARY KEY using index "contracts_pkey";
 
@@ -565,8 +690,6 @@ alter table "public"."negotiation_files" add constraint "negotiation_files_pkey"
 
 alter table "public"."negotiation_messages" add constraint "negotiation_messages_pkey" PRIMARY KEY using index "negotiation_messages_pkey";
 
-alter table "public"."proposal_comments" add constraint "proposal_comments_pkey" PRIMARY KEY using index "proposal_comments_pkey";
-
 alter table "public"."proposal_deliverables" add constraint "proposal_deliverables_pkey" PRIMARY KEY using index "proposal_deliverables_pkey";
 
 alter table "public"."proposal_files" add constraint "proposal_files_pkey" PRIMARY KEY using index "proposal_files_pkey";
@@ -590,6 +713,8 @@ alter table "public"."smartjects" add constraint "smartjects_pkey" PRIMARY KEY u
 alter table "public"."tags" add constraint "tags_pkey" PRIMARY KEY using index "tags_pkey";
 
 alter table "public"."technologies" add constraint "technologies_pkey" PRIMARY KEY using index "technologies_pkey";
+
+alter table "public"."user_settings" add constraint "user_settings_pkey" PRIMARY KEY using index "user_settings_pkey";
 
 alter table "public"."users" add constraint "users_pkey" PRIMARY KEY using index "users_pkey";
 
@@ -625,6 +750,18 @@ alter table "public"."contract_documents" add constraint "contract_documents_upl
 
 alter table "public"."contract_documents" validate constraint "contract_documents_uploaded_by_fkey";
 
+alter table "public"."contract_extension_requests" add constraint "contract_extension_requests_contract_id_fkey" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE not valid;
+
+alter table "public"."contract_extension_requests" validate constraint "contract_extension_requests_contract_id_fkey";
+
+alter table "public"."contract_extension_requests" add constraint "contract_extension_requests_requested_by_fkey" FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE not valid;
+
+alter table "public"."contract_extension_requests" validate constraint "contract_extension_requests_requested_by_fkey";
+
+alter table "public"."contract_message_attachments" add constraint "contract_message_attachments_message_id_fkey" FOREIGN KEY (message_id) REFERENCES contract_messages(id) ON DELETE CASCADE not valid;
+
+alter table "public"."contract_message_attachments" validate constraint "contract_message_attachments_message_id_fkey";
+
 alter table "public"."contract_messages" add constraint "contract_messages_contract_id_fkey" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE not valid;
 
 alter table "public"."contract_messages" validate constraint "contract_messages_contract_id_fkey";
@@ -645,13 +782,45 @@ alter table "public"."contract_milestone_deliverables" add constraint "contract_
 
 alter table "public"."contract_milestone_deliverables" validate constraint "contract_milestone_deliverables_milestone_id_fkey";
 
+alter table "public"."contract_milestone_messages" add constraint "contract_milestone_messages_milestone_id_fkey" FOREIGN KEY (milestone_id) REFERENCES contract_milestones(id) ON DELETE CASCADE not valid;
+
+alter table "public"."contract_milestone_messages" validate constraint "contract_milestone_messages_milestone_id_fkey";
+
+alter table "public"."contract_milestone_messages" add constraint "contract_milestone_messages_sender_id_fkey" FOREIGN KEY (sender_id) REFERENCES auth.users(id) ON DELETE CASCADE not valid;
+
+alter table "public"."contract_milestone_messages" validate constraint "contract_milestone_messages_sender_id_fkey";
+
+alter table "public"."contract_milestone_status_history" add constraint "contract_milestone_status_history_changed_by_fkey" FOREIGN KEY (changed_by) REFERENCES auth.users(id) ON DELETE CASCADE not valid;
+
+alter table "public"."contract_milestone_status_history" validate constraint "contract_milestone_status_history_changed_by_fkey";
+
+alter table "public"."contract_milestone_status_history" add constraint "contract_milestone_status_history_milestone_id_fkey" FOREIGN KEY (milestone_id) REFERENCES contract_milestones(id) ON DELETE CASCADE not valid;
+
+alter table "public"."contract_milestone_status_history" validate constraint "contract_milestone_status_history_milestone_id_fkey";
+
 alter table "public"."contract_milestones" add constraint "contract_milestones_contract_id_fkey" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE not valid;
 
 alter table "public"."contract_milestones" validate constraint "contract_milestones_contract_id_fkey";
 
+alter table "public"."contract_milestones" add constraint "contract_milestones_reviewed_by_fkey" FOREIGN KEY (reviewed_by) REFERENCES auth.users(id) ON DELETE SET NULL not valid;
+
+alter table "public"."contract_milestones" validate constraint "contract_milestones_reviewed_by_fkey";
+
 alter table "public"."contract_milestones" add constraint "contract_milestones_status_check" CHECK ((status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'completed'::text, 'overdue'::text, 'pending_review'::text]))) not valid;
 
 alter table "public"."contract_milestones" validate constraint "contract_milestones_status_check";
+
+alter table "public"."contract_milestones" add constraint "contract_milestones_submitted_by_fkey" FOREIGN KEY (submitted_by) REFERENCES auth.users(id) ON DELETE SET NULL not valid;
+
+alter table "public"."contract_milestones" validate constraint "contract_milestones_submitted_by_fkey";
+
+alter table "public"."contract_modification_requests" add constraint "contract_modification_requests_contract_id_fkey" FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE not valid;
+
+alter table "public"."contract_modification_requests" validate constraint "contract_modification_requests_contract_id_fkey";
+
+alter table "public"."contract_modification_requests" add constraint "contract_modification_requests_requested_by_fkey" FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE not valid;
+
+alter table "public"."contract_modification_requests" validate constraint "contract_modification_requests_requested_by_fkey";
 
 alter table "public"."contracts" add constraint "contracts_match_id_fkey" FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE not valid;
 
@@ -757,14 +926,6 @@ alter table "public"."negotiation_messages" add constraint "negotiation_messages
 
 alter table "public"."negotiation_messages" validate constraint "negotiation_messages_sender_id_fkey";
 
-alter table "public"."proposal_comments" add constraint "proposal_comments_proposal_id_fkey" FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE CASCADE not valid;
-
-alter table "public"."proposal_comments" validate constraint "proposal_comments_proposal_id_fkey";
-
-alter table "public"."proposal_comments" add constraint "proposal_comments_user_id_fkey" FOREIGN KEY (user_id) REFERENCES users(id) not valid;
-
-alter table "public"."proposal_comments" validate constraint "proposal_comments_user_id_fkey";
-
 alter table "public"."proposal_deliverables" add constraint "proposal_deliverables_milestone_id_fkey" FOREIGN KEY (milestone_id) REFERENCES proposal_milestones(id) ON DELETE CASCADE not valid;
 
 alter table "public"."proposal_deliverables" validate constraint "proposal_deliverables_milestone_id_fkey";
@@ -854,6 +1015,20 @@ alter table "public"."smartject_technologies" validate constraint "smartject_tec
 alter table "public"."tags" add constraint "tags_name_key" UNIQUE using index "tags_name_key";
 
 alter table "public"."technologies" add constraint "technologies_name_key" UNIQUE using index "technologies_name_key";
+
+alter table "public"."user_settings" add constraint "user_settings_profile_visibility_check" CHECK ((profile_visibility = ANY (ARRAY['public'::text, 'registered'::text, 'private'::text]))) not valid;
+
+alter table "public"."user_settings" validate constraint "user_settings_profile_visibility_check";
+
+alter table "public"."user_settings" add constraint "user_settings_theme_check" CHECK ((theme = ANY (ARRAY['light'::text, 'dark'::text, 'system'::text]))) not valid;
+
+alter table "public"."user_settings" validate constraint "user_settings_theme_check";
+
+alter table "public"."user_settings" add constraint "user_settings_user_id_fkey" FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE not valid;
+
+alter table "public"."user_settings" validate constraint "user_settings_user_id_fkey";
+
+alter table "public"."user_settings" add constraint "user_settings_user_id_key" UNIQUE using index "user_settings_user_id_key";
 
 alter table "public"."users" add constraint "users_email_key" UNIQUE using index "users_email_key";
 
@@ -978,7 +1153,7 @@ CREATE OR REPLACE FUNCTION public.update_updated_at_column()
  LANGUAGE plpgsql
 AS $function$
 BEGIN
-    NEW.updated_at := NOW();
+    NEW.updated_at = NOW();
     RETURN NEW;
 END;
 $function$
@@ -1194,6 +1369,90 @@ grant truncate on table "public"."contract_documents" to "service_role";
 
 grant update on table "public"."contract_documents" to "service_role";
 
+grant delete on table "public"."contract_extension_requests" to "anon";
+
+grant insert on table "public"."contract_extension_requests" to "anon";
+
+grant references on table "public"."contract_extension_requests" to "anon";
+
+grant select on table "public"."contract_extension_requests" to "anon";
+
+grant trigger on table "public"."contract_extension_requests" to "anon";
+
+grant truncate on table "public"."contract_extension_requests" to "anon";
+
+grant update on table "public"."contract_extension_requests" to "anon";
+
+grant delete on table "public"."contract_extension_requests" to "authenticated";
+
+grant insert on table "public"."contract_extension_requests" to "authenticated";
+
+grant references on table "public"."contract_extension_requests" to "authenticated";
+
+grant select on table "public"."contract_extension_requests" to "authenticated";
+
+grant trigger on table "public"."contract_extension_requests" to "authenticated";
+
+grant truncate on table "public"."contract_extension_requests" to "authenticated";
+
+grant update on table "public"."contract_extension_requests" to "authenticated";
+
+grant delete on table "public"."contract_extension_requests" to "service_role";
+
+grant insert on table "public"."contract_extension_requests" to "service_role";
+
+grant references on table "public"."contract_extension_requests" to "service_role";
+
+grant select on table "public"."contract_extension_requests" to "service_role";
+
+grant trigger on table "public"."contract_extension_requests" to "service_role";
+
+grant truncate on table "public"."contract_extension_requests" to "service_role";
+
+grant update on table "public"."contract_extension_requests" to "service_role";
+
+grant delete on table "public"."contract_message_attachments" to "anon";
+
+grant insert on table "public"."contract_message_attachments" to "anon";
+
+grant references on table "public"."contract_message_attachments" to "anon";
+
+grant select on table "public"."contract_message_attachments" to "anon";
+
+grant trigger on table "public"."contract_message_attachments" to "anon";
+
+grant truncate on table "public"."contract_message_attachments" to "anon";
+
+grant update on table "public"."contract_message_attachments" to "anon";
+
+grant delete on table "public"."contract_message_attachments" to "authenticated";
+
+grant insert on table "public"."contract_message_attachments" to "authenticated";
+
+grant references on table "public"."contract_message_attachments" to "authenticated";
+
+grant select on table "public"."contract_message_attachments" to "authenticated";
+
+grant trigger on table "public"."contract_message_attachments" to "authenticated";
+
+grant truncate on table "public"."contract_message_attachments" to "authenticated";
+
+grant update on table "public"."contract_message_attachments" to "authenticated";
+
+grant delete on table "public"."contract_message_attachments" to "service_role";
+
+grant insert on table "public"."contract_message_attachments" to "service_role";
+
+grant references on table "public"."contract_message_attachments" to "service_role";
+
+grant select on table "public"."contract_message_attachments" to "service_role";
+
+grant trigger on table "public"."contract_message_attachments" to "service_role";
+
+grant truncate on table "public"."contract_message_attachments" to "service_role";
+
+grant update on table "public"."contract_message_attachments" to "service_role";
+
 grant delete on table "public"."contract_messages" to "anon";
 
 grant insert on table "public"."contract_messages" to "anon";
@@ -1320,6 +1579,90 @@ grant truncate on table "public"."contract_milestone_deliverables" to "service_r
 
 grant update on table "public"."contract_milestone_deliverables" to "service_role";
 
+grant delete on table "public"."contract_milestone_messages" to "anon";
+
+grant insert on table "public"."contract_milestone_messages" to "anon";
+
+grant references on table "public"."contract_milestone_messages" to "anon";
+
+grant select on table "public"."contract_milestone_messages" to "anon";
+
+grant trigger on table "public"."contract_milestone_messages" to "anon";
+
+grant truncate on table "public"."contract_milestone_messages" to "anon";
+
+grant update on table "public"."contract_milestone_messages" to "anon";
+
+grant delete on table "public"."contract_milestone_messages" to "authenticated";
+
+grant insert on table "public"."contract_milestone_messages" to "authenticated";
+
+grant references on table "public"."contract_milestone_messages" to "authenticated";
+
+grant select on table "public"."contract_milestone_messages" to "authenticated";
+
+grant trigger on table "public"."contract_milestone_messages" to "authenticated";
+
+grant truncate on table "public"."contract_milestone_messages" to "authenticated";
+
+grant update on table "public"."contract_milestone_messages" to "authenticated";
+
+grant delete on table "public"."contract_milestone_messages" to "service_role";
+
+grant insert on table "public"."contract_milestone_messages" to "service_role";
+
+grant references on table "public"."contract_milestone_messages" to "service_role";
+
+grant select on table "public"."contract_milestone_messages" to "service_role";
+
+grant trigger on table "public"."contract_milestone_messages" to "service_role";
+
+grant truncate on table "public"."contract_milestone_messages" to "service_role";
+
+grant update on table "public"."contract_milestone_messages" to "service_role";
+
+grant delete on table "public"."contract_milestone_status_history" to "anon";
+
+grant insert on table "public"."contract_milestone_status_history" to "anon";
+
+grant references on table "public"."contract_milestone_status_history" to "anon";
+
+grant select on table "public"."contract_milestone_status_history" to "anon";
+
+grant trigger on table "public"."contract_milestone_status_history" to "anon";
+
+grant truncate on table "public"."contract_milestone_status_history" to "anon";
+
+grant update on table "public"."contract_milestone_status_history" to "anon";
+
+grant delete on table "public"."contract_milestone_status_history" to "authenticated";
+
+grant insert on table "public"."contract_milestone_status_history" to "authenticated";
+
+grant references on table "public"."contract_milestone_status_history" to "authenticated";
+
+grant select on table "public"."contract_milestone_status_history" to "authenticated";
+
+grant trigger on table "public"."contract_milestone_status_history" to "authenticated";
+
+grant truncate on table "public"."contract_milestone_status_history" to "authenticated";
+
+grant update on table "public"."contract_milestone_status_history" to "authenticated";
+
+grant delete on table "public"."contract_milestone_status_history" to "service_role";
+
+grant insert on table "public"."contract_milestone_status_history" to "service_role";
+
+grant references on table "public"."contract_milestone_status_history" to "service_role";
+
+grant select on table "public"."contract_milestone_status_history" to "service_role";
+
+grant trigger on table "public"."contract_milestone_status_history" to "service_role";
+
+grant truncate on table "public"."contract_milestone_status_history" to "service_role";
+
+grant update on table "public"."contract_milestone_status_history" to "service_role";
+
 grant delete on table "public"."contract_milestones" to "anon";
 
 grant insert on table "public"."contract_milestones" to "anon";
@@ -1361,6 +1704,48 @@ grant trigger on table "public"."contract_milestones" to "service_role";
 grant truncate on table "public"."contract_milestones" to "service_role";
 
 grant update on table "public"."contract_milestones" to "service_role";
+
+grant delete on table "public"."contract_modification_requests" to "anon";
+
+grant insert on table "public"."contract_modification_requests" to "anon";
+
+grant references on table "public"."contract_modification_requests" to "anon";
+
+grant select on table "public"."contract_modification_requests" to "anon";
+
+grant trigger on table "public"."contract_modification_requests" to "anon";
+
+grant truncate on table "public"."contract_modification_requests" to "anon";
+
+grant update on table "public"."contract_modification_requests" to "anon";
+
+grant delete on table "public"."contract_modification_requests" to "authenticated";
+
+grant insert on table "public"."contract_modification_requests" to "authenticated";
+
+grant references on table "public"."contract_modification_requests" to "authenticated";
+
+grant select on table "public"."contract_modification_requests" to "authenticated";
+
+grant trigger on table "public"."contract_modification_requests" to "authenticated";
+
+grant truncate on table "public"."contract_modification_requests" to "authenticated";
+
+grant update on table "public"."contract_modification_requests" to "authenticated";
+
+grant delete on table "public"."contract_modification_requests" to "service_role";
+
+grant insert on table "public"."contract_modification_requests" to "service_role";
+
+grant references on table "public"."contract_modification_requests" to "service_role";
+
+grant select on table "public"."contract_modification_requests" to "service_role";
+
+grant trigger on table "public"."contract_modification_requests" to "service_role";
+
+grant truncate on table "public"."contract_modification_requests" to "service_role";
+
+grant update on table "public"."contract_modification_requests" to "service_role";
 
 grant delete on table "public"."contracts" to "anon";
 
@@ -1866,48 +2251,6 @@ grant truncate on table "public"."negotiation_messages" to "service_role";
 
 grant update on table "public"."negotiation_messages" to "service_role";
 
-grant delete on table "public"."proposal_comments" to "anon";
-
-grant insert on table "public"."proposal_comments" to "anon";
-
-grant references on table "public"."proposal_comments" to "anon";
-
-grant select on table "public"."proposal_comments" to "anon";
-
-grant trigger on table "public"."proposal_comments" to "anon";
-
-grant truncate on table "public"."proposal_comments" to "anon";
-
-grant update on table "public"."proposal_comments" to "anon";
-
-grant delete on table "public"."proposal_comments" to "authenticated";
-
-grant insert on table "public"."proposal_comments" to "authenticated";
-
-grant references on table "public"."proposal_comments" to "authenticated";
-
-grant select on table "public"."proposal_comments" to "authenticated";
-
-grant trigger on table "public"."proposal_comments" to "authenticated";
-
-grant truncate on table "public"."proposal_comments" to "authenticated";
-
-grant update on table "public"."proposal_comments" to "authenticated";
-
-grant delete on table "public"."proposal_comments" to "service_role";
-
-grant insert on table "public"."proposal_comments" to "service_role";
-
-grant references on table "public"."proposal_comments" to "service_role";
-
-grant select on table "public"."proposal_comments" to "service_role";
-
-grant trigger on table "public"."proposal_comments" to "service_role";
-
-grant truncate on table "public"."proposal_comments" to "service_role";
-
-grant update on table "public"."proposal_comments" to "service_role";
-
 grant delete on table "public"."proposal_deliverables" to "anon";
 
 grant insert on table "public"."proposal_deliverables" to "anon";
@@ -2412,6 +2755,48 @@ grant truncate on table "public"."technologies" to "service_role";
 
 grant update on table "public"."technologies" to "service_role";
 
+grant delete on table "public"."user_settings" to "anon";
+
+grant insert on table "public"."user_settings" to "anon";
+
+grant references on table "public"."user_settings" to "anon";
+
+grant select on table "public"."user_settings" to "anon";
+
+grant trigger on table "public"."user_settings" to "anon";
+
+grant truncate on table "public"."user_settings" to "anon";
+
+grant update on table "public"."user_settings" to "anon";
+
+grant delete on table "public"."user_settings" to "authenticated";
+
+grant insert on table "public"."user_settings" to "authenticated";
+
+grant references on table "public"."user_settings" to "authenticated";
+
+grant select on table "public"."user_settings" to "authenticated";
+
+grant trigger on table "public"."user_settings" to "authenticated";
+
+grant truncate on table "public"."user_settings" to "authenticated";
+
+grant update on table "public"."user_settings" to "authenticated";
+
+grant delete on table "public"."user_settings" to "service_role";
+
+grant insert on table "public"."user_settings" to "service_role";
+
+grant references on table "public"."user_settings" to "service_role";
+
+grant select on table "public"."user_settings" to "service_role";
+
+grant trigger on table "public"."user_settings" to "service_role";
+
+grant truncate on table "public"."user_settings" to "service_role";
+
+grant update on table "public"."user_settings" to "service_role";
+
 grant delete on table "public"."users" to "anon";
 
 grant insert on table "public"."users" to "anon";
@@ -2495,6 +2880,132 @@ grant trigger on table "public"."votes" to "service_role";
 grant truncate on table "public"."votes" to "service_role";
 
 grant update on table "public"."votes" to "service_role";
+
+create policy "Users can create extension requests for their contracts"
+on "public"."contract_extension_requests"
+as permissive
+for insert
+to public
+with check (((EXISTS ( SELECT 1
+   FROM contracts
+  WHERE ((contracts.id = contract_extension_requests.contract_id) AND ((contracts.provider_id = auth.uid()) OR (contracts.needer_id = auth.uid()))))) AND (requested_by = auth.uid())));
+
+
+create policy "Users can view extension requests for their contracts"
+on "public"."contract_extension_requests"
+as permissive
+for select
+to public
+using ((EXISTS ( SELECT 1
+   FROM contracts
+  WHERE ((contracts.id = contract_extension_requests.contract_id) AND ((contracts.provider_id = auth.uid()) OR (contracts.needer_id = auth.uid()))))));
+
+
+create policy "Users can view message attachments for their contracts"
+on "public"."contract_message_attachments"
+as permissive
+for select
+to public
+using ((EXISTS ( SELECT 1
+   FROM (contract_messages
+     JOIN contracts ON ((contracts.id = contract_messages.contract_id)))
+  WHERE ((contract_messages.id = contract_message_attachments.message_id) AND ((contracts.provider_id = auth.uid()) OR (contracts.needer_id = auth.uid()))))));
+
+
+create policy "milestone_messages_insert_policy"
+on "public"."contract_milestone_messages"
+as permissive
+for insert
+to public
+with check (((sender_id = auth.uid()) AND (milestone_id IN ( SELECT cm.id
+   FROM (contract_milestones cm
+     JOIN contracts c ON ((cm.contract_id = c.id)))
+  WHERE ((c.provider_id = auth.uid()) OR (c.needer_id = auth.uid()))))));
+
+
+create policy "milestone_messages_select_policy"
+on "public"."contract_milestone_messages"
+as permissive
+for select
+to public
+using ((milestone_id IN ( SELECT cm.id
+   FROM (contract_milestones cm
+     JOIN contracts c ON ((cm.contract_id = c.id)))
+  WHERE ((c.provider_id = auth.uid()) OR (c.needer_id = auth.uid())))));
+
+
+create policy "milestone_messages_update_policy"
+on "public"."contract_milestone_messages"
+as permissive
+for update
+to public
+using (((sender_id = auth.uid()) AND (milestone_id IN ( SELECT cm.id
+   FROM (contract_milestones cm
+     JOIN contracts c ON ((cm.contract_id = c.id)))
+  WHERE ((c.provider_id = auth.uid()) OR (c.needer_id = auth.uid()))))));
+
+
+create policy "milestone_status_history_insert_policy"
+on "public"."contract_milestone_status_history"
+as permissive
+for insert
+to public
+with check (((changed_by = auth.uid()) AND (milestone_id IN ( SELECT cm.id
+   FROM (contract_milestones cm
+     JOIN contracts c ON ((cm.contract_id = c.id)))
+  WHERE ((c.provider_id = auth.uid()) OR (c.needer_id = auth.uid()))))));
+
+
+create policy "milestone_status_history_select_policy"
+on "public"."contract_milestone_status_history"
+as permissive
+for select
+to public
+using ((milestone_id IN ( SELECT cm.id
+   FROM (contract_milestones cm
+     JOIN contracts c ON ((cm.contract_id = c.id)))
+  WHERE ((c.provider_id = auth.uid()) OR (c.needer_id = auth.uid())))));
+
+
+create policy "milestone_select_policy"
+on "public"."contract_milestones"
+as permissive
+for select
+to public
+using ((contract_id IN ( SELECT c.id
+   FROM contracts c
+  WHERE ((c.provider_id = auth.uid()) OR (c.needer_id = auth.uid())))));
+
+
+create policy "milestone_update_policy"
+on "public"."contract_milestones"
+as permissive
+for update
+to public
+using ((contract_id IN ( SELECT c.id
+   FROM contracts c
+  WHERE ((c.provider_id = auth.uid()) OR (c.needer_id = auth.uid())))));
+
+
+create policy "Users can create modification requests for their contracts"
+on "public"."contract_modification_requests"
+as permissive
+for insert
+to public
+with check (((EXISTS ( SELECT 1
+   FROM contracts
+  WHERE ((contracts.id = contract_modification_requests.contract_id) AND ((contracts.provider_id = auth.uid()) OR (contracts.needer_id = auth.uid()))))) AND (requested_by = auth.uid())));
+
+
+create policy "Users can view modification requests for their contracts"
+on "public"."contract_modification_requests"
+as permissive
+for select
+to public
+using ((EXISTS ( SELECT 1
+   FROM contracts
+  WHERE ((contracts.id = contract_modification_requests.contract_id) AND ((contracts.provider_id = auth.uid()) OR (contracts.needer_id = auth.uid()))))));
+
 
 create policy "Allow inserting any NDA notifications"
 on "public"."nda_notifications"
@@ -2695,6 +3206,19 @@ to public
 with check ((signer_user_id = auth.uid()));
 
 
+create policy "Users can update their own NDA signatures"
+on "public"."proposal_nda_signatures"
+as permissive
+for update
+to public
+using (((signer_user_id = auth.uid()) OR (proposal_id IN ( SELECT proposals.id
+   FROM proposals
+  WHERE (proposals.user_id = auth.uid())))))
+with check (((signer_user_id = auth.uid()) OR (proposal_id IN ( SELECT proposals.id
+   FROM proposals
+  WHERE (proposals.user_id = auth.uid())))));
+
+
 create policy "Users can view relevant NDA signatures"
 on "public"."proposal_nda_signatures"
 as permissive
@@ -2703,6 +3227,38 @@ to public
 using (((signer_user_id = auth.uid()) OR (proposal_id IN ( SELECT proposals.id
    FROM proposals
   WHERE (proposals.user_id = auth.uid())))));
+
+
+create policy "Users can delete their own settings"
+on "public"."user_settings"
+as permissive
+for delete
+to public
+using ((auth.uid() = user_id));
+
+
+create policy "Users can insert their own settings"
+on "public"."user_settings"
+as permissive
+for insert
+to public
+with check ((auth.uid() = user_id));
+
+
+create policy "Users can update their own settings"
+on "public"."user_settings"
+as permissive
+for update
+to public
+using ((auth.uid() = user_id));
+
+
+create policy "Users can view their own settings"
+on "public"."user_settings"
+as permissive
+for select
+to public
+using ((auth.uid() = user_id));
 
 
 create policy "Allow logged-in users to read their user row"
@@ -2749,5 +3305,7 @@ using ((id = auth.uid()));
 CREATE TRIGGER update_negotiation_messages_updated_at BEFORE UPDATE ON public.negotiation_messages FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER nda_notification_trigger AFTER INSERT OR UPDATE ON public.proposal_nda_signatures FOR EACH ROW EXECUTE FUNCTION create_nda_notification();
+
+CREATE TRIGGER update_user_settings_updated_at BEFORE UPDATE ON public.user_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 

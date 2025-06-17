@@ -32,6 +32,8 @@ import {
 import { ContractDocumentPreview } from "@/components/contract-document-preview"
 import { contractService } from "@/lib/services"
 import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
+import { MilestoneCard } from "@/components/contract/milestone-card"
+import { QuickMilestoneActions } from "@/components/contract/quick-milestone-actions"
 
 export default function ContractDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -189,6 +191,12 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
         return (
           <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
             <CheckCircle className="h-3 w-3" /> Completed
+          </Badge>
+        )
+      case "submitted":
+        return (
+          <Badge className="bg-purple-100 text-purple-800 flex items-center gap-1">
+            <Clock className="h-3 w-3" /> Submitted for Review
           </Badge>
         )
       case "in_progress":
@@ -393,71 +401,66 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
           </CardFooter>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks for this contract</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {contract?.status === "active" && nextMilestone?.status === "in_progress" && isProvider && (
-              <Button 
-                className="w-full justify-between" 
-                onClick={() => router.push(`/contracts/${id}/milestone/${nextMilestone?.id}/complete`)}
-              >
-                Mark Current Milestone Complete
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </Button>
-            )}
+        <div className="space-y-6">
+          {/* Quick Milestone Actions */}
+          {contract?.status === "active" && nextMilestone && (
+            <QuickMilestoneActions
+              milestone={nextMilestone}
+              contractId={id}
+              userRole={isProvider ? "provider" : "needer"}
+              onMilestoneUpdate={() => {
+                // Reload contract data
+                window.location.reload()
+              }}
+            />
+          )}
 
-            {contract?.status === "active" && nextMilestone?.status === "in_progress" && !isProvider && (
-              <Button 
-                className="w-full justify-between" 
-                onClick={() => router.push(`/contracts/${id}/milestone/${nextMilestone?.id}/review`)}
-              >
-                Review Current Milestone
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </Button>
-            )}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>Common tasks for this contract</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {contract?.status === "active" && (
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-between" 
+                  onClick={() => router.push(`/contracts/${id}/messages`)}
+                >
+                  View Messages
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              )}
 
-            {contract?.status === "active" && (
-              <Button 
-                variant="outline" 
-                className="w-full justify-between" 
-                onClick={() => router.push(`/contracts/${id}/messages`)}
-              >
-                View Messages
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </Button>
-            )}
-
-            <Button 
-              variant="outline" 
-              className="w-full justify-between" 
-              onClick={() => router.push(`/contracts/${id}/documents`)}
-            >
-              View All Documents
-              <ChevronRight className="h-4 w-4 ml-2" />
-            </Button>
-
-            {contract?.status === "active" && (
               <Button 
                 variant="outline" 
                 className="w-full justify-between" 
-                onClick={() => router.push(`/contracts/${id}/schedule-meeting`)}
+                onClick={() => router.push(`/contracts/${id}/documents`)}
               >
-                Schedule Meeting
+                View All Documents
                 <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
-            )}
 
-            {contract?.status === "active" && (
-              <Button variant="destructive" className="w-full justify-between">
-                Request Contract Modification
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+              {contract?.status === "active" && (
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-between" 
+                  onClick={() => router.push(`/contracts/${id}/schedule-meeting`)}
+                >
+                  Schedule Meeting
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              )}
+
+              {contract?.status === "active" && (
+                <Button variant="destructive" className="w-full justify-between">
+                  Request Contract Modification
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Tabs defaultValue="milestones" className="mb-6">
@@ -477,121 +480,14 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
             <CardContent>
               <div className="space-y-4">
                 {contract?.paymentSchedule?.map((milestone: any) => (
-                  <div key={milestone.id} className="border rounded-lg overflow-hidden">
-                    <div
-                      className={`p-4 ${expandedMilestone === milestone.id ? "border-b" : ""} ${
-                        milestone.status === "completed"
-                          ? "bg-green-50"
-                          : milestone.status === "in_progress"
-                            ? "bg-blue-50"
-                            : ""
-                      } cursor-pointer`}
-                      onClick={() => toggleMilestone(milestone.id)}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium">{milestone.name}</h3>
-                            {getMilestoneStatusBadge(milestone.status)}
-                          </div>
-                          <p className="text-sm text-muted-foreground">{milestone.description}</p>
-                        </div>
-                        <div className="flex items-center">
-                          {expandedMilestone === milestone.id ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 mt-2 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Amount:</span>{" "}
-                          <span className="font-medium">{milestone.amount}</span>
-                        </div>
-                      
-                        <div>
-                          <span className="text-muted-foreground">Percentage:</span>{" "}
-                          <span className="font-medium">{milestone.percentage}%</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {expandedMilestone === milestone.id && (
-                      <div className="p-4 bg-background">
-                        <div className="space-y-4">
-                          <div>
-                            <h4 className="text-sm font-medium mb-2">Deliverables</h4>
-                            <ul className="list-disc pl-5 text-sm space-y-1">
-                              {milestone.deliverables?.map((deliverable: string, index: number) => (
-                                <li key={index}>{deliverable}</li>
-                              )) || <li>No deliverables specified</li>}
-                            </ul>
-                          </div>
-
-                          {milestone.status === "completed" && milestone.completedDate && (
-                            <div>
-                              <h4 className="text-sm font-medium mb-2">Completion Details</h4>
-                              <p className="text-sm">
-                                Completed on{" "}
-                                <span className="font-medium">
-                                  {new Date(milestone.completedDate).toLocaleDateString()}
-                                </span>
-                              </p>
-                            </div>
-                          )}
-
-                          {milestone.comments && milestone.comments?.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-medium mb-2">Comments</h4>
-                              <div className="space-y-2">
-                                {milestone.comments?.map((comment: any, index: number) => (
-                                  <div key={index} className="bg-muted/30 p-3 rounded-md text-sm">
-                                    <div className="flex justify-between mb-1">
-                                      <span className="font-medium">{comment.user}</span>
-                                      <span className="text-muted-foreground text-xs">
-                                        {new Date(comment.date).toLocaleDateString()}
-                                      </span>
-                                    </div>
-                                    <p>{comment.content}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex justify-end gap-2 mt-4">
-                            {milestone.status === "in_progress" && (
-                              <>
-                                {isProvider ? (
-                                  <Button 
-                                    size="sm" 
-                                    onClick={() => router.push(`/contracts/${id}/milestone/${milestone.id}/complete`)}
-                                  >
-                                    Mark as Complete
-                                  </Button>
-                                ) : (
-                                  <Button 
-                                    size="sm" 
-                                    onClick={() => router.push(`/contracts/${id}/milestone/${milestone.id}/review`)}
-                                  >
-                                    Review Milestone
-                                  </Button>
-                                )}
-                              </>
-                            )}
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => router.push(`/contracts/${id}/milestone/${milestone.id}`)}
-                            >
-                              View Details
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <MilestoneCard
+                    key={milestone.id}
+                    milestone={milestone}
+                    contractId={id}
+                    userRole={isProvider ? "provider" : "needer"}
+                    isExpanded={expandedMilestone === milestone.id}
+                    onToggleExpanded={() => toggleMilestone(milestone.id)}
+                  />
                 ))}
               </div>
             </CardContent>

@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/components/auth-provider";
 import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 import { useToast } from "@/hooks/use-toast";
-import { contractService } from "@/lib/services";
+import { contractService } from "@/lib/services/contract.service";
 import {
   ArrowLeft,
   Calendar,
@@ -259,6 +259,71 @@ export default function ContractPage({
               </div>
 
               <Separator />
+
+              {contract.terms.requirements && (
+                <>
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Requirements</h3>
+                    <div className="p-4 border rounded-md">
+                      <p className="whitespace-pre-wrap">{contract.terms.requirements}</p>
+                    </div>
+                  </div>
+
+                  <Separator />
+                </>
+              )}
+
+              {contract.terms.expertise && (
+                <>
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Expertise</h3>
+                    <div className="p-4 border rounded-md">
+                      <p className="whitespace-pre-wrap">{contract.terms.expertise}</p>
+                    </div>
+                  </div>
+
+                  <Separator />
+                </>
+              )}
+
+              {contract.terms.approach && (
+                <>
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Approach</h3>
+                    <div className="p-4 border rounded-md">
+                      <p className="whitespace-pre-wrap">{contract.terms.approach}</p>
+                    </div>
+                  </div>
+
+                  <Separator />
+                </>
+              )}
+
+              {contract.terms.team && (
+                <>
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Team</h3>
+                    <div className="p-4 border rounded-md">
+                      <p className="whitespace-pre-wrap">{contract.terms.team}</p>
+                    </div>
+                  </div>
+
+                  <Separator />
+                </>
+              )}
+
+              {contract.terms.additionalInfo && (
+                <>
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Additional Information</h3>
+                    <div className="p-4 border rounded-md">
+                      <p className="whitespace-pre-wrap">{contract.terms.additionalInfo}</p>
+                    </div>
+                  </div>
+
+                  <Separator />
+                </>
+              )}
 
               <div>
                 <h3 className="text-lg font-medium mb-2">Payment Schedule</h3>

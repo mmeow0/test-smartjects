@@ -36,7 +36,27 @@ export const contractService = {
         // Get smartject title
         const { data: proposalData } = await supabase
           .from("proposals")
-          .select("smartject_id, title")
+          .select(`
+            smartject_id, 
+            title, 
+            description, 
+            scope, 
+            timeline, 
+            budget, 
+            deliverables, 
+            requirements, 
+            expertise, 
+            approach, 
+            team, 
+            additional_info,
+            proposal_milestones (
+              id,
+              name,
+              description,
+              percentage,
+              amount
+            )
+          `)
           .eq("id", proposalId)
           .single();
 
@@ -46,7 +66,7 @@ export const contractService = {
           .eq("id", proposalData?.smartject_id)
           .single();
 
-        const smartjectTitle = smartjectData?.title || proposalData?.title || "Unknown Project";
+        const smartjectTitle = (smartjectData as any)?.title || (proposalData as any)?.title || "Unknown Project";
 
         // Transform real contract data
         const contract = {
@@ -75,20 +95,20 @@ export const contractService = {
                   percentage: m.percentage,
                   amount: m.amount,
                 }))
-              : [
-                  {
-                    milestone: "Project Start",
-                    percentage: 50,
-                    amount: "50% of total budget",
-                  },
-                  {
-                    milestone: "Project Completion",
-                    percentage: 50,
-                    amount: "50% of total budget",
-                  },
-                ],
+              : (proposalData?.proposal_milestones as any)?.length > 0
+              ? (proposalData.proposal_milestones as any).map((m: any) => ({
+                  milestone: m.name,
+                  percentage: m.percentage,
+                  amount: m.amount,
+                }))
+              : [],
             scope: realContractData.scope,
             deliverables: (realContractData.contract_deliverables as any)?.map((d: any) => d.description) || [],
+            requirements: (proposalData as any)?.requirements || "",
+            expertise: (proposalData as any)?.expertise || "",
+            approach: (proposalData as any)?.approach || "",
+            team: (proposalData as any)?.team || "",
+            additionalInfo: (proposalData as any)?.additional_info || "",
           },
           status: {
             providerSigned: realContractData.provider_signed || false,
@@ -123,7 +143,16 @@ export const contractService = {
       // Get the proposal data
       const { data: proposalData, error: proposalError } = await supabase
         .from("proposals")
-        .select("*")
+        .select(`
+          *,
+          proposal_milestones (
+            id,
+            name,
+            description,
+            percentage,
+            amount
+          )
+        `)
         .eq("id", proposalId)
         .single();
 
@@ -138,20 +167,19 @@ export const contractService = {
         timeline: proposalData.timeline || "3 months",
         scope: proposalData.scope || proposalData.description || "",
         deliverables: (proposalData.deliverables as string)?.split('\n').filter(d => d.trim()) || ["Project completion"],
-        milestones: [
-          {
-            name: "Project Start",
-            description: "Initial setup and project kickoff",
-            percentage: 50,
-            amount: "50% of total budget",
-          },
-          {
-            name: "Project Completion",
-            description: "Final delivery and project completion",
-            percentage: 50,
-            amount: "50% of total budget",
-          },
-        ]
+        requirements: (proposalData as any).requirements || "",
+        expertise: (proposalData as any).expertise || "",
+        approach: (proposalData as any).approach || "",
+        team: (proposalData as any).team || "",
+        additionalInfo: (proposalData as any).additional_info || "",
+        milestones: (proposalData.proposal_milestones as any)?.length > 0
+          ? (proposalData.proposal_milestones as any).map((m: any) => ({
+              name: m.name,
+              description: m.description,
+              percentage: m.percentage,
+              amount: m.amount,
+            }))
+          : []
       };
 
       // Create the real contract
@@ -232,6 +260,11 @@ export const contractService = {
               })),
           scope: newContractData.scope,
           deliverables: (newContractData.contract_deliverables as any)?.map((d: any) => d.description) || contractTerms.deliverables,
+          requirements: contractTerms.requirements,
+          expertise: contractTerms.expertise,
+          approach: contractTerms.approach,
+          team: contractTerms.team,
+          additionalInfo: contractTerms.additionalInfo,
         },
         status: {
           providerSigned: newContractData.provider_signed || false,
@@ -372,8 +405,7 @@ export const contractService = {
           *,
           provider:users!contracts_provider_id_fkey(id, name, email),
           needer:users!contracts_needer_id_fkey(id, name, email),
-          contract_deliverables(id, description),
-          contract_milestones(id, name, description, percentage, amount, status, completed_date)
+          contract_deliverables(id, description)
         `)
         .eq("id", contractId)
         .single();
@@ -409,62 +441,95 @@ export const contractService = {
         }
       }
 
-      // Get milestone comments
-      const { data: milestoneComments } = await supabase
-        .from("contract_milestone_comments")
-        .select(`
-          *,
-          user:users(name)
-        `)
-        .in("milestone_id", (contractData.contract_milestones as any)?.map((m: any) => m.id) || []);
+      // Get contract milestones for this contract
+      let paymentSchedule: any[] = [];
+      const { data: contractMilestones } = await supabase
+        .from("contract_milestones")
+        .select("*")
+        .eq("contract_id", contractData.id)
+        .order("percentage", { ascending: true });
 
-      // Transform milestones data
-      const paymentSchedule = (contractData.contract_milestones as any)?.map((milestone: any) => ({
-        id: milestone.id,
-        name: milestone.name,
-        description: milestone.description,
-        percentage: milestone.percentage,
-        amount: milestone.amount,
-        status: milestone.status,
-        completedDate: milestone.completed_date,
-        deliverables: [`${milestone.name} deliverables`], // Mock deliverables for now
-        comments: milestoneComments?.filter(c => c.milestone_id === milestone.id).map(c => ({
-          user: (c.user as any)?.name || "Unknown User",
-          date: c.created_at,
-          content: c.content
-        })) || []
-      })) || [
-        {
-          id: "milestone-1",
-          name: "Project Kickoff",
-          description: "Initial setup, requirements gathering, and project planning",
-          percentage: 30,
-          amount: "30% of total budget",
-          status: "pending",
-          deliverables: ["Project plan", "Requirements document"],
-          comments: []
-        },
-        {
-          id: "milestone-2", 
-          name: "Midpoint Delivery",
-          description: "Core development and implementation",
-          percentage: 40,
-          amount: "40% of total budget", 
-          status: "pending",
-          deliverables: ["Core functionality", "Testing results"],
-          comments: []
-        },
-        {
-          id: "milestone-3",
-          name: "Final Delivery", 
-          description: "Complete system with documentation and training",
-          percentage: 30,
-          amount: "30% of total budget",
-          status: "pending", 
-          deliverables: ["Complete system", "Documentation", "Training materials"],
-          comments: []
+      if (contractMilestones && contractMilestones.length > 0) {
+        // Get user data for submitted_by and reviewed_by
+        const userIds = contractMilestones
+          .flatMap(m => [m.submitted_by, m.reviewed_by])
+          .filter(Boolean);
+        
+        let usersData: any[] = [];
+        if (userIds.length > 0) {
+          const { data: users } = await supabase
+            .from("users")
+            .select("id, name")
+            .in("id", userIds);
+          usersData = users || [];
         }
-      ];
+
+        paymentSchedule = contractMilestones.map((milestone: any) => {
+          const submittedByUser = milestone.submitted_by 
+            ? usersData.find(u => u.id === milestone.submitted_by)
+            : null;
+          const reviewedByUser = milestone.reviewed_by 
+            ? usersData.find(u => u.id === milestone.reviewed_by)
+            : null;
+
+          return {
+            id: milestone.id,
+            name: milestone.name,
+            description: milestone.description,
+            percentage: milestone.percentage,
+            amount: milestone.amount,
+            status: milestone.status,
+            completedDate: milestone.completed_date,
+            dueDate: milestone.due_date,
+            submittedForReview: milestone.submitted_for_review || false,
+            submittedAt: milestone.submitted_at || null,
+            submittedBy: submittedByUser ? {
+              id: submittedByUser.id,
+              name: submittedByUser.name,
+            } : null,
+            reviewedAt: milestone.reviewed_at || null,
+            reviewedBy: reviewedByUser ? {
+              id: reviewedByUser.id,
+              name: reviewedByUser.name,
+            } : null,
+            reviewStatus: milestone.review_status || null,
+            reviewComments: milestone.review_comments || null,
+            deliverables: [`${milestone.name} deliverables`],
+            comments: []
+          };
+        });
+      } else if (contractData.proposal_id) {
+        // Fallback to proposal milestones if no contract milestones exist
+        const { data: proposalMilestones } = await supabase
+          .from("contract_milestones")
+          .select("*")
+          .eq("contract_id", contractData.id)
+          .order("percentage", { ascending: true });
+
+        console.log('proposalMilestones');
+        console.log(proposalMilestones);
+        
+
+        paymentSchedule = (proposalMilestones || []).map((milestone: any) => ({
+          id: milestone.id,
+          name: milestone.name,
+          description: milestone.description,
+          percentage: milestone.percentage,
+          amount: milestone.amount,
+          status: "pending",
+          completedDate: null,
+          dueDate: null,
+          submittedForReview: false,
+          submittedAt: null,
+          submittedBy: null,
+          reviewedAt: null,
+          reviewedBy: null,
+          reviewStatus: null,
+          reviewComments: null,
+          deliverables: [`${milestone.name} deliverables`],
+          comments: []
+        }));
+      }
 
       // Determine user role
       const isProvider = currentUser.id === contractData.provider_id;
@@ -625,6 +690,11 @@ export const contractService = {
       timeline: string;
       scope: string;
       deliverables: string[];
+      requirements: string;
+      expertise: string;
+      approach: string;
+      team: string;
+      additionalInfo: string;
       milestones: Array<{
         name: string;
         description: string;
@@ -637,8 +707,7 @@ export const contractService = {
 
     try {
       console.log("🏗️ createContractFromNegotiation called with:", { matchId, proposalId, providerId, neederId, terms });
-      // Verify match exists and get provider/needer IDs from it
-      console.log("📋 Fetching match data for matchId:", matchId);
+      
       const { data: matchData, error: matchError } = await supabase
         .from("matches")
         .select("provider_id, needer_id")
@@ -660,6 +729,34 @@ export const contractService = {
       const timelineMatch = terms.timeline.match(/(\d+(\.\d+)?)/);
       const timelineMonths = timelineMatch ? parseFloat(timelineMatch[1]) : 3;
       
+      // console.log("🔍 Current user ID:", currentUser?.id);
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      console.log("🔍 Current user ID:", currentUser?.id);
+      console.log("🔍 Final provider ID:", finalProviderId);
+      console.log("🔍 Final needer ID:", finalNeederId);
+      console.log("🔍 Real Match ID:", matchId);
+      console.log("🔍 Proposal ID:", proposalId);
+
+      // Проверяем данные proposal
+      const { data: proposalCheck } = await supabase
+        .from("proposals")
+        .select("user_id, id")
+        .eq("id", proposalId)
+        .single();
+      console.log("🔍 Proposal data:", proposalCheck);
+
+      // Проверяем данные match
+      const { data: matchCheck } = await supabase
+        .from("matches")
+        .select("provider_id, needer_id, id")
+        .eq("id", matchId)
+        .single();
+      console.log("🔍 Match data:", matchCheck);
+
+      // Проверяем условия RLS вручную
+      console.log("🔍 Is user proposal author?", currentUser?.id === proposalCheck?.user_id);
+      console.log("🔍 Is user match provider?", currentUser?.id === matchCheck?.provider_id);
+      console.log("🔍 Is user match needer?", currentUser?.id === matchCheck)
       const endDate = new Date(startDate);
       endDate.setMonth(endDate.getMonth() + Math.floor(timelineMonths));
       const remainingDays = Math.round((timelineMonths % 1) * 30);
@@ -729,12 +826,22 @@ export const contractService = {
         }
       }
 
-      // Create contract milestones
-      if (terms.milestones.length > 0) {
-        console.log("🎯 Creating milestones:", terms.milestones);
-        const milestoneInserts = terms.milestones.map((milestone, index) => {
+      // Create contract milestones from proposal milestones
+      console.log("🎯 Loading milestones from proposal:", proposalId);
+      const { data: proposalMilestones, error: proposalMilestonesError } = await supabase
+        .from("proposal_milestones")
+        .select("*")
+        .eq("proposal_id", proposalId)
+        .order("percentage", { ascending: true });
+
+      if (proposalMilestonesError) {
+        console.error("❌ Error fetching proposal milestones:", proposalMilestonesError);
+      } else if (proposalMilestones && proposalMilestones.length > 0) {
+        console.log("✅ Found proposal milestones:", proposalMilestones);
+        
+        const milestoneInserts = proposalMilestones.map((milestone, index) => {
           // Calculate due date for each milestone
-          const totalMilestones = terms.milestones.length;
+          const totalMilestones = proposalMilestones.length;
           const milestoneInterval = (endDate.getTime() - startDate.getTime()) / totalMilestones;
           const dueDate = new Date(startDate.getTime() + (milestoneInterval * (index + 1)));
           
@@ -758,6 +865,37 @@ export const contractService = {
           console.error("❌ Error creating milestones:", milestonesError);
         } else {
           console.log("✅ Milestones created successfully");
+        }
+      } else {
+        // Fallback to terms.milestones if no proposal milestones found
+        console.log("⚠️ No proposal milestones found, using terms milestones");
+        if (terms.milestones.length > 0) {
+          const milestoneInserts = terms.milestones.map((milestone, index) => {
+            // Calculate due date for each milestone
+            const totalMilestones = terms.milestones.length;
+            const milestoneInterval = (endDate.getTime() - startDate.getTime()) / totalMilestones;
+            const dueDate = new Date(startDate.getTime() + (milestoneInterval * (index + 1)));
+            
+            return {
+              contract_id: contractId,
+              name: milestone.name,
+              description: milestone.description,
+              percentage: milestone.percentage,
+              amount: milestone.amount,
+              due_date: dueDate.toISOString(),
+              status: 'pending'
+            };
+          });
+
+          const { error: milestonesError } = await supabase
+            .from("contract_milestones")
+            .insert(milestoneInserts);
+
+          if (milestonesError) {
+            console.error("❌ Error creating milestones from terms:", milestonesError);
+          } else {
+            console.log("✅ Milestones from terms created successfully");
+          }
         }
       }
 
@@ -795,11 +933,37 @@ export const contractService = {
 
       const contracts = contractsData || [];
 
+      // Get proposal milestones for all contracts
+      const contractIds = contracts.map(c => c.id);
+      const proposalIds = contracts.map(c => c.proposal_id).filter(Boolean);
+      
+      let proposalMilestonesData: any[] = [];
+      if (proposalIds.length > 0) {
+        const { data } = await supabase
+          .from("proposal_milestones")
+          .select("*")
+          .in("proposal_id", proposalIds);
+        proposalMilestonesData = data || [];
+      }
+
       // Transform contracts to match the expected format
       const transformedContracts = contracts.map(contract => {
         const isProvider = contract.provider_id === userId;
         const otherParty = isProvider ? contract.needer?.name : contract.provider?.name;
         const role = isProvider ? "provider" : "needer";
+
+        // Find proposal milestones for this contract
+        const milestones = proposalMilestonesData.filter(m => m.proposal_id === contract.proposal_id);
+        
+        // For proposal milestones, we'll treat them all as pending unless contract is completed
+        const pendingMilestones = contract.status === "completed" ? [] : milestones;
+        const nextMilestone = pendingMilestones
+          .sort((a: any, b: any) => (a.percentage || 0) - (b.percentage || 0))[0];
+
+        // For completed contracts, show the last milestone
+        const finalMilestone = contract.status === "completed" && milestones.length > 0
+          ? milestones.sort((a: any, b: any) => (b.percentage || 0) - (a.percentage || 0))[0]
+          : null;
 
         return {
           id: contract.id,
@@ -811,9 +975,9 @@ export const contractService = {
           endDate: contract.end_date,
           status: contract.status,
           budget: contract.budget,
-          nextMilestone: contract.status === "active" ? "In Progress" : contract.status === "pending_start" ? "Project Kickoff" : "N/A",
-          nextMilestoneDate: contract.status === "pending_start" ? contract.start_date : contract.end_date,
-          finalMilestone: contract.status === "completed" ? "Final Delivery" : undefined,
+          nextMilestone: nextMilestone ? nextMilestone.name : (milestones.length === 0 ? "No milestones defined" : "All milestones completed"),
+          nextMilestoneDate: nextMilestone ? contract.start_date : contract.end_date,
+          finalMilestone: finalMilestone ? finalMilestone.name : (contract.status === "completed" && milestones.length === 0 ? "Contract completed" : undefined),
           completionDate: contract.status === "completed" ? contract.end_date : undefined,
           exclusivityEnds: contract.exclusivity_ends,
         };
@@ -1160,6 +1324,7 @@ export const contractService = {
       }
 
       // Get milestone data with deliverables
+      // Get milestone data with enhanced fields
       const { data: milestoneData, error: milestoneError } = await supabase
         .from("contract_milestones")
         .select(`
@@ -1312,4 +1477,502 @@ export const contractService = {
       throw error;
     }
   },
+
+  // Get milestone messages
+  async getMilestoneMessages(milestoneId: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Verify user has access to this milestone
+      const { data: milestoneData } = await supabase
+        .from("contract_milestones")
+        .select(`
+          id,
+          contract_id,
+          contracts!inner(provider_id, needer_id)
+        `)
+        .eq("id", milestoneId)
+        .single();
+
+      if (!milestoneData || 
+          (milestoneData.contracts.provider_id !== currentUser.id && 
+           milestoneData.contracts.needer_id !== currentUser.id)) {
+        throw new Error("Access denied");
+      }
+
+      const { data: messages, error } = await supabase
+        .from("contract_milestone_messages")
+        .select("*")
+        .eq("milestone_id", milestoneId)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!messages || messages.length === 0) {
+        return [];
+      }
+
+      // Get all unique sender IDs
+      const senderIds = [...new Set(messages.map(m => m.sender_id))];
+      
+      // Get user data for all senders
+      const { data: usersData } = await supabase
+        .from("users")
+        .select("id, name, avatar")
+        .in("id", senderIds);
+
+      return messages.map(message => {
+        const sender = usersData?.find(u => u.id === message.sender_id);
+        return {
+          id: message.id,
+          content: message.content,
+          messageType: message.message_type,
+          sender: {
+            id: message.sender_id,
+            name: sender?.name || "Unknown User",
+            avatar: sender?.avatar || null,
+          },
+          createdAt: message.created_at,
+          isOwnMessage: message.sender_id === currentUser.id,
+        };
+      });
+    } catch (error) {
+      console.error("Error fetching milestone messages:", error);
+      throw error;
+    }
+  },
+
+  // Send milestone message
+  async sendMilestoneMessage(milestoneId: string, content: string, messageType: string = 'general') {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Verify user has access to this milestone
+      const { data: milestoneData } = await supabase
+        .from("contract_milestones")
+        .select(`
+          id,
+          contract_id,
+          contracts!inner(provider_id, needer_id)
+        `)
+        .eq("id", milestoneId)
+        .single();
+
+      if (!milestoneData || 
+          (milestoneData.contracts.provider_id !== currentUser.id && 
+           milestoneData.contracts.needer_id !== currentUser.id)) {
+        throw new Error("Access denied");
+      }
+
+      const { data, error } = await supabase
+        .from("contract_milestone_messages")
+        .insert({
+          milestone_id: milestoneId,
+          sender_id: currentUser.id,
+          content: content,
+          message_type: messageType,
+        })
+        .select("*")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      // Get sender data separately
+      const { data: sender } = await supabase
+        .from("users")
+        .select("id, name, avatar")
+        .eq("id", currentUser.id)
+        .single();
+
+      return {
+        id: data.id,
+        content: data.content,
+        messageType: data.message_type,
+        sender: {
+          id: currentUser.id,
+          name: sender?.name || "Unknown User",
+          avatar: sender?.avatar || null,
+        },
+        createdAt: data.created_at,
+        isOwnMessage: true,
+      };
+    } catch (error) {
+      console.error("Error sending milestone message:", error);
+      throw error;
+    }
+  },
+
+
+  // Submit milestone for review (by provider)
+  async submitMilestoneForReview(milestoneId: string, submissionMessage?: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Get milestone and verify user is the provider
+      const { data: milestoneData } = await supabase
+        .from("contract_milestones")
+        .select(`
+          *,
+          contracts!inner(provider_id, needer_id, title)
+        `)
+        .eq("id", milestoneId)
+        .single();
+
+      if (!milestoneData || milestoneData.contracts.provider_id !== currentUser.id) {
+        throw new Error("Access denied - only provider can submit milestone for review");
+      }
+
+      if (milestoneData.status !== "in_progress") {
+        throw new Error("Milestone must be in progress to submit for review");
+      }
+
+      // Update milestone status
+      const { error: updateError } = await supabase
+        .from("contract_milestones")
+        .update({
+          submitted_for_review: true,
+          submitted_at: new Date().toISOString(),
+          submitted_by: currentUser.id,
+          status: "submitted",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", milestoneId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Add status history entry
+      await supabase
+        .from("contract_milestone_status_history")
+        .insert({
+          milestone_id: milestoneId,
+          changed_by: currentUser.id,
+          old_status: milestoneData.status,
+          new_status: "submitted",
+          action_type: "submit",
+          comments: submissionMessage || "Milestone submitted for review",
+        });
+
+      // Send system message
+      if (submissionMessage) {
+        await this.sendMilestoneMessage(milestoneId, submissionMessage, "submission");
+      } else {
+        await this.sendMilestoneMessage(milestoneId, "Milestone has been submitted for review", "system");
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error submitting milestone for review:", error);
+      throw error;
+    }
+  },
+
+  // Review milestone (by client/needer)
+  async reviewMilestone(milestoneId: string, approved: boolean, reviewComments?: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Get milestone and verify user is the needer
+      const { data: milestoneData } = await supabase
+        .from("contract_milestones")
+        .select(`
+          *,
+          contracts!inner(provider_id, needer_id, title)
+        `)
+        .eq("id", milestoneId)
+        .single();
+
+      if (!milestoneData || milestoneData.contracts.needer_id !== currentUser.id) {
+        throw new Error("Access denied - only client can review milestone");
+      }
+
+      if (milestoneData.status !== "submitted") {
+        throw new Error("Milestone must be submitted for review");
+      }
+
+      const newStatus = approved ? "completed" : "in_progress";
+      const reviewStatus = approved ? "approved" : "rejected";
+
+      // Update milestone
+      const updateData: any = {
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: currentUser.id,
+        review_status: reviewStatus,
+        review_comments: reviewComments,
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (approved) {
+        updateData.completed_date = new Date().toISOString();
+      } else {
+        // Reset submission fields if rejected
+        updateData.submitted_for_review = false;
+        updateData.submitted_at = null;
+        updateData.submitted_by = null;
+      }
+
+      const { error: updateError } = await supabase
+        .from("contract_milestones")
+        .update(updateData)
+        .eq("id", milestoneId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Add status history entry
+      await supabase
+        .from("contract_milestone_status_history")
+        .insert({
+          milestone_id: milestoneId,
+          changed_by: currentUser.id,
+          old_status: milestoneData.status,
+          new_status: newStatus,
+          action_type: approved ? "approve" : "reject",
+          comments: reviewComments || (approved ? "Milestone approved" : "Milestone rejected - needs revision"),
+        });
+
+      // Send system message
+      const systemMessage = approved 
+        ? "Milestone has been approved and marked as completed" 
+        : "Milestone has been rejected and returned for revision";
+      
+      await this.sendMilestoneMessage(milestoneId, systemMessage, "system");
+      
+      if (reviewComments) {
+        await this.sendMilestoneMessage(milestoneId, reviewComments, "review");
+      }
+
+      return { success: true, approved };
+    } catch (error) {
+      console.error("Error reviewing milestone:", error);
+      throw error;
+    }
+  },
+
+  // Get milestone status history
+  async getMilestoneStatusHistory(milestoneId: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Verify user has access to this milestone
+      const { data: milestoneData } = await supabase
+        .from("contract_milestones")
+        .select(`
+          id,
+          contract_id,
+          contracts!inner(provider_id, needer_id)
+        `)
+        .eq("id", milestoneId)
+        .single();
+
+      if (!milestoneData || 
+          (milestoneData.contracts.provider_id !== currentUser.id && 
+           milestoneData.contracts.needer_id !== currentUser.id)) {
+        throw new Error("Access denied");
+      }
+
+      const { data: history, error } = await supabase
+        .from("contract_milestone_status_history")
+        .select("*")
+        .eq("milestone_id", milestoneId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!history || history.length === 0) {
+        return [];
+      }
+
+      // Get user data separately
+      const userIds = [...new Set(history.map(h => h.changed_by))];
+      const { data: usersData } = await supabase
+        .from("users")
+        .select("id, name")
+        .in("id", userIds);
+
+      return history.map(entry => {
+        const changedByUser = usersData?.find(u => u.id === entry.changed_by);
+        return {
+          id: entry.id,
+          oldStatus: entry.old_status,
+          newStatus: entry.new_status,
+          actionType: entry.action_type,
+          comments: entry.comments,
+          changedBy: {
+            id: changedByUser?.id || entry.changed_by,
+            name: changedByUser?.name || "Unknown User",
+          },
+          createdAt: entry.created_at,
+        };
+      });
+    } catch (error) {
+      console.error("Error fetching milestone status history:", error);
+      throw error;
+    }
+  },
+
+  // Get milestone with enhanced data including messages and status
+async getMilestoneByIdEnhanced(contractId: string, milestoneId: string) {
+  const supabase = getSupabaseBrowserClient();
+
+  try {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) {
+      console.error("No authenticated user");
+      return null;
+    }
+
+    // Проверяем доступ пользователя к контракту
+    const { data: contractData } = await supabase
+      .from("contracts")
+      .select("provider_id, needer_id, title")
+      .eq("id", contractId)
+      .single();
+
+    if (!contractData || (contractData.provider_id !== currentUser.id && contractData.needer_id !== currentUser.id)) {
+      console.error("User does not have access to this contract");
+      return null;
+    }
+
+    // Получаем данные milestone без связей на пользователей
+    const { data: milestoneData, error: milestoneError } = await supabase
+      .from("contract_milestones")
+      .select(`
+        *,
+        contract_milestone_deliverables(id, description, completed, created_at, updated_at)
+      `)
+      .eq("id", milestoneId)
+      .eq("contract_id", contractId)
+      .single();
+
+    if (milestoneError || !milestoneData) {
+      console.error("Error fetching milestone:", milestoneError);
+      return null;
+    }
+
+    // Функция для получения пользователя по id из public.users (view на auth.users)
+    async function getUserById(userId: string | null) {
+      if (!userId) return null;
+      const { data: user, error } = await supabase
+        .from("users")
+        .select("id, name")
+        .eq("id", userId)
+        .single();
+      if (error) {
+        console.warn("Error fetching user", userId, error);
+        return null;
+      }
+      return user;
+    }
+
+    // Получаем отправителей и ревьюеров, если есть
+    const submittedByUser = await getUserById(milestoneData.submitted_by);
+    const reviewedByUser = await getUserById(milestoneData.reviewed_by);
+
+    // Получаем сообщения и статус истории (как у тебя)
+    const messages = await this.getMilestoneMessages(milestoneId);
+    const statusHistory = await this.getMilestoneStatusHistory(milestoneId);
+
+    // Документы
+    const { data: documents } = await supabase
+      .from("contract_documents")
+      .select("*")
+      .eq("contract_id", contractId)
+      .ilike("name", `%milestone%${milestoneData.name}%`);
+
+    const isProvider = currentUser.id === contractData.provider_id;
+    const isNeeder = currentUser.id === contractData.needer_id;
+
+    // Формируем результат
+    return {
+      id: milestoneData.id,
+      contractId,
+      contractTitle: contractData.title,
+      name: milestoneData.name,
+      description: milestoneData.description,
+      percentage: milestoneData.percentage,
+      amount: milestoneData.amount,
+      dueDate: milestoneData.due_date,
+      status: milestoneData.status,
+      completedDate: milestoneData.completed_date,
+
+      submittedForReview: milestoneData.submitted_for_review || false,
+      submittedAt: milestoneData.submitted_at || null,
+      submittedBy: submittedByUser ? {
+        id: submittedByUser.id,
+        name: submittedByUser.name,
+      } : null,
+
+      reviewedAt: milestoneData.reviewed_at || null,
+      reviewedBy: reviewedByUser ? {
+        id: reviewedByUser.id,
+        name: reviewedByUser.name,
+      } : null,
+      reviewStatus: milestoneData.review_status || null,
+      reviewComments: milestoneData.review_comments || null,
+
+      deliverables: (milestoneData.contract_milestone_deliverables || []).map((d: any) => ({
+        id: d.id,
+        name: d.description,
+        description: d.description,
+        status: d.completed ? "completed" : "pending",
+        completedDate: d.completed ? d.updated_at : null,
+      })),
+
+      messages,
+      statusHistory,
+
+      documents: (documents || []).map(doc => ({
+        id: doc.id,
+        name: doc.name,
+        type: doc.type,
+        size: doc.size,
+        url: doc.url,
+        uploadedAt: doc.uploaded_at,
+      })),
+
+      userRole: isProvider ? "provider" : "needer",
+      canSubmitForReview: isProvider && milestoneData.status === "in_progress" && !milestoneData.submitted_for_review,
+      canReview: isNeeder && milestoneData.status === "submitted",
+      canSendMessage: true,
+    };
+  } catch (error) {
+    console.error("Error in getMilestoneByIdEnhanced:", error);
+    return null;
+  }
+},
 };

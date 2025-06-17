@@ -420,20 +420,31 @@ export default function DashboardPage() {
   };
 
     const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
+      const date = new Date(dateString)
+      const now = new Date()
+      const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
     
-    if (diffInHours < 1) {
-      return "Just now"
-    } else if (diffInHours < 24) {
-      return `${diffInHours}h ago`
-    } else if (diffInHours < 168) {
-      return `${Math.floor(diffInHours / 24)}d ago`
-    } else {
-      return date.toLocaleDateString()
+      if (diffInHours < 1) {
+        return "Just now"
+      } else if (diffInHours < 24) {
+        return `${diffInHours}h ago`
+      } else if (diffInHours < 168) {
+        return `${Math.floor(diffInHours / 24)}d ago`
+      } else {
+        return date.toLocaleDateString()
+      }
     }
-  }
+
+    const formatMilestoneDate = (dateString: string | null | undefined): string => {
+      if (!dateString) return "N/A"
+      try {
+        const date = new Date(dateString)
+        if (isNaN(date.getTime())) return "Invalid Date"
+        return date.toLocaleDateString()
+      } catch {
+        return "Invalid Date"
+      }
+    }
 
   const getNegotiationStatusBadge = (status: string) => {
     switch (status) {
@@ -807,10 +818,7 @@ export default function DashboardPage() {
                         </p>
                         <p className="font-medium">{contract.nextMilestone}</p>
                         <p className="text-xs text-muted-foreground">
-                          {/* Due:{" "}
-                          {new Date(
-                            contract.nextMilestoneDate
-                          ).toLocaleDateString()} */}
+                          Due: {formatMilestoneDate(contract.nextMilestoneDate)}
                         </p>
                       </div>
                       <div>

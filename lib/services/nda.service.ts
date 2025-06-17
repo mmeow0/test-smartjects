@@ -49,50 +49,48 @@ export const ndaService = {
         throw new Error("Failed to submit NDA request");
       }
 
-      // TODO: Enable file upload after storage and migrations are configured
+      // Upload files if provided
       const uploadedFiles: NDARequestFile[] = [];
       if (files && files.length > 0) {
-        console.log(`File upload temporarily disabled. ${files.length} files would be uploaded:`, files.map(f => f.name));
-        // Temporarily skip file upload until storage is configured
-        // for (const file of files) {
-        //   const fileExtension = file.name.split('.').pop();
-        //   const fileName = `${ndaData.id}/${Date.now()}-${file.name}`;
-        //   
-        //   // Upload file to storage
-        //   const { data: uploadData, error: uploadError } = await supabase.storage
-        //     .from('nda-files')
-        //     .upload(fileName, file);
-        //
-        //   if (uploadError) {
-        //     console.error("Error uploading file:", uploadError);
-        //     continue; // Skip this file but don't fail the whole request
-        //   }
-        //
-        //   // Save file metadata
-        //   const { data: fileData, error: fileError } = await supabase
-        //     .from("nda_request_files")
-        //     .insert({
-        //       nda_signature_id: ndaData.id,
-        //       file_name: file.name,
-        //       file_size: file.size,
-        //       file_type: file.type,
-        //       file_path: uploadData.path,
-        //     })
-        //     .select()
-        //     .single();
-        //
-        //   if (!fileError && fileData) {
-        //     uploadedFiles.push({
-        //       id: fileData.id as string,
-        //       ndaSignatureId: fileData.nda_signature_id as string,
-        //       fileName: fileData.file_name as string,
-        //       fileSize: fileData.file_size as number,
-        //       fileType: fileData.file_type as string,
-        //       filePath: fileData.file_path as string,
-        //       uploadedAt: fileData.uploaded_at as string,
-        //     });
-        //   }
-        // }
+        for (const file of files) {
+          const fileExtension = file.name.split('.').pop();
+          const fileName = `${userId}/${ndaData.id}/${Date.now()}-${file.name}`;
+          
+          // Upload file to storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('nda-files')
+            .upload(fileName, file);
+
+          if (uploadError) {
+            console.error("Error uploading file:", uploadError);
+            continue; // Skip this file but don't fail the whole request
+          }
+
+          // Save file metadata
+          const { data: fileData, error: fileError } = await supabase
+            .from("nda_request_files")
+            .insert({
+              nda_signature_id: ndaData.id,
+              file_name: file.name,
+              file_size: file.size,
+              file_type: file.type,
+              file_path: uploadData.path,
+            })
+            .select()
+            .single();
+
+          if (!fileError && fileData) {
+            uploadedFiles.push({
+              id: fileData.id as string,
+              ndaSignatureId: fileData.nda_signature_id as string,
+              fileName: fileData.file_name as string,
+              fileSize: fileData.file_size as number,
+              fileType: fileData.file_type as string,
+              filePath: fileData.file_path as string,
+              uploadedAt: fileData.uploaded_at as string,
+            });
+          }
+        }
       }
 
       return {
@@ -211,7 +209,7 @@ export const ndaService = {
     try {
       const { data, error } = await supabase
         .from("proposal_nda_signatures")
-        .select(`*`)
+        .select("*")
         .eq("proposal_id", proposalId)
         .eq("signer_user_id", userId)
         .single();
@@ -222,6 +220,25 @@ export const ndaService = {
         }
         console.error("Error fetching user NDA request:", error);
         return null;
+      }
+
+      // Get attached files separately
+      const { data: filesData, error: filesError } = await supabase
+        .from("nda_request_files")
+        .select("*")
+        .eq("nda_signature_id", data.id as string);
+
+      let attachedFiles: NDARequestFile[] = [];
+      if (!filesError && filesData && Array.isArray(filesData)) {
+        attachedFiles = filesData.map((file: any) => ({
+          id: file.id,
+          ndaSignatureId: file.nda_signature_id,
+          fileName: file.file_name,
+          fileSize: file.file_size,
+          fileType: file.file_type,
+          filePath: file.file_path,
+          uploadedAt: file.uploaded_at,
+        }));
       }
 
       return {
@@ -235,17 +252,7 @@ export const ndaService = {
         rejectedAt: data.rejected_at as string | undefined,
         rejectionReason: data.rejection_reason as string | undefined,
         approvedByUserId: data.approved_by_user_id as string | undefined,
-        // TODO: Uncomment after migration is applied
-        // attachedFiles: (data.nda_request_files as any[])?.map((file: any) => ({
-        //   id: file.id as string,
-        //   ndaSignatureId: file.nda_signature_id as string,
-        //   fileName: file.file_name as string,
-        //   fileSize: file.file_size as number,
-        //   fileType: file.file_type as string,
-        //   filePath: file.file_path as string,
-        //   uploadedAt: file.uploaded_at as string,
-        // })) || [],
-        attachedFiles: [],
+        attachedFiles,
       };
     } catch (error) {
       console.error("Error in getUserNDARequest:", error);
@@ -277,7 +284,16 @@ export const ndaService = {
           *,
           users:signer_user_id (
             name,
+            email,
             avatar_url
+          ),
+          nda_request_files (
+            id,
+            file_name,
+            file_size,
+            file_type,
+            file_path,
+            uploaded_at
           )
         `)
         .eq("proposal_id", proposalId)
@@ -331,22 +347,41 @@ export const ndaService = {
         return [];
       }
 
-      return data.map((request: any) => ({
-        id: request.id,
-        proposalId: request.proposal_id,
-        signerUserId: request.signer_user_id,
-        status: request.status,
-        requestMessage: request.request_message,
-        pendingAt: request.pending_at,
-        approvedAt: request.approved_at,
-        rejectedAt: request.rejected_at,
-        rejectionReason: request.rejection_reason,
-        approvedByUserId: request.approved_by_user_id,
-        signerName: request.users?.name,
-        signerEmail: request.users?.email,
-        signerAvatar: request.users?.avatar_url,
-        attachedFiles: [],
-      }));
+      // Get files for all requests
+      const requestIds = data.map(request => request.id);
+      const { data: filesData } = await supabase
+        .from("nda_request_files")
+        .select("*")
+        .in("nda_signature_id", requestIds);
+
+      return data.map((request: any) => {
+        const requestFiles = filesData?.filter(file => file.nda_signature_id === request.id) || [];
+        
+        return {
+          id: request.id,
+          proposalId: request.proposal_id,
+          signerUserId: request.signer_user_id,
+          status: request.status,
+          requestMessage: request.request_message,
+          pendingAt: request.pending_at,
+          approvedAt: request.approved_at,
+          rejectedAt: request.rejected_at,
+          rejectionReason: request.rejection_reason,
+          approvedByUserId: request.approved_by_user_id,
+          signerName: request.users?.name,
+          signerEmail: request.users?.email,
+          signerAvatar: request.users?.avatar_url,
+          attachedFiles: requestFiles.map((file: any) => ({
+            id: file.id,
+            ndaSignatureId: file.nda_signature_id,
+            fileName: file.file_name,
+            fileSize: file.file_size,
+            fileType: file.file_type,
+            filePath: file.file_path,
+            uploadedAt: file.uploaded_at,
+          })),
+        };
+      });
     } catch (error) {
       console.error("Error in getApprovedNDARequests:", error);
       return [];
@@ -377,32 +412,41 @@ export const ndaService = {
         return [];
       }
 
-      return data.map((request: any) => ({
-        id: request.id,
-        proposalId: request.proposal_id,
-        signerUserId: request.signer_user_id,
-        status: request.status,
-        requestMessage: request.request_message,
-        pendingAt: request.pending_at,
-        approvedAt: request.approved_at,
-        rejectedAt: request.rejected_at,
-        rejectionReason: request.rejection_reason,
-        approvedByUserId: request.approved_by_user_id,
-        signerName: request.users?.name,
-        signerEmail: request.users?.email,
-        signerAvatar: request.users?.avatar_url,
-        // TODO: Uncomment after migration is applied
-        // attachedFiles: request.nda_request_files?.map((file: any) => ({
-        //   id: file.id,
-        //   ndaSignatureId: file.nda_signature_id,
-        //   fileName: file.file_name,
-        //   fileSize: file.file_size,
-        //   fileType: file.file_type,
-        //   filePath: file.file_path,
-        //   uploadedAt: file.uploaded_at,
-        // })) || [],
-        attachedFiles: [],
-      }));
+      // Get files for all requests
+      const requestIds = data.map(request => request.id);
+      const { data: filesData } = await supabase
+        .from("nda_request_files")
+        .select("*")
+        .in("nda_signature_id", requestIds);
+
+      return data.map((request: any) => {
+        const requestFiles = filesData?.filter(file => file.nda_signature_id === request.id) || [];
+        
+        return {
+          id: request.id,
+          proposalId: request.proposal_id,
+          signerUserId: request.signer_user_id,
+          status: request.status,
+          requestMessage: request.request_message,
+          pendingAt: request.pending_at,
+          approvedAt: request.approved_at,
+          rejectedAt: request.rejected_at,
+          rejectionReason: request.rejection_reason,
+          approvedByUserId: request.approved_by_user_id,
+          signerName: request.users?.name,
+          signerEmail: request.users?.email,
+          signerAvatar: request.users?.avatar_url,
+          attachedFiles: requestFiles.map((file: any) => ({
+            id: file.id,
+            ndaSignatureId: file.nda_signature_id,
+            fileName: file.file_name,
+            fileSize: file.file_size,
+            fileType: file.file_type,
+            filePath: file.file_path,
+            uploadedAt: file.uploaded_at,
+          })),
+        };
+      });
     } catch (error) {
       console.error("Error in getPendingNDARequests:", error);
       return [];
@@ -501,27 +545,23 @@ export const ndaService = {
 
   // Download NDA request file
   async downloadNDAFile(filePath: string): Promise<Blob | null> {
-    // TODO: Enable file download after storage is configured
-    console.log("File download temporarily disabled for path:", filePath);
-    return null;
-    
-    // const supabase = getSupabaseBrowserClient();
-    //
-    // try {
-    //   const { data, error } = await supabase.storage
-    //     .from('nda-files')
-    //     .download(filePath);
-    //
-    //   if (error) {
-    //     console.error("Error downloading file:", error);
-    //     return null;
-    //   }
-    //
-    //   return data;
-    // } catch (error) {
-    //   console.error("Error in downloadNDAFile:", error);
-    //   return null;
-    // }
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data, error } = await supabase.storage
+        .from('nda-files')
+        .download(filePath);
+
+      if (error) {
+        console.error("Error downloading file:", error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error in downloadNDAFile:", error);
+      return null;
+    }
   },
 
   // Remove NDA signature (for admin purposes or user request)
