@@ -307,6 +307,52 @@ export const ndaService = {
     }
   },
 
+  // Get approved NDA requests for a proposal
+  async getApprovedNDARequests(proposalId: string): Promise<NDARequest[]> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data, error } = await supabase
+        .from("proposal_nda_signatures")
+        .select(`
+          *,
+          users:signer_user_id (
+            name,
+            email,
+            avatar_url
+          )
+        `)
+        .eq("proposal_id", proposalId)
+        .eq("status", "approved")
+        .order("approved_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching approved NDA requests:", error);
+        return [];
+      }
+
+      return data.map((request: any) => ({
+        id: request.id,
+        proposalId: request.proposal_id,
+        signerUserId: request.signer_user_id,
+        status: request.status,
+        requestMessage: request.request_message,
+        pendingAt: request.pending_at,
+        approvedAt: request.approved_at,
+        rejectedAt: request.rejected_at,
+        rejectionReason: request.rejection_reason,
+        approvedByUserId: request.approved_by_user_id,
+        signerName: request.users?.name,
+        signerEmail: request.users?.email,
+        signerAvatar: request.users?.avatar_url,
+        attachedFiles: [],
+      }));
+    } catch (error) {
+      console.error("Error in getApprovedNDARequests:", error);
+      return [];
+    }
+  },
+
   // Get pending NDA requests for proposal owner to review
   async getPendingNDARequests(proposalId: string): Promise<NDARequest[]> {
     const supabase = getSupabaseBrowserClient();
