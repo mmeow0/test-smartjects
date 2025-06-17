@@ -46,7 +46,8 @@ export const smartjectService = {
       smartject_technologies!inner (
         technologies (name)
       ),
-      votes (vote_type)
+      votes (vote_type),
+      comments(count)
     `
       )
       .order("created_at", { ascending: false });
@@ -94,7 +95,7 @@ export const smartjectService = {
         title: item.title as string,
         votes: voteCount,
         userVotes,
-        comments: 0, // можно реализовать отдельно
+        comments: item.comments?.[0]?.count || 0,
         createdAt: item.created_at as string,
         mission: (item.mission || "") as string,
         problematics: (item.problematics || "") as string,
@@ -275,7 +276,8 @@ export const smartjectService = {
       smartject_technologies (
         technologies (name)
       ),
-      votes (vote_type)
+      votes (vote_type),
+      comments(count)
     `
       )
       .in("id", Array.from(smartjectIds));
@@ -323,7 +325,7 @@ export const smartjectService = {
         title: item.title as string,
         votes: voteCount,
         userVotes,
-        comments: 0,
+        comments: item.comments?.[0]?.count || 0,
         createdAt: item.created_at as string,
         mission: (item.mission || "") as string,
         problematics: (item.problematics || "") as string,
