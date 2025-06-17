@@ -26,7 +26,6 @@ import {
   Clock,
   DollarSign,
   FileText,
-  MessageSquare,
   Pencil,
   CheckCircle,
   XCircle,
@@ -50,8 +49,7 @@ export default function ProposalDetailPage({
 }) {
   const { id } = use(params);
 
-  const [newComment, setNewComment] = useState("");
-  const [isPosting, setIsPosting] = useState(false);
+
   const router = useRouter();
   const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
   const { toast } = useToast();
@@ -88,36 +86,7 @@ export default function ProposalDetailPage({
     }
   }, [proposal?.id, user?.id]);
 
-  const handlePostComment = async () => {
-    if (!newComment.trim()) return;
 
-    setIsPosting(true);
-
-    try {
-      const createdComment = await proposalService.addCommentToProposal(
-        id,
-        user?.id as string,
-        newComment.trim()
-      );
-
-      // Обновляем локально список комментариев, чтобы отобразить сразу:
-      refetch();
-      setNewComment("");
-      toast({
-        title: "Comment posted",
-        variant: "default",
-      });
-    } catch (error) {
-      console.error("Failed to post comment", error);
-      toast({
-        title: "Error",
-        description: "Failed to post comment",
-        variant: "destructive",
-      });
-    } finally {
-      setIsPosting(false);
-    }
-  };
 
   if (authLoading || !canAccess || isLoading) {
     return null;
@@ -354,25 +323,35 @@ export default function ProposalDetailPage({
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="details">Proposal Details</TabsTrigger>
-            <TabsTrigger value="files">
-              Files ({proposal.files.length})
-            </TabsTrigger>
-            <TabsTrigger value="comments">
-              Comments ({proposal.comments.length})
-            </TabsTrigger>
-            {showNegotiationsTab && (
-              <TabsTrigger value="negotiations">
-                Negotiations
+          <div className="flex justify-between items-center mb-6">
+            <TabsList>
+              <TabsTrigger value="details">Proposal Details</TabsTrigger>
+              <TabsTrigger value="files">
+                Files ({proposal.files.length})
               </TabsTrigger>
-            )}
-            {isProposalOwner && hasPrivateFields && (
-              <TabsTrigger value="nda-management">
-                NDA Management
-              </TabsTrigger>
-            )}
-          </TabsList>
+              {showNegotiationsTab && (
+                <TabsTrigger value="negotiations">
+                  Negotiations
+                </TabsTrigger>
+              )}
+              {isProposalOwner && hasPrivateFields && (
+                <TabsTrigger value="nda-management">
+                  NDA Management
+                </TabsTrigger>
+              )}
+            </TabsList>
+            {proposal.userId !== user.id &&
+              proposal.status === "submitted" &&
+              proposal.type !== "provide" && (
+                <Button
+                  onClick={() =>
+                    router.push(`/matches/new/negotiate/${proposal.id}`)
+                  }
+                >
+                  Negotiate
+                </Button>
+              )}
+          </div>
 
           {/* Migration Status Warning */}
           {migrationNeeded && (
@@ -1009,19 +988,6 @@ export default function ProposalDetailPage({
                     Edit Proposal
                   </Button>
                 )}
-                {proposal.userId !== user.id &&
-                  proposal.status === "submitted" &&
-                  proposal.type !== "provide" && (
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() =>
-                          router.push(`/matches/new/negotiate/${proposal.id}`)
-                        }
-                      >
-                        Negotiate
-                      </Button>
-                    </div>
-                  )}
               </CardFooter>
             </Card>
           </TabsContent>
@@ -1071,71 +1037,7 @@ export default function ProposalDetailPage({
             </Card>
           </TabsContent>
 
-          <TabsContent value="comments">
-            <Card>
-              <CardHeader>
-                <CardTitle>Comments</CardTitle>
-                <CardDescription>
-                  Discussion about this proposal
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {proposal.comments.map((comment) => (
-                    <div
-                      key={comment.id}
-                      className="flex gap-4 p-4 border rounded-lg"
-                    >
-                      <Avatar>
-                        <AvatarImage
-                          src={comment.user.avatar || "/placeholder.svg"}
-                        />
-                        <AvatarFallback>
-                          {comment.user.name.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center mb-2">
-                          <h4 className="font-semibold">{comment.user.name}</h4>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(comment.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <p>{comment.content}</p>
-                      </div>
-                    </div>
-                  ))}
 
-                  <div className="flex items-center gap-4 mt-6">
-                    <Avatar>
-                      <AvatarImage src={user?.avatar || "/placeholder.svg"} />
-                      <AvatarFallback>
-                        {user?.name?.charAt(0) || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <textarea
-                        className="w-full border rounded-md p-2 min-h-[100px]"
-                        placeholder="Add a comment..."
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        disabled={isPosting}
-                      />
-                      <div className="flex justify-end mt-2">
-                        <Button
-                          onClick={handlePostComment}
-                          disabled={!newComment.trim() || isPosting}
-                        >
-                          <MessageSquare className="h-4 w-4 mr-2" />
-                          {isPosting ? "Posting..." : "Post Comment"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           {showNegotiationsTab && (
             <TabsContent value="negotiations">

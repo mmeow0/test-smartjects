@@ -152,16 +152,6 @@ export const proposalService = {
           type,
           path
         ),
-        proposal_comments (
-          id,
-          content,
-          created_at,
-          users (
-            id,
-            name,
-            avatar_url
-          )
-        ),
         proposal_milestones (
           id,
           name,
@@ -244,18 +234,6 @@ export const proposalService = {
           size: file.size,
           type: file.type,
           path: file.path
-        })) ?? [],
-
-      comments:
-        data.proposal_comments?.map((comment: any) => ({
-          id: comment.id,
-          content: comment.content,
-          createdAt: comment.created_at,
-          user: {
-            id: comment.users?.id,
-            name: comment.users?.name,
-            avatar: comment.users?.avatar_url,
-          },
         })) ?? [],
     };
   },
@@ -421,27 +399,6 @@ export const proposalService = {
       console.error("Error in updateProposal:", error);
       return false;
     }
-  },
-
-  async addCommentToProposal(
-    proposalId: string,
-    userId: string,
-    content: string
-  ): Promise<boolean> {
-    const supabase = getSupabaseBrowserClient();
-
-    const { error } = await supabase.from("proposal_comments").insert({
-      proposal_id: proposalId,
-      user_id: userId,
-      content: content,
-    });
-
-    if (error) {
-      console.error("Error adding comment to proposal:", error);
-      return false;
-    }
-
-    return true;
   },
 
   async createMilestones(
