@@ -45,11 +45,6 @@ export default function UpgradeSuccessPage() {
         }
       } catch (error) {
         console.error('Session verification error:', error)
-        toast({
-          title: "Verification failed",
-          description: "Unable to verify your payment. Please contact support if you were charged.",
-          variant: "destructive",
-        })
       } finally {
         setIsLoading(false)
       }
