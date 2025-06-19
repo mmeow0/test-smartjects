@@ -59,9 +59,38 @@ export default function UpgradePage() {
       }
     } catch (error) {
       console.error('Upgrade error:', error)
+      
+      let errorTitle = "Upgrade failed"
+      let errorDescription = "There was an error upgrading your account. Please try again."
+      
+      if (error instanceof Error) {
+        // Handle specific error types
+        if (error.message.includes('fetch')) {
+          errorTitle = "Connection Error"
+          errorDescription = "Unable to connect to payment service. Please check your internet connection and try again."
+        } else if (error.message.includes('Payment system not configured')) {
+          errorTitle = "Service Unavailable"
+          errorDescription = "Payment system is temporarily unavailable. Please try again later or contact support."
+        } else if (error.message.includes('User not found')) {
+          errorTitle = "Account Error"
+          errorDescription = "There was an issue with your account. Please try logging out and back in."
+        } else if (error.message.includes('Invalid plan type')) {
+          errorTitle = "Plan Error"
+          errorDescription = "Invalid subscription plan selected. Please refresh the page and try again."
+        } else {
+          errorDescription = error.message
+        }
+      }
+      
+      // Check if it's a network error
+      if (!navigator.onLine) {
+        errorTitle = "No Internet Connection"
+        errorDescription = "Please check your internet connection and try again."
+      }
+      
       toast({
-        title: "Upgrade failed",
-        description: error instanceof Error ? error.message : "There was an error upgrading your account. Please try again.",
+        title: errorTitle,
+        description: errorDescription,
         variant: "destructive",
       })
     } finally {
