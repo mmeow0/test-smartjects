@@ -28,6 +28,15 @@ export const userService = {
       company: data.company as string | undefined,
       website: data.website as string | undefined,
       createdAt: data.created_at as string | undefined,
+      stripeCustomerId: data.stripe_customer_id as string | undefined,
+      stripeSubscriptionId: data.stripe_subscription_id as string | undefined,
+      subscriptionPlan: data.subscription_plan as "monthly" | "annual" | undefined,
+      subscriptionStatus: data.subscription_status as "active" | "canceled" | "past_due" | "unpaid" | "incomplete" | undefined,
+      subscriptionCurrentPeriodStart: data.subscription_current_period_start as string | undefined,
+      subscriptionCurrentPeriodEnd: data.subscription_current_period_end as string | undefined,
+      subscriptionCreatedAt: data.subscription_created_at as string | undefined,
+      subscriptionCanceledAt: data.subscription_canceled_at as string | undefined,
+      lastPaymentDate: data.last_payment_date as string | undefined,
     };
   },
 
@@ -45,6 +54,15 @@ export const userService = {
         location: user.location,
         company: user.company,
         website: user.website,
+        stripe_customer_id: user.stripeCustomerId,
+        stripe_subscription_id: user.stripeSubscriptionId,
+        subscription_plan: user.subscriptionPlan,
+        subscription_status: user.subscriptionStatus,
+        subscription_current_period_start: user.subscriptionCurrentPeriodStart,
+        subscription_current_period_end: user.subscriptionCurrentPeriodEnd,
+        subscription_created_at: user.subscriptionCreatedAt,
+        subscription_canceled_at: user.subscriptionCanceledAt,
+        last_payment_date: user.lastPaymentDate,
       })
       .eq("id", id);
 

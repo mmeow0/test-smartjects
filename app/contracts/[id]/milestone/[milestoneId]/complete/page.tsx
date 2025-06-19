@@ -11,8 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
-import { ArrowLeft, CheckCircle, Upload, FileText, Loader2, AlertCircle } from "lucide-react"
-import { contractService } from "@/lib/services"
+import { ArrowLeft, CheckCircle, Upload, FileText, Loader2, AlertCircle, X, AlertTriangle } from "lucide-react"
+import { contractService } from "@/lib/services/contract.service"
 
 interface UploadFile {
   file: File
@@ -41,7 +41,6 @@ export default function MilestoneCompletePage({ params }: { params: Promise<{ id
   const [completedDeliverables, setCompletedDeliverables] = useState<string[]>([])
   const [confirmCompletion, setConfirmCompletion] = useState<boolean>(false)
 
-  // Load milestone and contract data
   // Load milestone data and check access
   useEffect(() => {
     const loadMilestone = async () => {
@@ -54,7 +53,7 @@ export default function MilestoneCompletePage({ params }: { params: Promise<{ id
 
       try {
         // Load milestone data
-        const milestoneData = await contractService.getMilestoneById(id, milestoneId)
+        const milestoneData = await contractService.getMilestoneByIdEnhanced(id, milestoneId)
         
         if (!milestoneData) {
           setError("Milestone not found or access denied")
@@ -62,13 +61,20 @@ export default function MilestoneCompletePage({ params }: { params: Promise<{ id
           return
         }
 
-        setMilestone(milestoneData)
-
-        // Load contract data
-        const contractData = await contractService.getContractById(id)
-        if (contractData) {
-          setContract(contractData)
+        // Check if user is provider and milestone is in progress
+        if (milestoneData.userRole !== "provider") {
+          setError("Only providers can complete milestones")
+          setIsLoading(false)
+          return
         }
+
+        if (milestoneData.status !== "in_progress") {
+          setError("Milestone must be in progress to complete")
+          setIsLoading(false)
+          return
+        }
+
+        setMilestone(milestoneData)
 
         // Initialize completed deliverables
         const completed = milestoneData.deliverables
@@ -226,36 +232,18 @@ export default function MilestoneCompletePage({ params }: { params: Promise<{ id
     setIsSubmitting(true)
 
     try {
-      // Update milestone status
-      await contractService.updateMilestoneStatus(milestoneId, "pending_review")
+      // Prepare files for upload
+      const filesToUpload = uploadFiles
+        .filter(uf => uf.status === 'pending' || uf.status === 'success')
+        .map(uf => uf.file)
 
-      // Create completion message
-      const completionMessage = `MILESTONE COMPLETION SUBMITTED
-
-Milestone: ${milestone.name}
-Status: Pending Review
-
-Completion Notes:
-${completionNotes}
-
-${deliverableNotes ? `Deliverable Notes:
-${deliverableNotes}` : ''}
-
-Completed Deliverables:
-${milestone.deliverables?.map((d: any) => `• ${d.name}`).join('\n') || 'No deliverables specified'}
-
-${uploadFiles.length > 0 ? `Uploaded Files: ${uploadFiles.length} file(s)` : 'No files uploaded'}
-
-This milestone is now ready for review and approval.`
-
-      // Send completion notification
-      await contractService.sendContractMessage(id, completionMessage)
-
-      // Add completion comment to milestone
-      await contractService.addMilestoneComment(
-        milestoneId, 
-        `Milestone marked as complete. ${completionNotes}`
-      )
+      // Complete milestone with all data
+      await contractService.completeMilestone(milestoneId, {
+        completionNotes,
+        deliverableNotes: deliverableNotes || undefined,
+        completedDeliverableIds: completedDeliverables,
+        uploadedFiles: filesToUpload.length > 0 ? filesToUpload : undefined,
+      })
 
       toast({
         title: "Milestone submitted for review",

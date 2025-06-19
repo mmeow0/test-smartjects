@@ -119,6 +119,68 @@ export const contractService = {
             clause: "Upon signing this contract, both parties agree to an exclusivity period for this specific smartject implementation. The provider agrees not to offer similar implementation services for this smartject to other parties, and the needer agrees not to engage other providers for this smartject implementation, for the duration of this contract plus 30 days after completion.",
             duration: `Contract period + 30 days (until ${new Date(realContractData.exclusivity_ends as string).toLocaleDateString()})`,
           },
+
+          async startMilestone(milestoneId: string) {
+            const supabase = getSupabaseBrowserClient();
+
+            try {
+              const { data: { user: currentUser } } = await supabase.auth.getUser();
+              if (!currentUser) {
+                throw new Error("No authenticated user");
+              }
+
+              // Get milestone and verify user is the provider
+              const { data: milestoneData } = await supabase
+                .from("contract_milestones")
+                .select(`
+                  *,
+                  contracts!inner(provider_id, needer_id, title)
+                `)
+                .eq("id", milestoneId)
+                .single();
+
+              if (!milestoneData || milestoneData.contracts.provider_id !== currentUser.id) {
+                throw new Error("Access denied - only provider can start milestone");
+              }
+
+              if (milestoneData.status !== "pending") {
+                throw new Error("Milestone must be pending to start work");
+              }
+
+              // Update milestone status to in_progress
+              const { error: updateError } = await supabase
+                .from("contract_milestones")
+                .update({
+                  status: "in_progress",
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", milestoneId);
+
+              if (updateError) {
+                throw updateError;
+              }
+
+              // Add status history entry
+              await supabase
+                .from("contract_milestone_status_history")
+                .insert({
+                  milestone_id: milestoneId,
+                  changed_by: currentUser.id,
+                  old_status: milestoneData.status,
+                  new_status: "in_progress",
+                  action_type: "start",
+                  comments: "Work started on milestone",
+                });
+
+              // Send system message
+              await this.sendMilestoneMessage(milestoneId, "Work has started on this milestone", "system");
+
+              return { success: true };
+            } catch (error) {
+              console.error("Error starting milestone:", error);
+              throw error;
+            }
+          },
         };
 
         return contract;
@@ -933,17 +995,16 @@ export const contractService = {
 
       const contracts = contractsData || [];
 
-      // Get proposal milestones for all contracts
+      // Get contract milestones for all contracts
       const contractIds = contracts.map(c => c.id);
-      const proposalIds = contracts.map(c => c.proposal_id).filter(Boolean);
       
-      let proposalMilestonesData: any[] = [];
-      if (proposalIds.length > 0) {
+      let contractMilestonesData: any[] = [];
+      if (contractIds.length > 0) {
         const { data } = await supabase
-          .from("proposal_milestones")
+          .from("contract_milestones")
           .select("*")
-          .in("proposal_id", proposalIds);
-        proposalMilestonesData = data || [];
+          .in("contract_id", contractIds);
+        contractMilestonesData = data || [];
       }
 
       // Transform contracts to match the expected format
@@ -952,17 +1013,19 @@ export const contractService = {
         const otherParty = isProvider ? contract.needer?.name : contract.provider?.name;
         const role = isProvider ? "provider" : "needer";
 
-        // Find proposal milestones for this contract
-        const milestones = proposalMilestonesData.filter(m => m.proposal_id === contract.proposal_id);
+        // Find contract milestones for this contract
+        const milestones = contractMilestonesData?.filter(m => m.contract_id === contract.id) || [];
         
-        // For proposal milestones, we'll treat them all as pending unless contract is completed
-        const pendingMilestones = contract.status === "completed" ? [] : milestones;
-        const nextMilestone = pendingMilestones
+        // Find next milestone (in_progress or pending)
+        const nextMilestone = milestones
+          .filter(m => m.status === "in_progress" || m.status === "pending")
           .sort((a: any, b: any) => (a.percentage || 0) - (b.percentage || 0))[0];
 
-        // For completed contracts, show the last milestone
+        // For completed contracts, show the last completed milestone
         const finalMilestone = contract.status === "completed" && milestones.length > 0
-          ? milestones.sort((a: any, b: any) => (b.percentage || 0) - (a.percentage || 0))[0]
+          ? milestones
+              .filter(m => m.status === "completed")
+              .sort((a: any, b: any) => (b.percentage || 0) - (a.percentage || 0))[0]
           : null;
 
         return {
@@ -976,7 +1039,8 @@ export const contractService = {
           status: contract.status,
           budget: contract.budget,
           nextMilestone: nextMilestone ? nextMilestone.name : (milestones.length === 0 ? "No milestones defined" : "All milestones completed"),
-          nextMilestoneDate: nextMilestone ? contract.start_date : contract.end_date,
+          nextMilestoneId: nextMilestone ? nextMilestone.id : undefined,
+          nextMilestoneDate: nextMilestone ? nextMilestone.due_date : contract.end_date,
           finalMilestone: finalMilestone ? finalMilestone.name : (contract.status === "completed" && milestones.length === 0 ? "Contract completed" : undefined),
           completionDate: contract.status === "completed" ? contract.end_date : undefined,
           exclusivityEnds: contract.exclusivity_ends,
@@ -1357,6 +1421,16 @@ export const contractService = {
         .eq("contract_id", contractId)
         .ilike("name", `%milestone%${milestoneData.name}%`);
 
+      // Get milestone files
+      const { data: milestoneFiles } = await supabase
+        .from("contract_milestone_files")
+        .select(`
+          *,
+          uploader:users!uploaded_by(name)
+        `)
+        .eq("milestone_id", milestoneId)
+        .order("created_at", { ascending: true });
+
       // Transform milestone data
       const milestone = {
         id: milestoneData.id,
@@ -1390,8 +1464,18 @@ export const contractService = {
           url: doc.url,
           uploadedAt: doc.uploaded_at,
         })) || [],
+        files: milestoneFiles?.map(file => ({
+          id: file.id,
+          name: file.name,
+          type: file.file_type,
+          size: file.file_size,
+          url: file.url,
+          uploadedAt: file.created_at,
+          uploadedBy: (file.uploader as any)?.name || "Unknown User",
+        })) || [],
         canReview: currentUser.id === contractData.provider_id || currentUser.id === contractData.needer_id,
         userRole: currentUser.id === contractData.provider_id ? "provider" : "needer",
+        canStartWork: currentUser.id === contractData.provider_id && milestoneData.status === "pending",
       };
 
       return milestone;
@@ -1474,6 +1558,69 @@ export const contractService = {
       return data;
     } catch (error) {
       console.error("Error updating milestone status:", error);
+      throw error;
+    }
+  },
+
+  // Start milestone work
+  async startMilestone(milestoneId: string) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Get milestone and verify user is the provider
+      const { data: milestoneData } = await supabase
+        .from("contract_milestones")
+        .select(`
+          *,
+          contracts!inner(provider_id, needer_id, title)
+        `)
+        .eq("id", milestoneId)
+        .single();
+
+      if (!milestoneData || milestoneData.contracts.provider_id !== currentUser.id) {
+        throw new Error("Access denied - only provider can start milestone");
+      }
+
+      if (milestoneData.status !== "pending") {
+        throw new Error("Milestone must be pending to start work");
+      }
+
+      // Update milestone status to in_progress
+      const { error: updateError } = await supabase
+        .from("contract_milestones")
+        .update({
+          status: "in_progress",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", milestoneId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Add status history entry
+      await supabase
+        .from("contract_milestone_status_history")
+        .insert({
+          milestone_id: milestoneId,
+          changed_by: currentUser.id,
+          old_status: milestoneData.status,
+          new_status: "in_progress",
+          action_type: "start",
+          comments: "Work started on milestone",
+        });
+
+      // Send system message
+      await this.sendMilestoneMessage(milestoneId, "Work has started on this milestone", "system");
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error starting milestone:", error);
       throw error;
     }
   },
@@ -1914,8 +2061,22 @@ async getMilestoneByIdEnhanced(contractId: string, milestoneId: string) {
       .eq("contract_id", contractId)
       .ilike("name", `%milestone%${milestoneData.name}%`);
 
+    // Get milestone files
+    const { data: milestoneFiles } = await supabase
+      .from("contract_milestone_files")
+      .select(`
+        *,
+        uploader:users!uploaded_by(name)
+      `)
+      .eq("milestone_id", milestoneId)
+      .order("created_at", { ascending: true });
+
     const isProvider = currentUser.id === contractData.provider_id;
     const isNeeder = currentUser.id === contractData.needer_id;
+
+    console.log('isProvider', isProvider);
+    console.log('isNeeder', isNeeder);
+    
 
     // Формируем результат
     return {
@@ -1965,14 +2126,214 @@ async getMilestoneByIdEnhanced(contractId: string, milestoneId: string) {
         uploadedAt: doc.uploaded_at,
       })),
 
+      files: (milestoneFiles || []).map(file => ({
+        id: file.id,
+        name: file.name,
+        type: file.file_type,
+        size: file.file_size,
+        url: file.url,
+        uploadedAt: file.created_at,
+        uploadedBy: (file.uploader as any)?.name || "Unknown User",
+      })),
+
       userRole: isProvider ? "provider" : "needer",
-      canSubmitForReview: isProvider && milestoneData.status === "in_progress" && !milestoneData.submitted_for_review,
       canReview: isNeeder && milestoneData.status === "submitted",
       canSendMessage: true,
+      canStartWork: isProvider && milestoneData.status === "pending",
     };
   } catch (error) {
     console.error("Error in getMilestoneByIdEnhanced:", error);
     return null;
   }
 },
+
+  async uploadMilestoneFiles(milestoneId: string, files: File[]) {
+    const supabase = getSupabaseBrowserClient();
+    
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      const uploadPromises = files.map(async (file) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${milestoneId}-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `milestone-files/${fileName}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('contract-files')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('contract-files')
+          .getPublicUrl(filePath);
+
+        // Save file record to database
+        const { data: fileRecord, error: insertError } = await supabase
+          .from('contract_milestone_files')
+          .insert({
+            milestone_id: milestoneId,
+            name: file.name,
+            file_path: filePath,
+            file_type: file.type,
+            file_size: file.size,
+            url: publicUrl,
+            uploaded_by: currentUser.id,
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        return fileRecord;
+      });
+
+      const uploadedFiles = await Promise.all(uploadPromises);
+      return uploadedFiles;
+    } catch (error) {
+      console.error("Error uploading milestone files:", error);
+      throw error;
+    }
+  },
+
+  async updateMilestoneDeliverables(milestoneId: string, completedDeliverableIds: string[]) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Get all deliverables for this milestone
+      const { data: deliverables } = await supabase
+        .from("contract_milestone_deliverables")
+        .select("*")
+        .eq("milestone_id", milestoneId);
+
+      if (!deliverables) {
+        return;
+      }
+
+      // Update each deliverable
+      const updatePromises = deliverables.map(async (deliverable) => {
+        const shouldBeCompleted = completedDeliverableIds.includes(deliverable.id);
+        
+        if (deliverable.completed !== shouldBeCompleted) {
+          const { error } = await supabase
+            .from("contract_milestone_deliverables")
+            .update({
+              completed: shouldBeCompleted,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", deliverable.id);
+
+          if (error) {
+            throw error;
+          }
+        }
+      });
+
+      await Promise.all(updatePromises);
+    } catch (error) {
+      console.error("Error updating milestone deliverables:", error);
+      throw error;
+    }
+  },
+
+  async completeMilestone(milestoneId: string, completionData: {
+    completionNotes: string;
+    deliverableNotes?: string;
+    completedDeliverableIds: string[];
+    uploadedFiles?: File[];
+  }) {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Get milestone and verify user is the provider
+      const { data: milestoneData } = await supabase
+        .from("contract_milestones")
+        .select(`
+          *,
+          contracts!inner(provider_id, needer_id, title)
+        `)
+        .eq("id", milestoneId)
+        .single();
+
+      if (!milestoneData || milestoneData.contracts.provider_id !== currentUser.id) {
+        throw new Error("Access denied - only provider can complete milestone");
+      }
+
+      if (milestoneData.status !== "in_progress") {
+        throw new Error("Milestone must be in progress to complete");
+      }
+
+      // Upload files if any
+      if (completionData.uploadedFiles && completionData.uploadedFiles.length > 0) {
+        await this.uploadMilestoneFiles(milestoneId, completionData.uploadedFiles);
+      }
+
+      // Update deliverables
+      await this.updateMilestoneDeliverables(milestoneId, completionData.completedDeliverableIds);
+
+      // Submit milestone for review
+      await this.submitMilestoneForReview(milestoneId, completionData.completionNotes);
+
+      // Add completion comment
+      await this.addMilestoneComment(milestoneId, completionData.completionNotes);
+
+      // Send completion message
+      let completionMessage = `MILESTONE COMPLETION SUBMITTED
+
+Milestone: ${milestoneData.name}
+Status: Pending Review
+
+Completion Notes:
+${completionData.completionNotes}`;
+
+      if (completionData.deliverableNotes) {
+        completionMessage += `
+
+Deliverable Notes:
+${completionData.deliverableNotes}`;
+      }
+
+      const deliverableCount = completionData.completedDeliverableIds.length;
+      if (deliverableCount > 0) {
+        completionMessage += `
+
+Completed Deliverables: ${deliverableCount} item(s)`;
+      }
+
+      const fileCount = completionData.uploadedFiles?.length || 0;
+      if (fileCount > 0) {
+        completionMessage += `
+
+Uploaded Files: ${fileCount} file(s)`;
+      }
+
+      completionMessage += `
+
+This milestone is now ready for review and approval.`;
+
+      await this.sendContractMessage(milestoneData.contract_id, completionMessage);
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error completing milestone:", error);
+      throw error;
+    }
+  },
 };

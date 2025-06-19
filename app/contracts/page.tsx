@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
-import { contractService } from "@/lib/services"
+import { contractService } from "@/lib/services/contract.service"
 import { ContractListType } from "@/lib/types"
 import { Calendar, Clock, Download, FileText, Search, Shield } from "lucide-react"
 
@@ -215,7 +215,16 @@ export default function ContractsPage() {
                     <p className="text-sm text-muted-foreground flex items-center">
                       <Clock className="h-4 w-4 mr-1" /> Next Milestone
                     </p>
-                    <p className="font-medium">{contract.nextMilestone}</p>
+                    {contract.nextMilestoneId ? (
+                      <p 
+                        className="font-medium text-primary cursor-pointer hover:underline"
+                        onClick={() => router.push(`/contracts/${contract.id}/milestone/${contract.nextMilestoneId}`)}
+                      >
+                        {contract.nextMilestone}
+                      </p>
+                    ) : (
+                      <p className="font-medium">{contract.nextMilestone}</p>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       Due: {formatDate(contract.nextMilestoneDate)}
                     </p>

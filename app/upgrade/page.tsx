@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
+import { getStripe } from "@/lib/stripe"
 
 export default function UpgradePage() {
   const router = useRouter()
@@ -25,17 +26,42 @@ export default function UpgradePage() {
 
     setIsLoading(true)
     try {
-      await upgradeAccount()
-      toast({
-        title: "Account upgraded",
-        description: "Your account has been successfully upgraded to the paid plan.",
+      // Create Stripe checkout session
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan: selectedPlan,
+          userId: user.id,
+        }),
       })
-      const redirectTo = searchParams.get("redirect") || "/dashboard";
-      router.push(redirectTo)
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout session')
+      }
+
+      // Redirect to Stripe checkout
+      const stripe = await getStripe()
+      if (!stripe) {
+        throw new Error('Stripe failed to initialize')
+      }
+
+      const { error } = await stripe.redirectToCheckout({
+        sessionId: data.sessionId,
+      })
+
+      if (error) {
+        throw new Error(error.message)
+      }
     } catch (error) {
+      console.error('Upgrade error:', error)
       toast({
         title: "Upgrade failed",
-        description: "There was an error upgrading your account. Please try again.",
+        description: error instanceof Error ? error.message : "There was an error upgrading your account. Please try again.",
         variant: "destructive",
       })
     } finally {

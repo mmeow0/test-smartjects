@@ -39,7 +39,42 @@ export type UserType = {
   company?: string;
   website?: string;
   joinDate?: string;
+  // Stripe fields
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  subscriptionPlan?: "monthly" | "annual";
+  subscriptionStatus?: "active" | "canceled" | "past_due" | "unpaid" | "incomplete";
+  subscriptionCurrentPeriodStart?: string;
+  subscriptionCurrentPeriodEnd?: string;
+  subscriptionCreatedAt?: string;
+  subscriptionCanceledAt?: string;
+  lastPaymentDate?: string;
 };
+</text>
+
+<old_text>
+      users: {
+        Row: {
+          id: string;
+          email: string;
+          name: string | null;
+          avatar_url: string | null;
+          account_type: string;
+          created_at: string;
+          bio: string | null;
+          location: string | null;
+          company: string | null;
+          website: string | null;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          subscription_plan: string | null;
+          subscription_status: string | null;
+          subscription_current_period_start: string | null;
+          subscription_current_period_end: string | null;
+          subscription_created_at: string | null;
+          subscription_canceled_at: string | null;
+          last_payment_date: string | null;
+        };
 
 export type UserSettingsType = {
   id: string;
@@ -275,6 +310,7 @@ export type ContractListType = {
   status: "pending_start" | "active" | "completed" | "cancelled";
   budget: string;
   nextMilestone?: string;
+  nextMilestoneId?: string;
   nextMilestoneDate?: string;
   finalMilestone?: string;
   completionDate?: string;
@@ -310,6 +346,19 @@ export type Database = {
           avatar_url?: string | null;
           account_type?: string;
           created_at?: string;
+          bio?: string | null;
+          location?: string | null;
+          company?: string | null;
+          website?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          subscription_plan?: string | null;
+          subscription_status?: string | null;
+          subscription_current_period_start?: string | null;
+          subscription_current_period_end?: string | null;
+          subscription_created_at?: string | null;
+          subscription_canceled_at?: string | null;
+          last_payment_date?: string | null;
         };
         Update: {
           id?: string;
@@ -317,11 +366,20 @@ export type Database = {
           name?: string | null;
           avatar_url?: string | null;
           account_type?: string;
-          created_at: string;
-          bio: string | null;
-          location: string | null;
-          company: string | null;
-          website: string | null;
+          created_at?: string;
+          bio?: string | null;
+          location?: string | null;
+          company?: string | null;
+          website?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          subscription_plan?: string | null;
+          subscription_status?: string | null;
+          subscription_current_period_start?: string | null;
+          subscription_current_period_end?: string | null;
+          subscription_created_at?: string | null;
+          subscription_canceled_at?: string | null;
+          last_payment_date?: string | null;
         };
       };
       user_settings: {

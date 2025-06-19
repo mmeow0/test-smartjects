@@ -9,9 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Textarea } from "@/components/ui/textarea"
-import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import {
   ArrowLeft,
@@ -27,10 +25,10 @@ import {
   FileText,
   History,
   User,
-  ChevronRight,
   Loader2,
+  Play,
 } from "lucide-react"
-import { contractService } from "@/lib/services"
+import { contractService } from "@/lib/services/contract.service"
 import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 
 interface MilestoneMessage {
@@ -100,10 +98,19 @@ interface Milestone {
     url: string
     uploadedAt: string
   }>
+  files: Array<{
+    id: string
+    name: string
+    type: string
+    size: number
+    url: string
+    uploadedAt: string
+    uploadedBy: string
+  }>
   userRole: "provider" | "needer"
-  canSubmitForReview: boolean
   canReview: boolean
   canSendMessage: boolean
+  canStartWork: boolean
 }
 
 export default function MilestoneDetailsPage({ 
@@ -183,34 +190,7 @@ export default function MilestoneDetailsPage({
     }
   }
 
-  const handleSubmitForReview = async () => {
-    if (!milestone) return
 
-    setIsSubmitting(true)
-    try {
-      await contractService.submitMilestoneForReview(milestoneId, "Milestone completed and ready for review")
-      
-      // Reload milestone data
-      const updatedMilestone = await contractService.getMilestoneByIdEnhanced(contractId, milestoneId)
-      if (updatedMilestone) {
-        setMilestone(updatedMilestone)
-      }
-
-      toast({
-        title: "Milestone submitted",
-        description: "Milestone has been submitted for client review.",
-      })
-    } catch (error) {
-      console.error("Error submitting milestone:", error)
-      toast({
-        title: "Error",
-        description: "Failed to submit milestone. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
 
   const handleReview = async (approved: boolean) => {
     if (!milestone) return
@@ -244,6 +224,35 @@ export default function MilestoneDetailsPage({
     }
   }
 
+  const handleStartWork = async () => {
+    if (!milestone) return
+
+    setIsSubmitting(true)
+    try {
+      await contractService.startMilestone(milestoneId)
+      
+      // Reload milestone data
+      const updatedMilestone = await contractService.getMilestoneByIdEnhanced(contractId, milestoneId)
+      if (updatedMilestone) {
+        setMilestone(updatedMilestone)
+      }
+
+      toast({
+        title: "Work started",
+        description: "You have started work on this milestone.",
+      })
+    } catch (error) {
+      console.error("Error starting milestone:", error)
+      toast({
+        title: "Error",
+        description: "Failed to start milestone work. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const getMilestoneStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
@@ -266,7 +275,7 @@ export default function MilestoneDetailsPage({
         )
       case "pending":
         return (
-          <Badge variant="outline" className="flex items-center gap-1">
+          <Badge className="bg-gray-100 text-gray-800 flex items-center gap-1">
             <Clock className="h-3 w-3" /> Pending
           </Badge>
         )
@@ -476,54 +485,81 @@ export default function MilestoneDetailsPage({
             <CardDescription>Available actions for this milestone</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {milestone.canSubmitForReview && (
+            {/* Start Work button for providers */}
+            {milestone.canStartWork && (
               <Button 
                 className="w-full" 
-                onClick={handleSubmitForReview}
+                onClick={handleStartWork}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
-                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <Play className="h-4 w-4 mr-2" />
                 )}
-                Submit for Review
+                Start Work
               </Button>
             )}
 
-            {milestone.canReview && (
+            {/* Complete Milestone button for providers */}
+            {milestone.userRole === "provider" && milestone.status === "in_progress" && (
+              <Button 
+                className="w-full" 
+                onClick={() => router.push(`/contracts/${contractId}/milestone/${milestoneId}/complete`)}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Complete Milestone
+              </Button>
+            )}
+
+
+
+            {milestone.canReview && milestone.status === "submitted" && (
+              <Button 
+                className="w-full" 
+                onClick={() => router.push(`/contracts/${contractId}/milestone/${milestoneId}/review`)}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Review Milestone
+              </Button>
+            )}
+
+            {milestone.canReview && milestone.status === "submitted" && (
               <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Quick Review:</p>
                 <Textarea
                   placeholder="Add review comments (optional)..."
                   value={reviewComments}
                   onChange={(e) => setReviewComments(e.target.value)}
-                  className="min-h-[100px]"
+                  className="min-h-[80px]"
                 />
                 <div className="flex gap-2">
                   <Button 
                     className="flex-1 bg-green-600 hover:bg-green-700"
                     onClick={() => handleReview(true)}
                     disabled={isReviewing}
+                    size="sm"
                   >
                     {isReviewing ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
                       <Check className="h-4 w-4 mr-2" />
                     )}
-                    Approve
+                    Quick Approve
                   </Button>
                   <Button 
                     variant="destructive"
                     className="flex-1"
                     onClick={() => handleReview(false)}
                     disabled={isReviewing}
+                    size="sm"
                   >
                     {isReviewing ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
                       <XCircle className="h-4 w-4 mr-2" />
                     )}
-                    Reject
+                    Quick Reject
                   </Button>
                 </div>
               </div>
@@ -537,6 +573,35 @@ export default function MilestoneDetailsPage({
                     <div key={doc.id} className="flex items-center text-sm">
                       <FileText className="h-4 w-4 mr-2 text-blue-600" />
                       <span className="truncate">{doc.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {milestone.files && milestone.files.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium mb-2">Milestone Files</h4>
+                <div className="space-y-2">
+                  {milestone.files.map((file) => (
+                    <div key={file.id} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center min-w-0 flex-1">
+                        <FileText className="h-4 w-4 mr-2 text-green-600 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-medium">{file.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Uploaded by {file.uploadedBy} • {new Date(file.uploadedAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(file.url, '_blank')}
+                        className="ml-2 flex-shrink-0"
+                      >
+                        View
+                      </Button>
                     </div>
                   ))}
                 </div>
