@@ -110,6 +110,7 @@ export default function UpgradePage() {
   const freeFeatures = features.slice(0, 1)
 
   return (
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)]">
     <div className="container max-w-6xl py-12">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-4">Upgrade Your Smartjects Experience</h1>
@@ -233,6 +234,7 @@ export default function UpgradePage() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   )
 }
