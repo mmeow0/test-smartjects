@@ -34,6 +34,8 @@ import { contractService } from "@/lib/services"
 import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
 import { MilestoneCard } from "@/components/contract/milestone-card"
 import { QuickMilestoneActions } from "@/components/contract/quick-milestone-actions"
+import { ContractWorkflow } from "@/components/contract/contract-workflow"
+import { ContractCompletion } from "@/components/contract/contract-completion"
 
 export default function ContractDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -48,55 +50,55 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
   const [contract, setContract] = useState<any>(null)
 
   // Load contract data
-  useEffect(() => {
-    const loadContract = async () => {
-      // Don't load while auth is still loading or access is denied
-      if (authLoading || !canAccess) {
-        return
-      }
+  const loadContract = async () => {
+    // Don't load while auth is still loading or access is denied
+    if (authLoading || !canAccess) {
+      return
+    }
 
-      setIsLoading(true)
-      setError(null)
+    setIsLoading(true)
+    setError(null)
 
-      try {
-        // Check if contract is fully signed using contractId
-        const { isSigned, matchId, proposalId } = await contractService.isContractFullySigned(id)
-        
-        if (!isSigned) {
-          // Contract not fully signed - redirect to signing page if we have match/proposal IDs
-          if (matchId && proposalId) {
-            router.push(`/matches/${matchId}/contract/${proposalId}`)
-            return
-          } else {
-            setError("Contract not found or not fully signed")
-            setIsCheckingSigningStatus(false)
-            setIsLoading(false)
-            return
-          }
-        }
-
-        // Contract is fully signed - load contract data
-        const contractData = await contractService.getContractById(id)
-        
-        if (!contractData) {
-          setError("Contract not found or access denied")
+    try {
+      // Check if contract is fully signed using contractId
+      const { isSigned, matchId, proposalId } = await contractService.isContractFullySigned(id)
+      
+      if (!isSigned) {
+        // Contract not fully signed - redirect to signing page if we have match/proposal IDs
+        if (matchId && proposalId) {
+          router.push(`/matches/${matchId}/contract/${proposalId}`)
+          return
+        } else {
+          setError("Contract not found or not fully signed")
           setIsCheckingSigningStatus(false)
           setIsLoading(false)
           return
         }
-
-        setContract(contractData)
-        setIsCheckingSigningStatus(false)
-        setIsLoading(false)
-        
-      } catch (error) {
-        console.error("Error loading contract:", error)
-        setError("Failed to load contract data")
-        setIsCheckingSigningStatus(false)
-        setIsLoading(false)
       }
-    }
 
+      // Contract is fully signed - load contract data
+      const contractData = await contractService.getContractById(id)
+      
+      if (!contractData) {
+        setError("Contract not found or access denied")
+        setIsCheckingSigningStatus(false)
+        setIsLoading(false)
+        return
+      }
+
+      setContract(contractData)
+      setIsCheckingSigningStatus(false)
+      setIsLoading(false)
+      
+    } catch (error) {
+      console.error("Error loading contract:", error)
+      setError("Failed to load contract data")
+      setIsCheckingSigningStatus(false)
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
     loadContract()
   }, [authLoading, canAccess, router, id])
 
@@ -134,7 +136,56 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
   // Calculate overall progress
   const completedMilestones = contract?.paymentSchedule?.filter((m: any) => m.status === "completed").length || 0
   const totalMilestones = contract?.paymentSchedule?.length || 0
-  const progressPercentage = Math.round((completedMilestones / totalMilestones) * 100)
+  const progressPercentage = totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 0
+  const hasMilestones = totalMilestones > 0
+
+  // Get contract status information for contracts without milestones
+  const getContractStatusInfo = () => {
+    switch (contract?.status) {
+      case 'pending_start':
+        return { 
+          label: 'Awaiting Work to Begin', 
+          percentage: 0, 
+          color: 'bg-yellow-500',
+          description: 'Provider needs to start work on this contract'
+        }
+      case 'active':
+        return { 
+          label: 'Work in Progress', 
+          percentage: 50, 
+          color: 'bg-blue-500',
+          description: 'Provider is actively working on deliverables'
+        }
+      case 'pending_review':
+        return { 
+          label: 'Awaiting Client Review', 
+          percentage: 90, 
+          color: 'bg-purple-500',
+          description: 'Work completed, waiting for client approval'
+        }
+      case 'completed':
+        return { 
+          label: 'Contract Completed', 
+          percentage: 100, 
+          color: 'bg-green-500',
+          description: 'All work delivered and approved'
+        }
+      case 'cancelled':
+        return { 
+          label: 'Contract Cancelled', 
+          percentage: 0, 
+          color: 'bg-red-500',
+          description: 'Contract has been cancelled'
+        }
+      default:
+        return { 
+          label: 'Status Unknown', 
+          percentage: 0, 
+          color: 'bg-gray-500',
+          description: 'Contract status is unclear'
+        }
+    }
+  }
 
   // Get the next milestone
   const nextMilestone = contract?.paymentSchedule?.find((m: any) => m.status === "in_progress" || m.status === "pending")
@@ -334,17 +385,35 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
             <div>
               <h3 className="text-sm font-medium mb-2">Overall Progress</h3>
               <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>{progressPercentage}% Complete</span>
-                  <span>
-                    {completedMilestones} of {totalMilestones} milestones
-                  </span>
-                </div>
-                <Progress value={progressPercentage} className="h-2" />
+                {hasMilestones ? (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span>{progressPercentage}% Complete</span>
+                      <span>
+                        {completedMilestones} of {totalMilestones} milestones
+                      </span>
+                    </div>
+                    <Progress value={progressPercentage} className="h-2" />
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">{getContractStatusInfo().label}</span>
+                      <span className="text-muted-foreground">{getContractStatusInfo().percentage}% Complete</span>
+                    </div>
+                    <Progress 
+                      value={getContractStatusInfo().percentage} 
+                      className="h-2" 
+                    />
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {getContractStatusInfo().description}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
-            {nextMilestone && (
+            {nextMilestone && hasMilestones && (
               <div className="bg-muted/50 p-4 rounded-lg">
                 <h3 className="text-sm font-medium mb-2 flex items-center">
                   <Clock className="h-4 w-4 mr-1" /> Next Milestone
@@ -479,19 +548,42 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {contract?.paymentSchedule?.map((milestone: any) => (
-                  <MilestoneCard
-                    key={milestone.id}
-                    milestone={milestone}
-                    contractId={id}
-                    userRole={isProvider ? "provider" : "needer"}
-                    isExpanded={expandedMilestone === milestone.id}
-                    onToggleExpanded={() => toggleMilestone(milestone.id)}
-                  />
-                ))}
+                {contract?.paymentSchedule && contract.paymentSchedule.length > 0 ? (
+                  contract.paymentSchedule.map((milestone: any) => (
+                    <MilestoneCard
+                      key={milestone.id}
+                      milestone={milestone}
+                      contractId={id}
+                      userRole={isProvider ? "provider" : "needer"}
+                      isExpanded={expandedMilestone === milestone.id}
+                      onToggleExpanded={() => toggleMilestone(milestone.id)}
+                    />
+                  ))
+                ) : (
+                  <div className="space-y-4">
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>This contract doesn't have specific milestones.</p>
+                      <p>Use the workflow below to manage the contract progress.</p>
+                    </div>
+                    <ContractWorkflow
+                      contractId={id}
+                      currentStatus={contract?.status}
+                      onStatusChange={loadContract}
+                    />
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
+          
+          {/* Contract Completion - only show for contracts with milestones */}
+          {hasMilestones && (
+            <ContractCompletion
+              contractId={id}
+              currentStatus={contract?.status}
+              onStatusChange={loadContract}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="documents">

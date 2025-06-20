@@ -33,7 +33,7 @@ const getProposalNegotiations = async (proposalId: string, userId: string) => {
     // Get the proposal details
     const { data: proposal, error: proposalError } = await supabase
       .from("proposals")
-      .select("id, user_id, smartject_id, title, budget, timeline")
+      .select("id, user_id, smartject_id, title, budget, timeline, type")
       .eq("id", proposalId)
       .single();
 
@@ -83,9 +83,19 @@ const getProposalNegotiations = async (proposalId: string, userId: string) => {
 
     const smartjectTitle = (smartjectResult.data?.title as string) || "Unknown Smartject";
 
-    // Determine provider and needer
-    const providerId = proposal.user_id as string;
-    const neederId = isProposalOwner ? (otherPartyId as string) : userId;
+    // Determine provider and needer based on proposal type
+    let providerId: string;
+    let neederId: string;
+    
+    if (proposal.type === "provide") {
+      // Proposal owner is providing the service
+      providerId = proposal.user_id as string;
+      neederId = otherPartyId as string;
+    } else {
+      // Proposal owner needs the service
+      neederId = proposal.user_id as string;
+      providerId = otherPartyId as string;
+    }
 
     // Get or find match
     const matchResult = await supabase

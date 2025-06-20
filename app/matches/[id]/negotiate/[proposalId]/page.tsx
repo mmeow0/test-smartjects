@@ -33,7 +33,7 @@ import { Badge } from "@/components/ui/badge"
 import { useProposal } from "@/hooks/use-proposal"
 import { negotiationService } from "@/lib/services/negotiation.service"
 import { getSupabaseBrowserClient } from "@/lib/supabase"
-import type { NDASignature } from "@/lib/types"
+
 
 // Define deliverable type
 interface Deliverable {
@@ -97,6 +97,7 @@ interface NegotiationData {
   smartjectTitle: string
   provider: User
   needer: User
+  proposalAuthor: User
   currentProposal: CurrentProposal
   milestones: Milestone[]
   messages: Message[]
@@ -218,6 +219,7 @@ export default function NegotiatePage({
             smartjectTitle: data.smartjectTitle,
             provider: data.provider,
             needer: data.needer,
+            proposalAuthor: data.proposalAuthor,
             currentProposal: data.currentProposal,
             milestones: data.milestones,
             messages: data.messages,
@@ -671,17 +673,17 @@ export default function NegotiatePage({
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-12 w-12">
-                    <AvatarFallback>{negotiation?.provider?.name?.charAt(0)}</AvatarFallback>
+                    <AvatarFallback>{negotiation?.proposalAuthor?.name?.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">{negotiation?.provider?.name}</p>
+                    <p className="font-medium">{negotiation?.proposalAuthor?.name}</p>
                     <p className="text-sm text-muted-foreground">Submitted this proposal</p>
                   </div>
                 </div>
                 <Badge variant="secondary">Proposal Creator</Badge>
               </div>
               <div className="mt-4 text-sm text-muted-foreground">
-                {user?.id === negotiation?.provider?.id 
+                {user?.id === negotiation?.proposalAuthor?.id 
                   ? "You submitted this proposal. The smartject owner can accept or negotiate terms."
                   : "This proposal was submitted for your smartject. You can accept or negotiate terms."
                 }

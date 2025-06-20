@@ -21,21 +21,21 @@ import {
 } from "lucide-react"
 import { contractService } from "@/lib/services/contract.service"
 
-export default function MilestoneReviewPage({ params }: { params: Promise<{ id: string; milestoneId: string }> }) {
-  const { id: contractId, milestoneId } = use(params);
+export default function ContractReviewPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: contractId } = use(params);
   
   const router = useRouter()
   const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
-  const [milestone, setMilestone] = useState<any>(null)
+  const [contract, setContract] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [reviewComments, setReviewComments] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Load milestone data
+  // Load contract data
   useEffect(() => {
-    const loadMilestone = async () => {
+    const loadContract = async () => {
       if (authLoading || !canAccess) {
         return
       }
@@ -44,74 +44,68 @@ export default function MilestoneReviewPage({ params }: { params: Promise<{ id: 
       setError(null)
 
       try {
-        const milestoneData = await contractService.getMilestoneByIdEnhanced(contractId, milestoneId)
+        const contractData = await contractService.getContractById(contractId)
         
-        if (!milestoneData) {
-          setError("Milestone not found or access denied")
+        if (!contractData) {
+          setError("Contract not found or access denied")
           setIsLoading(false)
           return
         }
 
-        // Check if user is needer and milestone is submitted for review
-        if (milestoneData.userRole !== "needer") {
-          setError("Only clients can review milestones")
+        // Check if user is needer and contract is submitted for review
+        const isNeeder = contractData.needer?.id === user?.id
+
+        if (!isNeeder) {
+          setError("Only clients can review contracts")
           setIsLoading(false)
           return
         }
 
-        if (milestoneData.status !== "pending_review") {
-          setError("Milestone must be submitted for review")
+        if (contractData.status !== "pending_review") {
+          setError("Contract must be submitted for review")
           setIsLoading(false)
           return
         }
 
-        setMilestone(milestoneData)
+        setContract(contractData)
         setIsLoading(false)
         
       } catch (error) {
-        console.error("Error loading milestone:", error)
-        setError("Failed to load milestone data")
+        console.error("Error loading contract:", error)
+        setError("Failed to load contract data")
         setIsLoading(false)
       }
     }
 
-    loadMilestone()
-  }, [authLoading, canAccess, contractId, milestoneId])
+    loadContract()
+  }, [authLoading, canAccess, contractId, user?.id])
 
   const handleReview = async (approved: boolean) => {
-    if (!milestone) return
+    if (!contract) return
 
     setIsSubmitting(true)
     try {
-      await contractService.reviewMilestone(milestoneId, approved, reviewComments.trim() || undefined)
+      await contractService.reviewContract(contractId, approved, reviewComments.trim() || undefined)
       
       toast({
-        title: approved ? "Milestone approved" : "Milestone rejected",
+        title: approved ? "Contract approved" : "Contract rejected",
         description: approved 
-          ? "Milestone has been approved and marked as completed."
-          : "Milestone has been rejected and returned for revision.",
+          ? "Contract has been approved and marked as completed."
+          : "Contract has been rejected and returned for revision.",
       })
 
-      // Redirect back to milestone details
-      router.push(`/contracts/${contractId}/milestone/${milestoneId}`)
+      // Redirect back to contract details
+      router.push(`/contracts/${contractId}`)
     } catch (error) {
-      console.error("Error reviewing milestone:", error)
+      console.error("Error reviewing contract:", error)
       toast({
         title: "Error",
-        description: "Failed to review milestone. Please try again.",
+        description: "Failed to review contract. Please try again.",
         variant: "destructive",
       })
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
   // Redirect if not authenticated or not paid
@@ -126,7 +120,7 @@ export default function MilestoneReviewPage({ params }: { params: Promise<{ id: 
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading milestone...</p>
+            <p className="text-muted-foreground">Loading contract...</p>
           </div>
         </div>
       </div>
@@ -134,12 +128,12 @@ export default function MilestoneReviewPage({ params }: { params: Promise<{ id: 
   }
 
   // Error state
-  if (error || !milestone) {
+  if (error || !contract) {
     return (
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <p className="text-destructive mb-4">{error || "Milestone not found"}</p>
+            <p className="text-destructive mb-4">{error || "Contract not found"}</p>
             <Button onClick={() => router.back()}>
               Go Back
             </Button>
@@ -154,22 +148,22 @@ export default function MilestoneReviewPage({ params }: { params: Promise<{ id: 
       <div className="flex items-center mb-6">
         <Button variant="ghost" onClick={() => router.back()} className="mr-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Milestone
+          Back to Contract
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Review Milestone</h1>
+          <h1 className="text-2xl font-bold">Review Contract</h1>
           <p className="text-muted-foreground">
-            {milestone.name} - {milestone.contractTitle}
+            {contract.title}
           </p>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Milestone Overview */}
+        {/* Contract Overview */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Milestone Overview</span>
+              <span>Contract Overview</span>
               <Badge className="bg-purple-100 text-purple-800">
                 Pending Review
               </Badge>
@@ -179,123 +173,93 @@ export default function MilestoneReviewPage({ params }: { params: Promise<{ id: 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
                 <p className="text-sm text-muted-foreground flex items-center">
-                  <DollarSign className="h-4 w-4 mr-1" /> Payment
+                  <DollarSign className="h-4 w-4 mr-1" /> Budget
                 </p>
-                <p className="font-medium">{milestone.amount}</p>
+                <p className="font-medium">{contract.budget}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground flex items-center">
-                  <Calendar className="h-4 w-4 mr-1" /> Progress
-                </p>
-                <p className="font-medium">{milestone.percentage}%</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground flex items-center">
-                  <Calendar className="h-4 w-4 mr-1" /> Due Date
+                  <Calendar className="h-4 w-4 mr-1" /> Start Date
                 </p>
                 <p className="font-medium">
-                  {milestone.dueDate ? new Date(milestone.dueDate).toLocaleDateString() : "TBD"}
+                  {new Date(contract.start_date).toLocaleDateString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground flex items-center">
+                  <Calendar className="h-4 w-4 mr-1" /> End Date
+                </p>
+                <p className="font-medium">
+                  {new Date(contract.end_date).toLocaleDateString()}
                 </p>
               </div>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Description</p>
-              <p className="mt-1">{milestone.description}</p>
+              <p className="text-sm text-muted-foreground">Scope of Work</p>
+              <p className="mt-1">{contract.scope}</p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Submission Info */}
-        {milestone.submittedForReview && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Submission Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p>
-                  <span className="text-sm text-muted-foreground">Submitted by:</span>{" "}
-                  <span className="font-medium">{milestone.submittedBy?.name}</span>
+        {/* Provider Info */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Provider Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+                <span className="text-sm font-medium text-primary">
+                  {contract.provider?.name?.charAt(0) || 'P'}
+                </span>
+              </div>
+              <div>
+                <p className="font-medium">{contract.provider?.name}</p>
+                <p className="text-sm text-muted-foreground">{contract.provider?.email}</p>
+              </div>
+            </div>
+            {contract.submitted_at && (
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Submitted for review on{" "}
+                  <span className="font-medium">
+                    {new Date(contract.submitted_at).toLocaleString()}
+                  </span>
                 </p>
-                {milestone.submittedAt && (
-                  <p>
-                    <span className="text-sm text-muted-foreground">Submitted on:</span>{" "}
-                    <span className="font-medium">
-                      {new Date(milestone.submittedAt).toLocaleString()}
-                    </span>
-                  </p>
-                )}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Deliverables */}
-        {milestone.deliverables && milestone.deliverables.length > 0 && (
+        {/* Contract Documents */}
+        {contract.documents && contract.documents.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Deliverables</CardTitle>
+              <CardTitle>Contract Documents</CardTitle>
               <CardDescription>
-                Review the completed deliverables for this milestone
+                Review the contract documents and deliverables
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {milestone.deliverables.map((deliverable: any) => (
-                  <div key={deliverable.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                    {deliverable.status === "completed" ? (
-                      <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                    ) : (
-                      <Clock className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                    )}
-                    <div className="flex-1">
-                      <p className="font-medium">{deliverable.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {deliverable.description}
-                      </p>
-                      {deliverable.status === "completed" && deliverable.completedDate && (
-                        <p className="text-xs text-green-600 mt-1">
-                          Completed on {new Date(deliverable.completedDate).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Files */}
-        {milestone.files && milestone.files.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Uploaded Files</CardTitle>
-              <CardDescription>
-                Files submitted with this milestone
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {milestone.files.map((file: any) => (
-                  <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg">
+                {contract.documents.map((doc: any) => (
+                  <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <FileText className="h-5 w-5 text-blue-600" />
                       <div>
-                        <p className="font-medium">{file.name}</p>
+                        <p className="font-medium">{doc.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {formatFileSize(file.size)} • Uploaded by {file.uploadedBy} • {" "}
-                          {new Date(file.uploadedAt).toLocaleDateString()}
+                          {doc.type} • {new Date(doc.created_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(file.url, '_blank')}
+                      onClick={() => window.open(doc.url, '_blank')}
                     >
                       View
                     </Button>
@@ -309,9 +273,9 @@ export default function MilestoneReviewPage({ params }: { params: Promise<{ id: 
         {/* Review Form */}
         <Card>
           <CardHeader>
-            <CardTitle>Review Milestone</CardTitle>
+            <CardTitle>Review Contract</CardTitle>
             <CardDescription>
-              Provide your feedback and decision on this milestone submission
+              Provide your feedback and decision on this contract submission
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -322,7 +286,7 @@ export default function MilestoneReviewPage({ params }: { params: Promise<{ id: 
                 </label>
                 <Textarea
                   id="reviewComments"
-                  placeholder="Provide detailed feedback on the milestone submission..."
+                  placeholder="Provide detailed feedback on the contract work..."
                   value={reviewComments}
                   onChange={(e) => setReviewComments(e.target.value)}
                   className="mt-2 min-h-[120px]"
@@ -336,9 +300,9 @@ export default function MilestoneReviewPage({ params }: { params: Promise<{ id: 
               <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
                 <h4 className="font-medium text-amber-800 mb-2">Review Guidelines</h4>
                 <ul className="text-sm text-amber-700 space-y-1">
-                  <li>• Check that all deliverables meet the agreed specifications</li>
-                  <li>• Verify that uploaded files are complete and accessible</li>
-                  <li>• Ensure the work quality meets your expectations</li>
+                  <li>• Verify that all deliverables meet the agreed specifications</li>
+                  <li>• Check that the work quality meets your expectations</li>
+                  <li>• Ensure all contract requirements have been fulfilled</li>
                   <li>• Provide constructive feedback for any issues</li>
                 </ul>
               </div>
@@ -354,7 +318,7 @@ export default function MilestoneReviewPage({ params }: { params: Promise<{ id: 
                   ) : (
                     <CheckCircle className="h-4 w-4 mr-2" />
                   )}
-                  Approve Milestone
+                  Approve & Complete Contract
                 </Button>
                 <Button
                   variant="destructive"
@@ -372,7 +336,7 @@ export default function MilestoneReviewPage({ params }: { params: Promise<{ id: 
               </div>
 
               <p className="text-xs text-muted-foreground text-center">
-                Once you approve this milestone, payment will be processed according to your contract terms.
+                Once you approve this contract, it will be marked as completed and payment will be processed according to your contract terms.
               </p>
             </div>
           </CardContent>

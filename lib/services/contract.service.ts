@@ -1799,7 +1799,7 @@ export const contractService = {
           submitted_for_review: true,
           submitted_at: new Date().toISOString(),
           submitted_by: currentUser.id,
-          status: "submitted",
+          status: "pending_review",
           updated_at: new Date().toISOString(),
         })
         .eq("id", milestoneId);
@@ -1815,7 +1815,7 @@ export const contractService = {
           milestone_id: milestoneId,
           changed_by: currentUser.id,
           old_status: milestoneData.status,
-          new_status: "submitted",
+          new_status: "pending_review",
           action_type: "submit",
           comments: submissionMessage || "Milestone submitted for review",
         });
@@ -1858,7 +1858,7 @@ export const contractService = {
         throw new Error("Access denied - only client can review milestone");
       }
 
-      if (milestoneData.status !== "submitted") {
+      if (milestoneData.status !== "pending_review") {
         throw new Error("Milestone must be submitted for review");
       }
 
@@ -1916,10 +1916,215 @@ export const contractService = {
         await this.sendMilestoneMessage(milestoneId, reviewComments, "review");
       }
 
+      // Check if all milestones are completed after approval
+      if (approved) {
+        const allCompleted = await this.checkAllMilestonesCompleted(milestoneData.contract_id);
+        if (allCompleted) {
+          // Auto-submit contract for final review
+          await this.submitContractForFinalReview(milestoneData.contract_id);
+        }
+      }
+
       return { success: true, approved };
     } catch (error) {
       console.error("Error reviewing milestone:", error);
       throw error;
+    }
+  },
+
+  // Check if all milestones in a contract are completed
+  async checkAllMilestonesCompleted(contractId: string): Promise<boolean> {
+     const supabase = getSupabaseBrowserClient();
+    try {
+      const { data: milestones, error } = await supabase
+        .from("contract_milestones")
+        .select("id, status")
+        .eq("contract_id", contractId);
+
+      if (error || !milestones || milestones.length === 0) {
+        return false;
+      }
+
+      return milestones.every(milestone => milestone.status === "completed");
+    } catch (error) {
+      console.error("Error checking milestones completion:", error);
+      return false;
+    }
+  },
+
+  // Submit contract for final review after all milestones are completed
+  async submitContractForFinalReview(contractId: string): Promise<{ success: boolean }> {
+     const supabase = getSupabaseBrowserClient();
+ const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+
+    try {
+      // Update contract status to pending_review
+      const { error: updateError } = await supabase
+        .from("contracts")
+        .update({
+          status: "pending_review",
+          submitted_for_review: true,
+          submitted_at: new Date().toISOString(),
+          submitted_by: currentUser.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", contractId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Send notification message
+      await this.sendContractMessage(
+        contractId, 
+        "🎉 All milestones have been completed! The contract is now ready for final review and closure.", 
+        "system"
+      );
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error submitting contract for final review:", error);
+      throw error;
+    }
+  },
+
+  // Review and complete contract (final approval)
+  async reviewContractCompletion(contractId: string, approved: boolean, reviewComments?: string): Promise<{ success: boolean }> {
+     const supabase = getSupabaseBrowserClient();
+ const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+
+    try {
+      // Get contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        throw new Error("Contract not found");
+      }
+
+      // Check if user is the client (needer)
+      if (contractData.needer_id !== currentUser.id) {
+        throw new Error("Only the client can review contract completion");
+      }
+
+      // Check current status
+      if (contractData.status !== "pending_review") {
+        throw new Error("Contract must be pending review");
+      }
+
+      const newStatus = approved ? "completed" : "active";
+
+      // Update contract
+      const { error: updateError } = await supabase
+        .from("contracts")
+        .update({
+          status: newStatus,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: currentUser.id,
+          review_comments: reviewComments,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", contractId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Send notification message
+      const message = approved 
+        ? `✅ Contract has been approved and marked as completed!${reviewComments ? '\n\nClient comments: ' + reviewComments : ''}\n\n🎊 Congratulations on successfully completing this project!`
+        : `❌ Contract completion has been rejected and returned to active status.${reviewComments ? '\n\nClient comments: ' + reviewComments : ''}\n\nPlease address any remaining issues.`;
+      
+      await this.sendContractMessage(contractId, message, "system");
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error reviewing contract completion:", error);
+      throw error;
+    }
+  },
+
+  // Get contract completion workflow status
+  async getContractCompletionStatus(contractId: string): Promise<{
+    allMilestonesCompleted: boolean;
+    canSubmitForFinalReview: boolean;
+    canReviewCompletion: boolean;
+    isAwaitingFinalReview: boolean;
+    isCompleted: boolean;
+    userRole: 'provider' | 'needer' | null;
+  }> {
+     const supabase = getSupabaseBrowserClient();
+ const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+
+    if (!currentUser) {
+      return {
+        allMilestonesCompleted: false,
+        canSubmitForFinalReview: false,
+        canReviewCompletion: false,
+        isAwaitingFinalReview: false,
+        isCompleted: false,
+        userRole: null,
+      };
+    }
+
+    try {
+      // Get contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        throw new Error("Contract not found");
+      }
+
+      // Determine user role
+      let userRole: 'provider' | 'needer' | null = null;
+      if (contractData.provider_id === currentUser.id) {
+        userRole = 'provider';
+      } else if (contractData.needer_id === currentUser.id) {
+        userRole = 'needer';  
+      }
+
+      // Check if all milestones are completed
+      const allMilestonesCompleted = await this.checkAllMilestonesCompleted(contractId);
+
+      const isCompleted = contractData.status === 'completed';
+      const isAwaitingFinalReview = contractData.status === 'pending_review';
+      const canSubmitForFinalReview = userRole === 'provider' && allMilestonesCompleted && contractData.status === 'active';
+      const canReviewCompletion = userRole === 'needer' && isAwaitingFinalReview;
+
+      return {
+        allMilestonesCompleted,
+        canSubmitForFinalReview,
+        canReviewCompletion,
+        isAwaitingFinalReview,
+        isCompleted,
+        userRole,
+      };
+    } catch (error) {
+      console.error("Error getting contract completion status:", error);
+      return {
+        allMilestonesCompleted: false,
+        canSubmitForFinalReview: false,
+        canReviewCompletion: false,
+        isAwaitingFinalReview: false,
+        isCompleted: false,
+        userRole: null,
+      };
     }
   },
 
@@ -2137,7 +2342,7 @@ async getMilestoneByIdEnhanced(contractId: string, milestoneId: string) {
       })),
 
       userRole: isProvider ? "provider" : "needer",
-      canReview: isNeeder && milestoneData.status === "submitted",
+      canReview: isNeeder && milestoneData.status === "pending_review",
       canSendMessage: true,
       canStartWork: isProvider && milestoneData.status === "pending",
     };
@@ -2334,6 +2539,255 @@ This milestone is now ready for review and approval.`;
     } catch (error) {
       console.error("Error completing milestone:", error);
       throw error;
+    }
+  },
+
+  // Contract workflow functions (for contracts without milestones)
+  async startContractWork(contractId: string): Promise<{ success: boolean }> {
+  const supabase = getSupabaseBrowserClient();
+   const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) {
+      throw new Error("User not authenticated");
+    }
+
+    try {
+      // Get contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        throw new Error("Contract not found");
+      }
+
+      // Check if user is the provider
+      if (contractData.provider_id !== currentUser.id) {
+        throw new Error("Only the provider can start contract work");
+      }
+
+      // Check current status
+      if (contractData.status !== "pending_start") {
+        throw new Error("Contract must be in pending_start status to begin work");
+      }
+
+      // Update contract status
+      const { error: updateError } = await supabase
+        .from("contracts")
+        .update({
+          status: "active",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", contractId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Send notification message
+      await this.sendContractMessage(contractId, "Work has been started on this contract.", "system");
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error starting contract work:", error);
+      throw error;
+    }
+  },
+
+  async submitContractForReview(contractId: string, submissionMessage?: string): Promise<{ success: boolean }> {
+  const supabase = getSupabaseBrowserClient();
+   const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) {
+      throw new Error("User not authenticated");
+    }
+
+    try {
+      // Get contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        throw new Error("Contract not found");
+      }
+
+      // Check if user is the provider
+      if (contractData.provider_id !== currentUser.id) {
+        throw new Error("Only the provider can submit contract for review");
+      }
+
+      // Check current status
+      if (contractData.status !== "active") {
+        throw new Error("Contract must be active to submit for review");
+      }
+
+      // Update contract
+      const { error: updateError } = await supabase
+        .from("contracts")
+        .update({
+          submitted_for_review: true,
+          submitted_at: new Date().toISOString(),
+          submitted_by: currentUser.id,
+          status: "pending_review",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", contractId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Send notification message
+      if (submissionMessage) {
+        await this.sendContractMessage(contractId, submissionMessage);
+      } else {
+        await this.sendContractMessage(contractId, "Contract has been submitted for review", "system");
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error submitting contract for review:", error);
+      throw error;
+    }
+  },
+
+  async reviewContract(contractId: string, approved: boolean, reviewComments?: string): Promise<{ success: boolean }> {
+        const supabase = getSupabaseBrowserClient();
+   const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) {
+      throw new Error("User not authenticated");
+    }
+
+    try {
+      // Get contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        throw new Error("Contract not found");
+      }
+
+      // Check if user is the client (needer)
+      if (contractData.needer_id !== currentUser.id) {
+        throw new Error("Only the client can review contract");
+      }
+
+      // Check current status
+      if (contractData.status !== "pending_review") {
+        throw new Error("Contract must be submitted for review");
+      }
+
+      const newStatus = approved ? "completed" : "active";
+
+      // Update contract
+      const { error: updateError } = await supabase
+        .from("contracts")
+        .update({
+          status: newStatus,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: currentUser.id,
+          review_comments: reviewComments,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", contractId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Send notification message
+      const message = approved 
+        ? `Contract has been approved and marked as completed.${reviewComments ? '\n\nClient comments: ' + reviewComments : ''}`
+        : `Contract has been rejected and returned for revision.${reviewComments ? '\n\nClient comments: ' + reviewComments : ''}`;
+      
+      await this.sendContractMessage(contractId, message, "system");
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error reviewing contract:", error);
+      throw error;
+    }
+  },
+
+  async getContractWorkflowStatus(contractId: string): Promise<{
+    canStartWork: boolean;
+    canSubmitForReview: boolean;
+    canReview: boolean;
+    isCompleted: boolean;
+    hasMilestones: boolean;
+    userRole: 'provider' | 'needer' | null;
+  }> {
+         const supabase = getSupabaseBrowserClient();
+   const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) {
+      return {
+        canStartWork: false,
+        canSubmitForReview: false,
+        canReview: false,
+        isCompleted: false,
+        hasMilestones: false,
+        userRole: null,
+      };
+    }
+
+    try {
+      // Get contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        throw new Error("Contract not found");
+      }
+
+      // Check if contract has milestones
+      const { data: milestones, error: milestonesError } = await supabase
+        .from("contract_milestones")
+        .select("id")
+        .eq("contract_id", contractId)
+        .limit(1);
+
+      const hasMilestones = !milestonesError && milestones && milestones.length > 0;
+
+      // Determine user role
+      let userRole: 'provider' | 'needer' | null = null;
+      if (contractData.provider_id === currentUser.id) {
+        userRole = 'provider';
+      } else if (contractData.needer_id === currentUser.id) {
+        userRole = 'needer';  
+      }
+
+      const isCompleted = contractData.status === 'completed';
+      const canStartWork = userRole === 'provider' && contractData.status === 'pending_start' && !hasMilestones;
+      const canSubmitForReview = userRole === 'provider' && contractData.status === 'active' && !hasMilestones;
+      const canReview = userRole === 'needer' && contractData.status === 'pending_review' && !hasMilestones;
+
+      return {
+        canStartWork,
+        canSubmitForReview,
+        canReview,
+        isCompleted,
+        hasMilestones,
+        userRole,
+      };
+    } catch (error) {
+      console.error("Error getting contract workflow status:", error);
+      return {
+        canStartWork: false,
+        canSubmitForReview: false,
+        canReview: false,
+        isCompleted: false,
+        hasMilestones: false,
+        userRole: null,
+      };
     }
   },
 };

@@ -512,9 +512,37 @@ export default function MilestoneDetailsPage({
               </Button>
             )}
 
+            {/* Waiting for review message for providers */}
+            {milestone.userRole === "provider" && milestone.status === "pending_review" && (
+              <div className="w-full p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2 text-blue-800 mb-2">
+                  <Clock className="h-4 w-4" />
+                  <span className="font-medium">Waiting for Review</span>
+                </div>
+                <p className="text-sm text-blue-600">
+                  Your milestone has been submitted for review. The client will review your work and either approve it or request changes.
+                </p>
+              </div>
+            )}
 
+            {/* Completed milestone indicator */}
+            {milestone.status === "completed" && (
+              <div className="w-full p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 text-green-800 mb-2">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="font-medium">Milestone Completed</span>
+                </div>
+                <p className="text-sm text-green-600">
+                  This milestone has been completed and approved. 
+                  {milestone.completedDate && (
+                    <span> Completed on {new Date(milestone.completedDate).toLocaleDateString()}.</span>
+                  )}
+                </p>
+              </div>
+            )}
 
-            {milestone.canReview && milestone.status === "submitted" && (
+            {/* Review Milestone button for needers */}
+            {milestone.userRole === "needer" && milestone.status === "pending_review" && (
               <Button 
                 className="w-full" 
                 onClick={() => router.push(`/contracts/${contractId}/milestone/${milestoneId}/review`)}
@@ -524,7 +552,7 @@ export default function MilestoneDetailsPage({
               </Button>
             )}
 
-            {milestone.canReview && milestone.status === "submitted" && (
+            {milestone.userRole === "needer" && milestone.status === "pending_review" && (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">Quick Review:</p>
                 <Textarea

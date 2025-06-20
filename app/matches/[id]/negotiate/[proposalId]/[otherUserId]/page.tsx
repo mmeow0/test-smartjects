@@ -26,7 +26,8 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { getSupabaseBrowserClient } from "@/lib/supabase"
-import { contractService, negotiationService } from "@/lib/services"
+import { contractService } from "@/lib/services/contract.service"
+import { negotiationService } from "@/lib/services/negotiation.service"
 
 interface Deliverable {
   id: string
@@ -87,6 +88,7 @@ interface IndividualNegotiationData {
   provider: User
   needer: User
   otherUser: User
+  proposalAuthor: User
   currentProposal: CurrentProposal
   milestones: Milestone[]
   messages: Message[]
@@ -208,7 +210,26 @@ export default function IndividualNegotiatePage({
         ) || [];
 
         const isProposalOwner = proposalData.user_id === user?.id;
-        const smartjectOwnerId = "mock-smartject-owner"; // Would get from smartjects table
+        
+        // Determine provider and needer based on proposal type
+        let providerId: string;
+        let neederId: string;
+        let providerData: any;
+        let neederData: any;
+        
+        if (proposalData.type === "provide") {
+          // Proposal owner provides service
+          providerId = proposalData.user_id as string;
+          neederId = otherUserId;
+          providerData = proposalData.users;
+          neederData = otherUserData;
+        } else {
+          // Proposal owner needs service
+          neederId = proposalData.user_id as string;
+          providerId = otherUserId;
+          neederData = proposalData.users;
+          providerData = otherUserData;
+        }
 
         const negotiationData: IndividualNegotiationData = {
           matchId: id,
@@ -216,15 +237,15 @@ export default function IndividualNegotiatePage({
           otherUserId: otherUserId,
           smartjectTitle: ((proposalData.smartjects as any)?.title as string) || "",
           provider: {
-            id: ((proposalData.users as any)?.id as string) || "",
-            name: ((proposalData.users as any)?.name as string) || "",
-            avatar: ((proposalData.users as any)?.avatar_url as string) || "",
+            id: providerId,
+            name: (providerData?.name as string) || "TBD",
+            avatar: (providerData?.avatar_url as string) || "",
             rating: 4.8,
           },
           needer: {
-            id: smartjectOwnerId,
-            name: "Smartject Owner",
-            avatar: "",
+            id: neederId,
+            name: (neederData?.name as string) || "TBD",
+            avatar: (neederData?.avatar_url as string) || "",
             rating: 4.6,
           },
           otherUser: {
@@ -232,6 +253,12 @@ export default function IndividualNegotiatePage({
             name: (otherUserData.name as string) || "Unknown User",
             avatar: (otherUserData.avatar_url as string) || "",
             rating: 4.5,
+          },
+          proposalAuthor: {
+            id: ((proposalData.users as any)?.id as string) || "",
+            name: ((proposalData.users as any)?.name as string) || "",
+            avatar: ((proposalData.users as any)?.avatar_url as string) || "",
+            rating: 4.7,
           },
           currentProposal: {
             budget: (proposalData.budget as string) || "",
@@ -243,7 +270,7 @@ export default function IndividualNegotiatePage({
           milestones: [],
           messages: filteredMessages.map((message: any) => ({
             id: (message.id as string) || "",
-            sender: (message.sender_id === proposalData.user_id ? "provider" : "needer") as "provider" | "needer",
+            sender: (message.sender_id === providerId ? "provider" : "needer") as "provider" | "needer",
             senderName: (message.users?.name as string) || "",
             content: (message.content as string) || "",
             timestamp: (message.created_at as string) || "",

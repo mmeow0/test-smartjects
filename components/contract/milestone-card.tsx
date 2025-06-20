@@ -115,7 +115,7 @@ export function MilestoneCard({
     milestone.status === "in_progress" && 
     !milestone.submittedForReview
 
-  const canReview = userRole === "needer" && milestone.status === "submitted"
+  const canReview = userRole === "needer" && milestone.status === "pending_review"
 
   const isOverdue = milestone.dueDate && 
     new Date(milestone.dueDate) < new Date() && 
