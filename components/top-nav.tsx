@@ -51,20 +51,23 @@ export function TopNav({ isHomePage = false }: TopNavProps) {
   ];
 
   return (
-    <header className={`${
-      isHomePage 
-        ? "absolute top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/10" 
-        : "sticky top-0 z-50 bg-white border-b border-gray-200"
-    }`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+    <header
+      className={`${
+        isHomePage
+          ? "absolute top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/10"
+          : "sticky top-0 z-50 bg-white border-b border-gray-200"
+      }`}
+    >
+      <div className="max-w-[1340px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center gap-2">
-            {isHomePage ?
-             <LogoWhite className="h-8 w-auto" /> 
-             : <Logo className="h-8 w-auto" /> }
-       
+              {isHomePage ? (
+                <LogoWhite className="h-8 w-auto" />
+              ) : (
+                <Logo className="h-8 w-auto" />
+              )}
             </Link>
           </div>
 
@@ -75,19 +78,15 @@ export function TopNav({ isHomePage = false }: TopNavProps) {
               <Link
                 key={item.href}
                 href={item.href}
-              className={`flex items-center gap-1 text-sm font-medium transition-colors ${
-                isHomePage
-                  ? `hover:text-blue-400 ${
-                      pathname === item.href
-                      ? "text-blue-400"
-                      : "text-white/80"
-                    }`
-                  : `hover:text-primary ${
-                      pathname === item.href
-                      ? "text-primary"
-                      : "text-muted-foreground"
-                    }`
-              }`}
+                className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+                  isHomePage
+                    ? `hover:text-[#FFD900] ${
+                        pathname === item.href ? "text-white" : "text-gray-300"
+                      }`
+                    : `hover:text-[#FFD900] ${
+                        pathname === item.href ? "text-black" : "text-gray-600"
+                      }`
+                }`}
               >
                 {item.label}
               </Link>
@@ -101,19 +100,19 @@ export function TopNav({ isHomePage = false }: TopNavProps) {
                   <Link
                     key={item.href}
                     href={item.href}
-                  className={`flex items-center gap-1 text-sm font-medium transition-colors ${
-                    isHomePage
-                      ? `hover:text-blue-400 ${
-                          pathname === item.href
-                          ? "text-blue-400"
-                          : "text-white/80"
-                        }`
-                      : `hover:text-primary ${
-                          pathname === item.href
-                          ? "text-primary"
-                          : "text-muted-foreground"
-                        }`
-                  }`}
+                    className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+                      isHomePage
+                        ? `hover:text-[#FFD900] ${
+                            pathname === item.href
+                              ? "text-white"
+                              : "text-gray-300"
+                          }`
+                        : `hover:text-[#FFD900] ${
+                            pathname === item.href
+                              ? "text-black"
+                              : "text-gray-600"
+                          }`
+                    }`}
                   >
                     {item.label}
                   </Link>
@@ -122,30 +121,53 @@ export function TopNav({ isHomePage = false }: TopNavProps) {
 
           {/* User Menu, Theme Toggle, and Auth Buttons */}
           <div className="flex items-center gap-2">
-            {/* Theme Toggle - временно скрыто */}
-            {/* <ThemeToggle /> */}
+            {/* Theme Toggle */}
+            {/* <div
+              className={`${
+                isHomePage
+                  ? "[&_button]:text-white [&_button:hover]:text-[#FFD900] [&_svg]:text-white"
+                  : "[&_button]:text-black [&_button:hover]:text-[#FFD900] [&_svg]:text-black"
+              }`}
+            >
+              <ThemeToggle />
+            </div> */}
 
             {/* Notifications (for authenticated users) */}
-            {isAuthenticated && <NotificationBadge />}
+            {isAuthenticated && (
+              <div
+                className={`${
+                  isHomePage
+                    ? "[&_button]:text-white [&_button:hover]:text-[#FFD900] [&_svg]:text-white"
+                    : "[&_button]:text-black [&_button:hover]:text-[#FFD900] [&_svg]:text-black"
+                }`}
+              >
+                <NotificationBadge />
+              </div>
+            )}
 
             {/* User Menu or Auth Buttons */}
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className={`flex items-center gap-2 ${
-                    isHomePage 
-                      ? "text-white hover:bg-white/10" 
-                      : "hover:bg-gray-100"
-                  }`}>
+                  <Button
+                    variant="ghost"
+                    className={`flex items-center gap-2 hover:text-[#FFD900] hover:bg-transparent ${
+                      isHomePage ? "text-white" : "text-black"
+                    }`}
+                  >
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user?.avatar || ""} />
-                      <AvatarFallback>
+                      <AvatarFallback
+                        className={`${
+                          isHomePage
+                            ? "bg-white text-black"
+                            : "bg-gray-200 text-black"
+                        }`}
+                      >
                         {user?.name?.charAt(0) || "U"}
                       </AvatarFallback>
                     </Avatar>
-                    <span className={`hidden sm:inline text-sm font-medium ${
-                      isHomePage ? "text-white" : ""
-                    }`}>
+                    <span className="hidden sm:inline text-sm font-medium">
                       {user?.name || "User"}
                     </span>
                   </Button>
@@ -195,13 +217,22 @@ export function TopNav({ isHomePage = false }: TopNavProps) {
               </DropdownMenu>
             ) : (
               <div className="hidden md:flex items-center gap-3">
-                <Button variant="ghost" className={isHomePage ? "text-white hover:bg-white/10" : ""} asChild>
+                <Button
+                  variant="ghost"
+                  asChild
+                  className={`hover:text-[#FFD900] hover:bg-transparent ${
+                    isHomePage ? "text-white" : "text-black"
+                  }`}
+                >
                   <Link href="/auth/login">
                     <LogIn className="mr-2 h-4 w-4" />
                     Log in
                   </Link>
                 </Button>
-                <Button className={isHomePage ? "bg-blue-600 hover:bg-blue-700 text-white" : ""} asChild>
+                <Button
+                  asChild
+                  className="bg-[#FFD900] text-black hover:bg-[#e6c300]"
+                >
                   <Link href="/auth/register">
                     <UserPlus className="mr-2 h-4 w-4" />
                     Sign up
@@ -213,9 +244,13 @@ export function TopNav({ isHomePage = false }: TopNavProps) {
             {/* Mobile Menu Button */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className={`md:hidden ${
-                  isHomePage ? "text-white hover:bg-white/10" : ""
-                }`}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`md:hidden hover:text-[#FFD900] hover:bg-transparent ${
+                    isHomePage ? "text-white" : "text-black"
+                  }`}
+                >
                   <Menu className="h-5 w-5" />
                   <span className="sr-only">Toggle menu</span>
                 </Button>
@@ -245,10 +280,10 @@ export function TopNav({ isHomePage = false }: TopNavProps) {
                         <Link
                           href={item.href}
                           className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-blue-600 ${
-                              pathname === item.href
-                                ? "text-blue-600"
-                                : "text-gray-700"
-                            }`}
+                            pathname === item.href
+                              ? "text-blue-600"
+                              : "text-gray-700"
+                          }`}
                         >
                           {item.label}
                         </Link>
@@ -292,7 +327,10 @@ export function TopNav({ isHomePage = false }: TopNavProps) {
                           Log in
                         </Link>
                       </Button>
-                      <Button className="w-full justify-start bg-blue-600 hover:bg-blue-700" asChild>
+                      <Button
+                        className="w-full justify-start bg-[#FFD900] text-black hover:bg-[#e6c300]"
+                        asChild
+                      >
                         <Link
                           href="/auth/register"
                           onClick={() => setMobileMenuOpen(false)}

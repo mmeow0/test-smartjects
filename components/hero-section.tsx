@@ -9,7 +9,7 @@ export function HeroSection() {
           <div className="relative h-[1298px]">
             {/* Background Image */}
             <img
-              className="absolute w-[2421px] h-[1005px] -top-10 left-0 object-cover"
+              className="absolute w-[2421px] h-[1005px] -top-16 left-0 object-cover"
               alt="Background"
               src="/images/landing-background.png"
             />
