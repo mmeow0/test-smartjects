@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useMemo, useCallback, memo, useEffect } from "react";
+import { useState, useMemo, useCallback, memo, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ChevronDown, Search, X } from "lucide-react";
 import { HeroSection } from "@/components/hero-section";
-import { SearchBar } from "@/components/search-bar";
+
 import { CompanyLogos } from "@/components/company-logos";
 import { NewsletterSignup } from "@/components/newsletter-signup";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +23,9 @@ import { useSmartjects } from "@/hooks/use-smartjects";
 import { Discover } from "@/components/icons/Discover";
 import { Connect } from "@/components/icons/Connect";
 import { Execute } from "@/components/icons/Execute";
+import { Audience } from "@/components/icons/Audience";
+import { Functions } from "@/components/icons/Functions";
+import { Industries } from "@/components/icons/Industries";
 
 // Debounce hook inline for performance
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -49,7 +53,7 @@ const SmartjectCard = dynamic(
   {
     loading: () => <CardSkeleton />,
     ssr: false,
-  }
+  },
 );
 
 // Memoized skeleton component
@@ -91,6 +95,49 @@ const SkeletonGrid = memo(() => (
 ));
 
 SkeletonGrid.displayName = "SkeletonGrid";
+
+const FilterBadge = memo(
+  ({
+    type,
+    value,
+    onRemove,
+  }: {
+    type: "industry" | "technology" | "function";
+    value: string;
+    onRemove: (value: string) => void;
+  }) => {
+    const handleRemove = useCallback(() => onRemove(value), [onRemove, value]);
+
+    const colorConfig = {
+      industry: "bg-orange-100 text-orange-800 hover:bg-orange-200",
+      technology: "bg-green-100 text-green-800 hover:bg-green-200",
+      function: "bg-blue-100 text-blue-800 hover:bg-blue-200",
+    };
+
+    const bgColor = colorConfig[type];
+
+    return (
+      <Badge
+        variant="secondary"
+        className={`flex items-center gap-1 ${bgColor} rounded-full px-3 py-1`}
+      >
+        {value}
+        <X
+          className="h-3 w-3 cursor-pointer ml-1 hover:text-red-500"
+          onClick={handleRemove}
+        />
+      </Badge>
+    );
+  },
+);
+
+FilterBadge.displayName = "FilterBadge";
+
+const toggleItem = (array: string[], item: string) => {
+  return array.includes(item)
+    ? array.filter((i) => i !== item)
+    : [...array, item];
+};
 
 // Memoized How Smartjects Works section
 const HowItWorksSection = memo(() => (
@@ -442,7 +489,7 @@ const SmartjectsGrid = memo(
         ))}
       </div>
     );
-  }
+  },
 );
 
 SmartjectsGrid.displayName = "SmartjectsGrid";
@@ -451,35 +498,159 @@ SmartjectsGrid.displayName = "SmartjectsGrid";
 export default function Home() {
   const { user } = useAuth();
   const { smartjects, isLoading, filters, setFilter, refetch } = useSmartjects(
-    user?.id
+    user?.id,
   );
   const [query, setQuery] = useState("");
+  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
+  const [selectedTechnologies, setSelectedTechnologies] = useState<string[]>(
+    [],
+  );
+  const [selectedFunctions, setSelectedFunctions] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<
+    "recent" | "most-needed" | "most-provided" | "most-believed"
+  >("recent");
+  const [showIndustriesDropdown, setShowIndustriesDropdown] = useState(false);
+  const [showAudienceDropdown, setShowAudienceDropdown] = useState(false);
+  const [showFunctionsDropdown, setShowFunctionsDropdown] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+
+  // Refs for dropdown close handling
+  const industriesRef = useRef<HTMLDivElement>(null);
+  const audienceRef = useRef<HTMLDivElement>(null);
+  const functionsRef = useRef<HTMLDivElement>(null);
+  const sortRef = useRef<HTMLDivElement>(null);
 
   // Debounce search query for better performance
   const debouncedQuery = useDebounce(query, 300);
 
-  const handleSearchChange = useCallback((value: string) => {
-    setQuery(value);
+  // Memoized filter handlers to prevent unnecessary re-renders
+  const handleToggleIndustry = useCallback(
+    (industry: string) => {
+      setSelectedIndustries((prev) => {
+        const updated = toggleItem(prev, industry);
+        const filterUpdated = toggleItem(filters.industries || [], industry);
+        setFilter("industries", filterUpdated);
+        return updated;
+      });
+    },
+    [filters.industries, setFilter],
+  );
+
+  const handleToggleTechnology = useCallback(
+    (tech: string) => {
+      setSelectedTechnologies((prev) => {
+        const updated = toggleItem(prev, tech);
+        const filterUpdated = toggleItem(filters.technologies || [], tech);
+        setFilter("technologies", filterUpdated);
+        return updated;
+      });
+    },
+    [filters.technologies, setFilter],
+  );
+
+  const handleToggleFunction = useCallback(
+    (fn: string) => {
+      setSelectedFunctions((prev) => {
+        const updated = toggleItem(prev, fn);
+        const filterUpdated = toggleItem(filters.businessFunctions || [], fn);
+        setFilter("businessFunctions", filterUpdated);
+        return updated;
+      });
+    },
+    [filters.businessFunctions, setFilter],
+  );
+
+  // Memoized total filters count
+  const totalFiltersCount = useMemo(
+    () =>
+      selectedIndustries.length +
+      selectedTechnologies.length +
+      selectedFunctions.length,
+    [
+      selectedIndustries.length,
+      selectedTechnologies.length,
+      selectedFunctions.length,
+    ],
+  );
+
+  // Memoized clear all filters handler
+  const handleClearAllFilters = useCallback(() => {
+    setSelectedIndustries([]);
+    setSelectedFunctions([]);
+    setSelectedTechnologies([]);
+    // Close all dropdowns
+    setShowIndustriesDropdown(false);
+    setShowAudienceDropdown(false);
+    setShowFunctionsDropdown(false);
+    setShowSortDropdown(false);
   }, []);
+
+  // Memoized search change handler
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setQuery(e.target.value);
+    },
+    [],
+  );
+
+  // Sort options
+  const sortOptions = [
+    { value: "recent", label: "Recent" },
+    { value: "most-needed", label: "Most Needed" },
+    { value: "most-provided", label: "Most Provided" },
+    { value: "most-believed", label: "Most Believed" },
+  ] as const;
 
   const handleVoted = useCallback(() => {
     refetch();
   }, [refetch]);
 
   const filteredSmartjects = useMemo(() => {
-    if (!debouncedQuery) return smartjects;
+    if (!smartjects?.length) return [];
 
     const lowerQuery = debouncedQuery.toLowerCase();
 
     return smartjects.filter((s) => {
-      return (
+      // Early return for empty query and no filters
+      if (!lowerQuery && totalFiltersCount === 0) return true;
+
+      // Query matching
+      const matchesQuery =
+        !lowerQuery ||
         s.title?.toLowerCase().includes(lowerQuery) ||
         s.mission?.toLowerCase().includes(lowerQuery) ||
         s.problematics?.toLowerCase().includes(lowerQuery) ||
-        s.scope?.toLowerCase().includes(lowerQuery)
-      );
+        s.scope?.toLowerCase().includes(lowerQuery);
+
+      if (!matchesQuery) return false;
+
+      // Filter matching with early returns
+      const matchesIndustries =
+        selectedIndustries.length === 0 ||
+        selectedIndustries.some((i) => s.industries?.includes(i));
+
+      if (!matchesIndustries) return false;
+
+      const matchesTechnologies =
+        selectedTechnologies.length === 0 ||
+        selectedTechnologies.some((t) => s.technologies?.includes(t));
+
+      if (!matchesTechnologies) return false;
+
+      const matchesFunctions =
+        selectedFunctions.length === 0 ||
+        selectedFunctions.some((f) => s.businessFunctions?.includes(f));
+
+      return matchesFunctions;
     });
-  }, [smartjects, debouncedQuery]);
+  }, [
+    smartjects,
+    debouncedQuery,
+    selectedIndustries,
+    selectedTechnologies,
+    selectedFunctions,
+    totalFiltersCount,
+  ]);
 
   const categorizedSmartjects = useMemo(() => {
     if (!filteredSmartjects.length) {
@@ -499,19 +670,19 @@ export default function Home() {
       recent: sortAndLimit(
         filteredSmartjects,
         (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       ),
       mostNeeded: sortAndLimit(
         smartjects, // Use all smartjects for global ranking
-        (a, b) => (b.votes?.need || 0) - (a.votes?.need || 0)
+        (a, b) => (b.votes?.need || 0) - (a.votes?.need || 0),
       ),
       mostProvided: sortAndLimit(
         smartjects, // Use all smartjects for global ranking
-        (a, b) => (b.votes?.provide || 0) - (a.votes?.provide || 0)
+        (a, b) => (b.votes?.provide || 0) - (a.votes?.provide || 0),
       ),
       mostBelieved: sortAndLimit(
         smartjects, // Use all smartjects for global ranking
-        (a, b) => (b.votes?.believe || 0) - (a.votes?.believe || 0)
+        (a, b) => (b.votes?.believe || 0) - (a.votes?.believe || 0),
       ),
     };
   }, [filteredSmartjects, smartjects]);
@@ -519,6 +690,38 @@ export default function Home() {
   const handleVote = useCallback(() => {
     refetch();
   }, [refetch]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        industriesRef.current &&
+        !industriesRef.current.contains(event.target as Node)
+      ) {
+        setShowIndustriesDropdown(false);
+      }
+      if (
+        audienceRef.current &&
+        !audienceRef.current.contains(event.target as Node)
+      ) {
+        setShowAudienceDropdown(false);
+      }
+      if (
+        functionsRef.current &&
+        !functionsRef.current.contains(event.target as Node)
+      ) {
+        setShowFunctionsDropdown(false);
+      }
+      if (sortRef.current && !sortRef.current.contains(event.target as Node)) {
+        setShowSortDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <>
@@ -539,119 +742,329 @@ export default function Home() {
 
         <div className="bg-gray-50 py-16">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                Discover Smartjects
-              </h2>
-              <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-                Explore cutting-edge research projects ready for business
-                implementation
-              </p>
-              <div className="max-w-md mx-auto">
-                <SearchBar onChange={handleSearchChange} />
+            <div className="flex flex-col items-start gap-[50px] relative border border-solid border-transparent mb-2">
+              <div className="flex flex-col items-start gap-[50px] relative self-stretch w-full flex-[0_0_auto]">
+                <div className="flex items-center justify-center gap-2.5 relative self-stretch w-full flex-[0_0_auto]">
+                  <div className="flex flex-col items-start gap-2 relative flex-1 grow">
+                    <div className="inline-flex items-center justify-center gap-2.5 relative flex-[0_0_auto]">
+                      <div className="relative w-fit mt-[-1.00px] text-4xl font-bold text-gray-900 whitespace-nowrap">
+                        Discover smartjects
+                      </div>
+                    </div>
+                    <div className="inline-flex items-center justify-center gap-2.5 pl-0.5 pr-0 py-0 relative flex-[0_0_auto]">
+                      <p className="relative max-w-7xl mt-[-1.00px] text-base font-normal text-gray-600">
+                        Explore all available AI implementation projects
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col w-full items-start gap-3 relative flex-[0_0_auto] mb-12">
+                  <div className="flex items-center gap-3 self-stretch w-full relative flex-[0_0_auto]">
+                    <div className="flex h-16 items-start gap-3 p-3 relative flex-1 grow bg-gray-200 rounded-2xl">
+                      <div className="flex items-center gap-3 relative flex-1 grow">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <Input
+                            placeholder="Search here..."
+                            value={query}
+                            onChange={handleSearchChange}
+                            className="pl-10 border-0 bg-white rounded-xl h-10 focus:border-blue-500 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        <div className="relative" ref={industriesRef}>
+                          <div
+                            className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
+                            onClick={() =>
+                              setShowIndustriesDropdown(!showIndustriesDropdown)
+                            }
+                          >
+                            <Industries className="w-4 h-4" />
+                            <span className="text-sm font-medium text-gray-700">
+                              Industries
+                            </span>
+                            <ChevronDown className="w-4 h-4 text-gray-500" />
+                          </div>
+                          {showIndustriesDropdown && (
+                            <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-y-auto">
+                              {filters.industries?.map((industry) => (
+                                <div
+                                  key={industry}
+                                  className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                                    selectedIndustries.includes(industry)
+                                      ? "bg-blue-50 text-blue-700"
+                                      : "text-gray-700"
+                                  }`}
+                                  onClick={() => {
+                                    handleToggleIndustry(industry);
+                                    setShowIndustriesDropdown(false);
+                                  }}
+                                >
+                                  {industry}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="relative" ref={audienceRef}>
+                          <div
+                            className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
+                            onClick={() =>
+                              setShowAudienceDropdown(!showAudienceDropdown)
+                            }
+                          >
+                            <Audience className="w-4 h-4" />
+                            <span className="text-sm font-medium text-gray-700">
+                              Audience
+                            </span>
+                            <ChevronDown className="w-4 h-4 text-gray-500" />
+                          </div>
+                          {showAudienceDropdown && (
+                            <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-y-auto">
+                              {filters.technologies?.map((tech) => (
+                                <div
+                                  key={tech}
+                                  className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                                    selectedTechnologies.includes(tech)
+                                      ? "bg-blue-50 text-blue-700"
+                                      : "text-gray-700"
+                                  }`}
+                                  onClick={() => {
+                                    handleToggleTechnology(tech);
+                                    setShowAudienceDropdown(false);
+                                  }}
+                                >
+                                  {tech}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="relative" ref={functionsRef}>
+                          <div
+                            className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
+                            onClick={() =>
+                              setShowFunctionsDropdown(!showFunctionsDropdown)
+                            }
+                          >
+                            <Functions className="w-4 h-4" />
+                            <span className="text-sm font-medium text-gray-700">
+                              Functions
+                            </span>
+                            <ChevronDown className="w-4 h-4 text-gray-500" />
+                          </div>
+                          {showFunctionsDropdown && (
+                            <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-y-auto">
+                              {filters.businessFunctions?.map((func) => (
+                                <div
+                                  key={func}
+                                  className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                                    selectedFunctions.includes(func)
+                                      ? "bg-blue-50 text-blue-700"
+                                      : "text-gray-700"
+                                  }`}
+                                  onClick={() => {
+                                    handleToggleFunction(func);
+                                    setShowFunctionsDropdown(false);
+                                  }}
+                                >
+                                  {func}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="relative" ref={sortRef}>
+                        <div
+                          className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
+                          onClick={() => setShowSortDropdown(!showSortDropdown)}
+                        >
+                          <span className="text-sm font-medium text-gray-700">
+                            {
+                              sortOptions.find((opt) => opt.value === sortBy)
+                                ?.label
+                            }
+                          </span>
+                          <ChevronDown className="w-4 h-4 text-gray-500" />
+                        </div>
+                        {showSortDropdown && (
+                          <div className="absolute top-12 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-40">
+                            {sortOptions.map((option) => (
+                              <div
+                                key={option.value}
+                                className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                                  sortBy === option.value
+                                    ? "bg-blue-50 text-blue-700"
+                                    : "text-gray-700"
+                                }`}
+                                onClick={() => {
+                                  setSortBy(option.value);
+                                  setShowSortDropdown(false);
+                                }}
+                              >
+                                {option.label}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Active Filters Tags */}
+                  {totalFiltersCount > 0 && (
+                    <div className="inline-flex items-start gap-2 px-3 py-0 relative flex-[0_0_auto]">
+                      {selectedIndustries.map((industry) => (
+                        <FilterBadge
+                          key={industry}
+                          type="industry"
+                          value={industry}
+                          onRemove={handleToggleIndustry}
+                        />
+                      ))}
+                      {selectedTechnologies.map((tech) => (
+                        <FilterBadge
+                          key={tech}
+                          type="technology"
+                          value={tech}
+                          onRemove={handleToggleTechnology}
+                        />
+                      ))}
+                      {selectedFunctions.map((func) => (
+                        <FilterBadge
+                          key={func}
+                          type="function"
+                          value={func}
+                          onRemove={handleToggleFunction}
+                        />
+                      ))}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleClearAllFilters}
+                        className="text-xs h-7 px-2 text-gray-500 hover:text-gray-700"
+                      >
+                        Clear all
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            <Tabs defaultValue="recent">
-              <TabsList className="mb-12 bg-white shadow-sm border-0 p-1 rounded-lg">
-                <TabsTrigger
-                  value="recent"
-                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6 py-3 font-semibold"
-                >
-                  Recent
-                </TabsTrigger>
-                <TabsTrigger
-                  value="most-needed"
-                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6 py-3 font-semibold"
-                >
-                  Most Needed
-                </TabsTrigger>
-                <TabsTrigger
-                  value="most-provided"
-                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6 py-3 font-semibold"
-                >
-                  Most Provided
-                </TabsTrigger>
-                <TabsTrigger
-                  value="most-believed"
-                  className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6 py-3 font-semibold"
-                >
-                  Most Believed
-                </TabsTrigger>
-              </TabsList>
-
+            <Tabs
+              value={sortBy}
+              onValueChange={(value) => setSortBy(value as typeof sortBy)}
+            >
               <TabsContent value="recent" className="space-y-4">
                 <SmartjectsGrid
-                  smartjects={categorizedSmartjects.recent}
+                  smartjects={
+                    sortBy === "recent"
+                      ? categorizedSmartjects.recent
+                      : sortBy === "most-needed"
+                        ? categorizedSmartjects.mostNeeded
+                        : sortBy === "most-provided"
+                          ? categorizedSmartjects.mostProvided
+                          : categorizedSmartjects.mostBelieved
+                  }
                   isLoading={isLoading}
                   onVoted={handleVote}
-                  emptyMessage="No recent smartjects found matching your criteria."
+                  emptyMessage={`No ${sortBy === "recent" ? "recent " : ""}smartjects found matching your criteria.`}
                 />
                 <div className="flex justify-center mt-12">
                   <Button
                     variant="outline"
                     size="lg"
-                    className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg"
+                    className="border border-gray-300 text-gray-600 hover:bg-gray-50 px-6 py-2 text-base font-normal rounded-lg"
                     asChild
                   >
-                    <a href="/discover">View More Smartjects</a>
+                    <a href="/discover">View More</a>
                   </Button>
                 </div>
               </TabsContent>
 
               <TabsContent value="most-needed" className="space-y-4">
                 <SmartjectsGrid
-                  smartjects={categorizedSmartjects.mostNeeded}
+                  smartjects={
+                    sortBy === "recent"
+                      ? categorizedSmartjects.recent
+                      : sortBy === "most-needed"
+                        ? categorizedSmartjects.mostNeeded
+                        : sortBy === "most-provided"
+                          ? categorizedSmartjects.mostProvided
+                          : categorizedSmartjects.mostBelieved
+                  }
                   isLoading={isLoading}
                   onVoted={handleVote}
-                  emptyMessage="No smartjects found matching your criteria."
+                  emptyMessage={`No ${sortBy === "recent" ? "recent " : ""}smartjects found matching your criteria.`}
                 />
                 <div className="flex justify-center mt-12">
                   <Button
                     variant="outline"
                     size="lg"
-                    className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg"
+                    className="border border-gray-300 text-gray-600 hover:bg-gray-50 px-6 py-2 text-base font-normal rounded-lg"
                     asChild
                   >
-                    <a href="/discover">View More Smartjects</a>
+                    <a href="/discover">View More</a>
                   </Button>
                 </div>
               </TabsContent>
 
               <TabsContent value="most-provided" className="space-y-4">
                 <SmartjectsGrid
-                  smartjects={categorizedSmartjects.mostProvided}
+                  smartjects={
+                    sortBy === "recent"
+                      ? categorizedSmartjects.recent
+                      : sortBy === "most-needed"
+                        ? categorizedSmartjects.mostNeeded
+                        : sortBy === "most-provided"
+                          ? categorizedSmartjects.mostProvided
+                          : categorizedSmartjects.mostBelieved
+                  }
                   isLoading={isLoading}
                   onVoted={handleVote}
-                  emptyMessage="No smartjects found matching your criteria."
+                  emptyMessage={`No ${sortBy === "recent" ? "recent " : ""}smartjects found matching your criteria.`}
                 />
                 <div className="flex justify-center mt-12">
                   <Button
                     variant="outline"
                     size="lg"
-                    className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg"
+                    className="border border-gray-300 text-gray-600 hover:bg-gray-50 px-6 py-2 text-base font-normal rounded-lg"
                     asChild
                   >
-                    <a href="/discover">View More Smartjects</a>
+                    <a href="/discover">View More</a>
                   </Button>
                 </div>
               </TabsContent>
 
               <TabsContent value="most-believed" className="space-y-4">
                 <SmartjectsGrid
-                  smartjects={categorizedSmartjects.mostBelieved}
+                  smartjects={
+                    sortBy === "recent"
+                      ? categorizedSmartjects.recent
+                      : sortBy === "most-needed"
+                        ? categorizedSmartjects.mostNeeded
+                        : sortBy === "most-provided"
+                          ? categorizedSmartjects.mostProvided
+                          : categorizedSmartjects.mostBelieved
+                  }
                   isLoading={isLoading}
                   onVoted={handleVote}
-                  emptyMessage="No smartjects found matching your criteria."
+                  emptyMessage={`No ${sortBy === "recent" ? "recent " : ""}smartjects found matching your criteria.`}
                 />
                 <div className="flex justify-center mt-12">
                   <Button
                     variant="outline"
                     size="lg"
-                    className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg"
+                    className="border border-gray-300 text-gray-600 hover:bg-gray-50 px-6 py-2 text-base font-normal rounded-lg"
                     asChild
                   >
-                    <a href="/discover">View More Smartjects</a>
+                    <a href="/discover">View More</a>
                   </Button>
                 </div>
               </TabsContent>
