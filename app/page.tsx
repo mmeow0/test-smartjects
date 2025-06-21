@@ -54,22 +54,26 @@ const SmartjectCard = dynamic(
 
 // Memoized skeleton component
 const CardSkeleton = memo(() => (
-  <Card className="h-[400px]">
-    <div className="h-40 relative">
-      <Skeleton className="h-full w-full" />
-    </div>
-    <div className="p-5 space-y-4">
-      <Skeleton className="h-6 w-3/4" />
+  <Card className="w-full">
+    <CardHeader>
+      <div className="flex items-center space-x-4">
+        <Skeleton className="h-12 w-12 rounded-full" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-[250px]" />
+          <Skeleton className="h-4 w-[200px]" />
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent>
       <div className="space-y-2">
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-4 w-3/4" />
       </div>
-      <div className="flex gap-2">
-        <Skeleton className="h-8 w-20" />
-        <Skeleton className="h-8 w-20" />
-      </div>
-    </div>
+    </CardContent>
+    <CardFooter>
+      <Skeleton className="h-10 w-full" />
+    </CardFooter>
   </Card>
 ));
 
@@ -102,7 +106,7 @@ const HowItWorksSection = memo(() => (
 
     <div className="flex items-start justify-center gap-[50px] self-stretch w-full relative flex-[0_0_auto]">
       <div className="flex flex-col w-[371px] items-center gap-5 relative">
-        <Discover className="!relative !w-[150px] !h-[150px]" />
+        <Discover className="!relative !w-[125px] !h-[125px]" />
         <div className="inline-flex flex-col items-center gap-[50px] relative flex-[0_0_auto]">
           <div className="relative w-[371px] mt-[-1.00px] [font-family:'Inter_Tight-Regular',Helvetica] font-normal text-[#020817] text-[35px] text-center tracking-[0] leading-[normal]">
             Discover
@@ -115,7 +119,7 @@ const HowItWorksSection = memo(() => (
       </div>
 
       <div className="flex flex-col w-[371px] items-center gap-5 relative">
-        <Connect className="!relative !w-[150px] !h-[150px]" />
+        <Connect className="!relative !w-[125px] !h-[125px]" />
         <div className="flex flex-col w-[371px] items-center gap-[50px] relative flex-[0_0_auto]">
           <div className="relative self-stretch mt-[-1.00px] [font-family:'Inter_Tight-Regular',Helvetica] font-normal text-[#020817] text-[35px] text-center tracking-[0] leading-[normal]">
             Connect
@@ -128,7 +132,7 @@ const HowItWorksSection = memo(() => (
       </div>
 
       <div className="flex flex-col w-[371px] items-center gap-5 relative">
-        <Execute className="!relative !w-[150px] !h-[150px]" />
+        <Execute className="!relative !w-[125px] !h-[125px]" />
         <div className="flex flex-col w-[371px] items-center gap-[50px] relative flex-[0_0_auto]">
           <div className="relative self-stretch mt-[-1.00px] [font-family:'Inter_Tight-Regular',Helvetica] font-normal text-[#020817] text-[35px] text-center tracking-[0] leading-[normal]">
             Execute
@@ -152,187 +156,244 @@ const HowItWorksSection = memo(() => (
 
 HowItWorksSection.displayName = "HowItWorksSection";
 
-// Memoized comparison section
+// Memoized comparison section with new black background design
 const ComparisonSection = memo(() => (
-  <section className="my-32 px-4 max-w-7xl mx-auto">
-    {/* Title */}
-    <div className="text-center mb-20 max-w-4xl mx-auto px-2 sm:px-0">
-      <h2 className="text-3xl sm:text-4xl font-bold leading-tight tracking-tight">
-        Why <span className="text-primary">Smartjects</span> are better than
-        traditional implementation projects
-      </h2>
-      <p className="text-muted-foreground text-base sm:text-xl mt-6 max-w-3xl mx-auto">
-        Traditional corporate project implementation process is not geared
-        toward innovations. Gathering requirements, writing technical
-        specifications, tendering, and procurement do not take into account the
-        rapid emergence of new technologies, so project results are often
-        mediocre and uncompetitive.
-      </p>
-    </div>
-
-    {/* Comparison Grid */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 px-2 sm:px-0">
-      {/* Traditional Projects */}
-      <div>
-        <h3 className="text-2xl font-semibold mb-4 text-primary">
-          🧱 Traditional Implementation Projects
-        </h3>
-        <div className="space-y-6 text-sm text-muted-foreground">
-          <div className="bg-muted/50 p-4 rounded-xl border-l-4 border-destructive h-auto md:h-24">
-            <p className="font-semibold text-destructive">
-              🚫 Not Built for Innovation
-            </p>
-            <p>
-              Often start from internal assumptions or top-down mandates,
-              leading to weak business cases.
-            </p>
-          </div>
-          <div className="bg-muted/50 p-4 rounded-xl border-l-4 border-destructive h-auto md:h-24">
-            <p className="font-semibold text-destructive">
-              ❌ Weak Business Cases
-            </p>
-            <p>
-              Validation happens late—if at all—after pilot stages or through
-              costly market studies.
-            </p>
-          </div>
-          <div className="bg-muted/50 p-4 rounded-xl border-l-4 border-destructive h-auto md:h-24">
-            <p className="font-semibold text-destructive">
-              🐢 Late or No Validation
-            </p>
-            <p>
-              Require long lead times, RFP processes, and vendor evaluations.
-            </p>
-          </div>
+  <div className="flex flex-col items-center gap-[70px] relative bg-black rounded-[50px] overflow-hidden py-10">
+    <div className="inline-flex flex-col items-start gap-20 relative">
+      <div className="flex w-[1340px] h-[207px] items-end gap-5 relative">
+        <p className="relative w-[660px] font-normal text-[#020817] text-[50px] tracking-[-0.90px] leading-[normal]">
+          <span className="text-slate-50 tracking-[-0.45px]">Why </span>
+          <span className="font-dynalight text-slate-50 text-[80px] tracking-[-0.72px]">
+            smartjects
+          </span>
+          <span className="text-slate-50 tracking-[-0.45px]">
+            {" "}
+            are <br />
+            better for innovations
+          </span>
+        </p>
+        <div className="flex flex-col max-w-screen-md items-start relative flex-1 grow">
+          <p className="relative w-[593px] text-white text-lg leading-7">
+            Traditional corporate project implementation process is not <br />
+            geared toward innovations. Gathering requirements, writing technical
+            specifications, tendering, and procurement do not take into account
+            the rapid emergence of new technologies, so project results <br />
+            are often mediocre and uncompetitive.
+          </p>
         </div>
       </div>
 
-      {/* Smartjects Approach */}
-      <div>
-        <h3 className="text-2xl font-semibold mb-4 text-green-600">
-          🚀 Smartjects Approach
-        </h3>
-        <div className="space-y-6 text-sm text-muted-foreground">
-          <div className="bg-green-50 p-4 rounded-xl border-l-4 border-green-500 h-auto md:h-24">
-            <p className="font-semibold text-green-700">
-              🔬 Immediate relevance through research-driven origin
-            </p>
-            <p>
-              Begin with <b>scientific research</b>, ensuring ideas are grounded
-              in recent innovations and cutting-edge findings.
-            </p>
+      <div className="flex w-[1340px] items-start gap-5 relative flex-[0_0_auto]">
+        {/* Traditional implementation projects - левая сторона */}
+        <div className="flex flex-col items-start justify-center gap-8 p-4 relative flex-1 self-stretch grow bg-[#ffffff0d] rounded-[20px] shadow-100">
+          <div className="inline-flex items-center gap-4 relative flex-[0_0_auto]">
+            <div className="w-[50px] h-[50px] flex items-center justify-center bg-[#ff6b00] rounded-2xl">
+              <span className="text-black font-thin text-6xl">-</span>
+            </div>
+            <div className="w-fit font-semibold text-slate-50 text-lg leading-5 whitespace-nowrap">
+              Traditional implementation projects
+            </div>
           </div>
-          <div className="bg-green-50 p-4 rounded-xl border-l-4 border-green-500 h-auto md:h-24">
-            <p className="font-semibold text-green-700">
-              📊 Market validation is built-In
-            </p>
-            <p>
-              Use live voting mechanisms to community-validate relevance,
-              demand, and supply before investment.
-            </p>
-          </div>
-          <div className="bg-green-50 p-4 rounded-xl border-l-4 border-green-500 h-auto md:h-24">
-            <p className="font-semibold text-green-700">
-              ⚡ Shorter time to value
-            </p>
-            <p>
-              Allow fast, peer-to-peer matching of needs and providers, leading
-              directly to automated smart contract creation.
-            </p>
+
+          <div className="gap-3 w-full flex flex-col items-start relative flex-1 self-stretch grow">
+            <div className="flex h-[173px] items-start gap-3 relative self-stretch w-full">
+              <div className="gap-[25px] p-6 bg-[#ffffff0d] rounded-2xl flex flex-col items-start relative flex-1 self-stretch grow">
+                <div className="w-fit font-semibold text-slate-50 text-lg leading-5 whitespace-nowrap">
+                  Not Built for Innovation
+                </div>
+                <p className="self-stretch text-white text-sm leading-5">
+                  Often start from internal assumptions or top-down mandates,
+                  leading to weak business cases.
+                </p>
+              </div>
+
+              <div className="gap-[25px] p-6 bg-[#ffffff0d] rounded-2xl flex flex-col items-start relative flex-1 self-stretch grow">
+                <div className="w-fit font-semibold text-slate-50 text-lg leading-5 whitespace-nowrap">
+                  Weak Business Cases
+                </div>
+                <p className="self-stretch text-white text-sm leading-5">
+                  Validation happens late—if at all—after pilot stages or
+                  through costly market <br /> studies.
+                </p>
+              </div>
+            </div>
+
+            <div className="items-start gap-[25px] p-6 self-stretch w-full bg-[#ffffff0d] rounded-2xl flex flex-col relative">
+              <div className="w-fit font-semibold text-slate-50 text-lg leading-5 whitespace-nowrap">
+                Late or No Validation
+              </div>
+              <p className="w-[278px] text-white text-sm leading-5">
+                Require long lead times, RFP processes, and vendor evaluations.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    {/* Second Title */}
-    <div className="text-center mb-20 max-w-4xl mx-auto my-28 px-2 sm:px-0">
-      <h2 className="text-3xl sm:text-4xl font-bold leading-tight tracking-tight">
-        Why <span className="text-primary">Smartjects</span> are better than
-        startups
-      </h2>
-      <p className="text-muted-foreground text-base sm:text-xl mt-6 max-w-3xl mx-auto">
-        Startups cannot keep up with the pace of innovation. Technologies
-        quickly become obsolete, and most startups lose their reason for
-        existence.
-      </p>
-    </div>
+        {/* Smartjects approach - правая сторона */}
+        <div className="flex flex-col items-start justify-center gap-8 p-4 relative flex-1 self-stretch grow bg-white rounded-[20px] shadow-100">
+          <div className="inline-flex items-center gap-4 relative flex-[0_0_auto]">
+            <div className="w-[50px] h-[50px] flex items-center justify-center bg-[#ffd800] rounded-2xl">
+              <span className="text-black font-thin text-4xl">+</span>
+            </div>
 
-    {/* Second Comparison Grid */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 px-2 sm:px-0">
-      {/* Startups */}
-      <div>
-        <h3 className="text-2xl font-semibold mb-4 text-red-500">
-          🔥 Startups
-        </h3>
-        <div className="space-y-6 text-sm text-muted-foreground">
-          <div className="bg-muted/50 p-4 rounded-xl border-l-4 border-red-400 h-auto md:h-24">
-            <p className="font-semibold text-red-600">
-              💸 Fundraising Bottlenecks
-            </p>
-            <p>
-              Require initial capital, pitching, and often months of pre-revenue
-              development.
-            </p>
+            <div className="w-fit font-semibold text-black text-lg leading-5 whitespace-nowrap">
+              Smartjects approach
+            </div>
           </div>
-          <div className="bg-muted/50 p-4 rounded-xl border-l-4 border-red-400 h-auto md:h-24">
-            <p className="font-semibold text-red-600">
-              🏛️ Legal & Bureaucratic Overhead
-            </p>
-            <p>
-              Need incorporation, legal setup, bank accounts, and tax
-              compliance.
-            </p>
-          </div>
-          <div className="bg-muted/50 p-4 rounded-xl border-l-4 border-red-400 h-auto md:h-24">
-            <p className="font-semibold text-red-600">
-              🎢 High-Risk, Monolithic Efforts
-            </p>
-            <p>
-              Require full-time dedication, co-founder alignment, and investor
-              trust.
-            </p>
-          </div>
-        </div>
-      </div>
 
-      {/* Smartjects Model */}
-      <div>
-        <h3 className="text-2xl font-semibold mb-4 text-green-600">
-          🌐 Smartjects Model
-        </h3>
-        <div className="space-y-6 text-sm text-muted-foreground">
-          <div className="bg-green-50 p-4 rounded-xl border-l-4 border-green-500 h-auto md:h-24">
-            <p className="font-semibold text-green-700">
-              💰 No need for fundraising
-            </p>
-            <p>
-              Enable individuals and teams to monetize implementation expertise
-              immediately by responding to existing demand.
-            </p>
-          </div>
-          <div className="bg-green-50 p-4 rounded-xl border-l-4 border-green-500 h-auto md:h-24">
-            <p className="font-semibold text-green-700">
-              ⚖️ No legal entity require
-            </p>
-            <p>
-              Use smart contracts to formalize collaboration, making it possible
-              for any expert to work project-by-project without overhead.
-            </p>
-          </div>
-          <div className="bg-green-50 p-4 rounded-xl border-l-4 border-green-500 h-auto md:h-24">
-            <p className="font-semibold text-green-700">
-              🧩 Distributed collaboration over monolithic venture
-            </p>
-            <p>
-              Allow modular contributions from individuals, small teams, or
-              companies who want to build without quitting their jobs or taking
-              massive risks.
-            </p>
+          <div className="gap-3 w-full flex flex-col items-start relative flex-1 self-stretch grow">
+            <div className="flex h-[173px] items-start gap-3 relative self-stretch w-full">
+              <div className="gap-[25px] p-6 bg-white rounded-2xl border border-solid border-[#eaeaea] flex flex-col items-start relative flex-1 self-stretch grow">
+                <div className="w-fit font-semibold text-black text-lg leading-5 whitespace-nowrap">
+                  Research-driven origin
+                </div>
+                <p className="self-stretch text-slate-900 text-sm leading-5">
+                  Begin with scientific research, ensuring ideas are grounded in
+                  recent innovations and cutting-edge findings.
+                </p>
+              </div>
+
+              <div className="gap-[25px] p-6 bg-white rounded-2xl border border-solid border-[#eaeaea] flex flex-col items-start relative flex-1 self-stretch grow">
+                <div className="w-fit font-semibold text-black text-lg leading-5 whitespace-nowrap">
+                  Built-in validation
+                </div>
+                <p className="self-stretch text-slate-900 text-sm leading-5">
+                  Use live voting mechanisms to community-validate relevance,
+                  demand, and supply before investment.
+                </p>
+              </div>
+            </div>
+
+            <div className="items-start gap-[25px] p-6 self-stretch w-full bg-white rounded-2xl border border-solid border-[#eaeaea] flex flex-col relative">
+              <div className="w-fit font-semibold text-black text-lg leading-5 whitespace-nowrap">
+                Shorter time to value
+              </div>
+              <p className="w-[278px] text-slate-900 text-sm leading-5">
+                Allow fast, peer-to-peer matching of needs and providers,
+                leading directly to automated smart contract creation.
+              </p>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </section>
+    <div className="inline-flex flex-col items-start gap-20 relative">
+      <div className="flex w-[1340px] h-[207px] items-end gap-5 relative">
+        <p className="relative w-[660px] font-normal text-[#020817] text-[50px] tracking-[-0.90px] leading-[normal]">
+          <span className="text-slate-50 tracking-[-0.45px]">Why </span>
+          <span className="font-dynalight text-slate-50 text-[80px] tracking-[-0.72px]">
+            smartjects
+          </span>
+          <span className="text-slate-50 tracking-[-0.45px]">
+            {" "}
+            are <br />
+            better than startups
+          </span>
+        </p>
+        <div className="flex flex-col max-w-screen-md items-start relative flex-1 grow">
+          <p className="relative w-[593px] text-white text-lg leading-7">
+            Startups cannot keep up with the pace of innovation. Technologies
+            quickly become obsolete, and most startups lose their reason for
+            existence.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex w-[1340px] items-start gap-5 relative flex-[0_0_auto]">
+        {/* Startups - левая сторона */}
+        <div className="flex flex-col items-start justify-center gap-8 p-4 relative flex-1 self-stretch grow bg-[#ffffff0d] rounded-[20px] shadow-100">
+          <div className="inline-flex items-center gap-4 relative flex-[0_0_auto]">
+          <div className="w-[50px] h-[50px] flex items-center justify-center bg-[#ff6b00] rounded-2xl">
+              <span className="text-black font-thin text-6xl">-</span>
+            </div>
+            <div className="w-fit font-semibold text-slate-50 text-lg leading-5 whitespace-nowrap">
+              Startups
+            </div>
+          </div>
+
+          <div className="gap-3 w-full flex flex-col items-start relative flex-1 self-stretch grow">
+            <div className="gap-[25px] p-6 bg-[#ffffff0d] rounded-2xl flex flex-col items-start relative self-stretch w-full">
+              <div className="w-fit font-semibold text-slate-50 text-lg leading-5 whitespace-nowrap">
+                Fundraising bottlenecks
+              </div>
+              <p className="self-stretch text-white text-sm leading-5">
+                Require initial capital, pitching, and often months of
+                pre-revenue development.
+              </p>
+            </div>
+
+            <div className="gap-[25px] p-6 bg-[#ffffff0d] rounded-2xl flex flex-col items-start relative self-stretch w-full">
+              <div className="w-fit font-semibold text-slate-50 text-lg leading-5 whitespace-nowrap">
+                Legal & bureaucratic overhead
+              </div>
+              <p className="self-stretch text-white text-sm leading-5">
+                Need incorporation, legal setup, bank accounts, and tax
+                compliance.
+              </p>
+            </div>
+
+            <div className="gap-[25px] p-6 bg-[#ffffff0d] rounded-2xl flex flex-col items-start relative self-stretch w-full">
+              <div className="w-fit font-semibold text-slate-50 text-lg leading-5 whitespace-nowrap">
+                High-risk, monolithic efforts
+              </div>
+              <p className="self-stretch text-white text-sm leading-5">
+                Require full-time dedication, co-founder alignment, and investor
+                trust.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Smartjects Model - правая сторона */}
+        <div className="flex flex-col items-start justify-center gap-8 p-4 relative flex-1 self-stretch grow bg-white rounded-[20px] shadow-100">
+          <div className="inline-flex items-center gap-4 relative flex-[0_0_auto]">
+           <div className="w-[50px] h-[50px] flex items-center justify-center bg-[#ffd800] rounded-2xl">
+              <span className="text-black font-thin text-4xl">+</span>
+            </div>
+            <div className="w-fit font-semibold text-black text-lg leading-5 whitespace-nowrap">
+              Smartjects Model
+            </div>
+          </div>
+
+          <div className="gap-3 w-full flex flex-col items-start relative flex-1 self-stretch grow">
+            <div className="flex items-start gap-3 relative self-stretch w-full">
+              <div className="gap-[25px] p-6 bg-white rounded-2xl border border-solid border-[#eaeaea] flex flex-col items-start relative flex-1 self-stretch grow">
+                <div className="w-fit font-semibold text-black text-lg leading-5 whitespace-nowrap">
+                  No need for fundraising
+                </div>
+                <p className="self-stretch text-slate-900 text-sm leading-5">
+                  Enable individuals and teams to monetize implementation
+                  expertise immediately by responding to existing demand.
+                </p>
+              </div>
+
+              <div className="gap-[25px] p-6 bg-white rounded-2xl border border-solid border-[#eaeaea] flex flex-col items-start relative flex-1 self-stretch grow">
+                <div className="w-fit font-semibold text-black text-lg leading-5 whitespace-nowrap">
+                  No legal entity required
+                </div>
+                <p className="self-stretch text-slate-900 text-sm leading-5">
+                  Use smart contracts to formalize collaboration, making it
+                  possible for any expert to work project-by-project without
+                  overhead.
+                </p>
+              </div>
+            </div>
+
+            <div className="gap-[25px] p-6 bg-white rounded-2xl border border-solid border-[#eaeaea] flex flex-col items-start relative self-stretch w-full">
+              <div className="w-fit font-semibold text-black text-lg leading-5 whitespace-nowrap">
+                Distributed collaboration over monolithic venture
+              </div>
+              <p className="self-stretch text-slate-900 text-sm leading-5">
+                Allow modular contributions from individuals, small teams, or
+                companies who want to build without quitting their jobs or
+                taking massive risks.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 ));
 
 ComparisonSection.displayName = "ComparisonSection";
@@ -393,14 +454,15 @@ export default function Home() {
   // Debounce search query for better performance
   const debouncedQuery = useDebounce(query, 300);
 
-  // Memoized search change handler
   const handleSearchChange = useCallback((value: string) => {
     setQuery(value);
   }, []);
 
-  // Memoized filtered smartjects with optimized filtering logic
+  const handleVoted = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
   const filteredSmartjects = useMemo(() => {
-    if (!smartjects?.length) return [];
     if (!debouncedQuery) return smartjects;
 
     const lowerQuery = debouncedQuery.toLowerCase();
@@ -415,9 +477,8 @@ export default function Home() {
     });
   }, [smartjects, debouncedQuery]);
 
-  // Memoized sorted arrays for different tabs with limit of 6 items
-  const sortedSmartjects = useMemo(() => {
-    if (!filteredSmartjects?.length) {
+  const categorizedSmartjects = useMemo(() => {
+    if (!filteredSmartjects.length) {
       return {
         recent: [],
         mostNeeded: [],
@@ -426,9 +487,8 @@ export default function Home() {
       };
     }
 
-    // For performance, we limit the sorting to what we need (6 items)
-    const sortAndLimit = (array: any[], sortFn: (a: any, b: any) => number) => {
-      return [...array].sort(sortFn).slice(0, 6);
+    const sortAndLimit = (arr: any[], sortFn: (a: any, b: any) => number) => {
+      return [...arr].sort(sortFn).slice(0, 6);
     };
 
     return {
@@ -452,8 +512,7 @@ export default function Home() {
     };
   }, [filteredSmartjects, smartjects]);
 
-  // Memoized refetch callback
-  const memoizedRefetch = useCallback(() => {
+  const handleVote = useCallback(() => {
     refetch();
   }, [refetch]);
 
@@ -466,19 +525,17 @@ export default function Home() {
           <HowItWorksSection />
         </div>
 
-        <div className="bg-gray-50 py-16">
-          <div className="container mx-auto px-4">
-            <CompanyLogos />
-          </div>
+        <div className="container mx-auto px-4">
+          <CompanyLogos />
         </div>
 
-        <div className="container mx-auto px-4 py-16">
+        <div className="pb-16 w-full">
           <ComparisonSection />
         </div>
 
-        <div className="bg-gradient-to-br from-gray-50 to-blue-50 py-20">
+        <div className="bg-gray-50 py-16">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
+            <div className="text-center mb-16">
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
                 Discover Smartjects
               </h2>
@@ -521,9 +578,9 @@ export default function Home() {
 
               <TabsContent value="recent" className="space-y-4">
                 <SmartjectsGrid
-                  smartjects={sortedSmartjects.recent}
+                  smartjects={categorizedSmartjects.recent}
                   isLoading={isLoading}
-                  onVoted={memoizedRefetch}
+                  onVoted={handleVote}
                   emptyMessage="No recent smartjects found matching your criteria."
                 />
                 <div className="flex justify-center mt-12">
@@ -540,9 +597,9 @@ export default function Home() {
 
               <TabsContent value="most-needed" className="space-y-4">
                 <SmartjectsGrid
-                  smartjects={sortedSmartjects.mostNeeded}
+                  smartjects={categorizedSmartjects.mostNeeded}
                   isLoading={isLoading}
-                  onVoted={memoizedRefetch}
+                  onVoted={handleVote}
                   emptyMessage="No smartjects found matching your criteria."
                 />
                 <div className="flex justify-center mt-12">
@@ -559,9 +616,9 @@ export default function Home() {
 
               <TabsContent value="most-provided" className="space-y-4">
                 <SmartjectsGrid
-                  smartjects={sortedSmartjects.mostProvided}
+                  smartjects={categorizedSmartjects.mostProvided}
                   isLoading={isLoading}
-                  onVoted={memoizedRefetch}
+                  onVoted={handleVote}
                   emptyMessage="No smartjects found matching your criteria."
                 />
                 <div className="flex justify-center mt-12">
@@ -578,9 +635,9 @@ export default function Home() {
 
               <TabsContent value="most-believed" className="space-y-4">
                 <SmartjectsGrid
-                  smartjects={sortedSmartjects.mostBelieved}
+                  smartjects={categorizedSmartjects.mostBelieved}
                   isLoading={isLoading}
-                  onVoted={memoizedRefetch}
+                  onVoted={handleVote}
                   emptyMessage="No smartjects found matching your criteria."
                 />
                 <div className="flex justify-center mt-12">
@@ -598,10 +655,8 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="bg-white py-16">
-          <div className="container mx-auto px-4">
-            <NewsletterSignup />
-          </div>
+        <div className="container mx-auto px-4 py-16">
+          <NewsletterSignup />
         </div>
       </div>
     </>
