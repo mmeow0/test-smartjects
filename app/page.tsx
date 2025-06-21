@@ -16,7 +16,7 @@ import { ChevronDown, Search, X } from "lucide-react";
 import { HeroSection } from "@/components/hero-section";
 
 import { CompanyLogos } from "@/components/company-logos";
-import { NewsletterSignup } from "@/components/newsletter-signup";
+import { StayUpdatedSection } from "@/components/stay-updated-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/auth-provider";
 import { useSmartjects } from "@/hooks/use-smartjects";
@@ -206,6 +206,17 @@ HowItWorksSection.displayName = "HowItWorksSection";
 // Memoized comparison section with new black background design
 const ComparisonSection = memo(() => (
   <div className="flex flex-col items-center gap-[70px] relative bg-black rounded-[50px] overflow-hidden py-10">
+        <div className="absolute inset-0 z-0 overflow-hidden">
+      <div className="relative w-full h-full">
+        <img
+          className="absolute inset-0 w-full h-full object-cover object-top rotate-60"
+          alt="Background"
+          src="/images/landing-background.png"
+        />
+        <div className="absolute inset-0 bg-[#ffa357] mix-blend-color" />
+        <div className="absolute inset-0 bg-black mix-blend-soft-light" />
+      </div>
+    </div>
     <div className="inline-flex flex-col items-start gap-20 relative">
       <div className="flex w-[1340px] h-[207px] items-end gap-5 relative">
         <p className="relative w-[660px] font-normal text-[#020817] text-[50px] tracking-[-0.90px] leading-[normal]">
@@ -1073,7 +1084,7 @@ export default function Home() {
         </div>
 
         <div className="container mx-auto px-4 py-16">
-          <NewsletterSignup />
+          <StayUpdatedSection />
         </div>
       </div>
     </>
