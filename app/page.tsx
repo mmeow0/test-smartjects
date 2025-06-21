@@ -79,50 +79,64 @@ SkeletonGrid.displayName = "SkeletonGrid";
 
 // Memoized How Smartjects Works section
 const HowItWorksSection = memo(() => (
-  <Card className="my-12">
-    <CardHeader>
-      <CardTitle>How Smartjects Works</CardTitle>
-      <CardDescription>
+  <section className="text-center">
+    <div className="max-w-3xl mx-auto mb-16">
+      <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+        How Smartjects Works
+      </h2>
+      <p className="text-xl text-gray-600 leading-relaxed">
         From research to implementation in three simple steps
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      </p>
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl mx-auto">
+      <div className="relative">
         <div className="flex flex-col items-center text-center">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <span className="text-primary font-bold text-xl">1</span>
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-6 shadow-lg">
+            <span className="text-white font-bold text-2xl">1</span>
           </div>
-          <h3 className="text-xl font-semibold mb-2">Discover</h3>
-          <p className="text-muted-foreground">
+          <h3 className="text-2xl font-bold mb-4 text-gray-900">Discover</h3>
+          <p className="text-gray-600 text-lg leading-relaxed">
             Browse research data transformed into potential implementation
             projects for business
           </p>
         </div>
+        {/* Connection line */}
+        <div className="hidden md:block absolute top-10 left-full w-full h-0.5 bg-gradient-to-r from-blue-200 to-transparent -translate-x-1/2"></div>
+      </div>
+      
+      <div className="relative">
         <div className="flex flex-col items-center text-center">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <span className="text-primary font-bold text-xl">2</span>
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center mb-6 shadow-lg">
+            <span className="text-white font-bold text-2xl">2</span>
           </div>
-          <h3 className="text-xl font-semibold mb-2">Connect</h3>
-          <p className="text-muted-foreground">
+          <h3 className="text-2xl font-bold mb-4 text-gray-900">Connect</h3>
+          <p className="text-gray-600 text-lg leading-relaxed">
             Participate in discussions, vote on smartjects, find partners,
             and help shape the future of innovations in business
           </p>
         </div>
-        <div className="flex flex-col items-center text-center">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <span className="text-primary font-bold text-xl">3</span>
-          </div>
-          <h3 className="text-xl font-semibold mb-2">Execute</h3>
-          <p className="text-muted-foreground">
-            Create proposals, negotiate and agree with smart contracts
-          </p>
-        </div>
+        {/* Connection line */}
+        <div className="hidden md:block absolute top-10 left-full w-full h-0.5 bg-gradient-to-r from-blue-200 to-transparent -translate-x-1/2"></div>
       </div>
-    </CardContent>
-    <CardFooter className="flex justify-center">
-      <Button size="lg">Learn More</Button>
-    </CardFooter>
-  </Card>
+      
+      <div className="flex flex-col items-center text-center">
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-700 to-blue-800 flex items-center justify-center mb-6 shadow-lg">
+          <span className="text-white font-bold text-2xl">3</span>
+        </div>
+        <h3 className="text-2xl font-bold mb-4 text-gray-900">Execute</h3>
+        <p className="text-gray-600 text-lg leading-relaxed">
+          Create proposals, negotiate and agree with smart contracts
+        </p>
+      </div>
+    </div>
+    
+    <div className="mt-16">
+      <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg">
+        Learn More
+      </Button>
+    </div>
+  </section>
 ));
 
 HowItWorksSection.displayName = "HowItWorksSection";
@@ -372,88 +386,111 @@ export default function Home() {
   }, [refetch]);
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <>
       <HeroSection />
       
-      <HowItWorksSection />
-      
-      <CompanyLogos />
-      
-      <ComparisonSection />
-
-      <div className="my-12">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold">Discover Smartjects</h2>
-          <SearchBar onChange={handleSearchChange} />
+      <div className="bg-white">
+        <div className="container mx-auto px-4 py-16">
+          <HowItWorksSection />
+        </div>
+        
+        <div className="bg-gray-50 py-16">
+          <div className="container mx-auto px-4">
+            <CompanyLogos />
+          </div>
+        </div>
+        
+        <div className="container mx-auto px-4 py-16">
+          <ComparisonSection />
         </div>
 
-        <Tabs defaultValue="recent">
-          <TabsList className="mb-6">
-            <TabsTrigger value="recent">Recent</TabsTrigger>
-            <TabsTrigger value="most-needed">Most Needed</TabsTrigger>
-            <TabsTrigger value="most-provided">Most Provided</TabsTrigger>
-            <TabsTrigger value="most-believed">Most Believed</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="recent" className="space-y-4">
-            <SmartjectsGrid
-              smartjects={sortedSmartjects.recent}
-              isLoading={isLoading}
-              onVoted={memoizedRefetch}
-              emptyMessage="No recent smartjects found matching your criteria."
-            />
-            <div className="flex justify-center mt-8">
-              <Button variant="outline" size="lg" asChild>
-                <a href="/discover">View More Smartjects</a>
-              </Button>
+        <div className="bg-gradient-to-br from-gray-50 to-blue-50 py-20">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+                Discover Smartjects
+              </h2>
+              <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+                Explore cutting-edge research projects ready for business implementation
+              </p>
+              <div className="max-w-md mx-auto">
+                <SearchBar onChange={handleSearchChange} />
+              </div>
             </div>
-          </TabsContent>
 
-          <TabsContent value="most-needed" className="space-y-4">
-            <SmartjectsGrid
-              smartjects={sortedSmartjects.mostNeeded}
-              isLoading={isLoading}
-              onVoted={memoizedRefetch}
-              emptyMessage="No smartjects found matching your criteria."
-            />
-            <div className="flex justify-center mt-8">
-              <Button variant="outline" size="lg" asChild>
-                <a href="/discover">View More Smartjects</a>
-              </Button>
-            </div>
-          </TabsContent>
+            <Tabs defaultValue="recent">
+              <TabsList className="mb-12 bg-white shadow-sm border-0 p-1 rounded-lg">
+                <TabsTrigger value="recent" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6 py-3 font-semibold">Recent</TabsTrigger>
+                <TabsTrigger value="most-needed" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6 py-3 font-semibold">Most Needed</TabsTrigger>
+                <TabsTrigger value="most-provided" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6 py-3 font-semibold">Most Provided</TabsTrigger>
+                <TabsTrigger value="most-believed" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6 py-3 font-semibold">Most Believed</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="most-provided" className="space-y-4">
-            <SmartjectsGrid
-              smartjects={sortedSmartjects.mostProvided}
-              isLoading={isLoading}
-              onVoted={memoizedRefetch}
-              emptyMessage="No smartjects found matching your criteria."
-            />
-            <div className="flex justify-center mt-8">
-              <Button variant="outline" size="lg" asChild>
-                <a href="/discover">View More Smartjects</a>
-              </Button>
-            </div>
-          </TabsContent>
+              <TabsContent value="recent" className="space-y-4">
+                <SmartjectsGrid
+                  smartjects={sortedSmartjects.recent}
+                  isLoading={isLoading}
+                  onVoted={memoizedRefetch}
+                  emptyMessage="No recent smartjects found matching your criteria."
+                />
+                <div className="flex justify-center mt-12">
+                  <Button variant="outline" size="lg" className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg" asChild>
+                    <a href="/discover">View More Smartjects</a>
+                  </Button>
+                </div>
+              </TabsContent>
 
-          <TabsContent value="most-believed" className="space-y-4">
-            <SmartjectsGrid
-              smartjects={sortedSmartjects.mostBelieved}
-              isLoading={isLoading}
-              onVoted={memoizedRefetch}
-              emptyMessage="No smartjects found matching your criteria."
-            />
-            <div className="flex justify-center mt-8">
-              <Button variant="outline" size="lg" asChild>
-                <a href="/discover">View More Smartjects</a>
-              </Button>
-            </div>
-          </TabsContent>
-        </Tabs>
+              <TabsContent value="most-needed" className="space-y-4">
+                <SmartjectsGrid
+                  smartjects={sortedSmartjects.mostNeeded}
+                  isLoading={isLoading}
+                  onVoted={memoizedRefetch}
+                  emptyMessage="No smartjects found matching your criteria."
+                />
+                <div className="flex justify-center mt-12">
+                  <Button variant="outline" size="lg" className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg" asChild>
+                    <a href="/discover">View More Smartjects</a>
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="most-provided" className="space-y-4">
+                <SmartjectsGrid
+                  smartjects={sortedSmartjects.mostProvided}
+                  isLoading={isLoading}
+                  onVoted={memoizedRefetch}
+                  emptyMessage="No smartjects found matching your criteria."
+                />
+                <div className="flex justify-center mt-12">
+                  <Button variant="outline" size="lg" className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg" asChild>
+                    <a href="/discover">View More Smartjects</a>
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="most-believed" className="space-y-4">
+                <SmartjectsGrid
+                  smartjects={sortedSmartjects.mostBelieved}
+                  isLoading={isLoading}
+                  onVoted={memoizedRefetch}
+                  emptyMessage="No smartjects found matching your criteria."
+                />
+                <div className="flex justify-center mt-12">
+                  <Button variant="outline" size="lg" className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white px-8 py-4 text-lg font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg" asChild>
+                    <a href="/discover">View More Smartjects</a>
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+
+        <div className="bg-white py-16">
+          <div className="container mx-auto px-4">
+            <NewsletterSignup />
+          </div>
+        </div>
       </div>
-
-      <NewsletterSignup />
-    </div>
+    </>
   );
 }

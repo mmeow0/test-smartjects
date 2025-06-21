@@ -1,12 +1,21 @@
 import type React from "react"
-import { Inter } from "next/font/google"
+import { Inter, Archivo, Dynalight } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/components/auth-provider"
-import { TopNav } from "@/components/top-nav"
+import { ClientLayout } from "./client-layout"
 
 const inter = Inter({ subsets: ["latin"] })
+const archivo = Archivo({ 
+  subsets: ["latin"],
+  variable: "--font-archivo"
+})
+const dynalight = Dynalight({ 
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-dynalight"
+})
 
 export const metadata = {
   title: "Smartjects - AI Research to Business Implementation",
@@ -21,13 +30,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.className} ${archivo.variable} ${dynalight.variable}`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <AuthProvider>
-            <div className="flex flex-col min-h-screen px-4">
-              <TopNav />
-              <main className="flex-1">{children}</main>
-            </div>
+            <ClientLayout>{children}</ClientLayout>
             <Toaster />
           </AuthProvider>
         </ThemeProvider>

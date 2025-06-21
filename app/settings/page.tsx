@@ -326,7 +326,7 @@ export default function SettingsPage() {
           <TabsList className="mb-6">
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="appearance">Appearance</TabsTrigger>
+            {/* <TabsTrigger value="appearance">Appearance</TabsTrigger> */}
             <TabsTrigger value="privacy">Privacy</TabsTrigger>
           </TabsList>
 
@@ -516,6 +516,7 @@ export default function SettingsPage() {
             </Card>
           </TabsContent>
 
+          {/* Временно скрыто - вкладка Appearance
           <TabsContent value="appearance">
             <Card>
               <CardHeader>
@@ -540,6 +541,7 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           </TabsContent>
+          */}
 
           <TabsContent value="privacy">
             <Card>

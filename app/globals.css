@@ -89,3 +89,13 @@
 .prose ul {
   @apply list-disc pl-6 mb-4;
 }
+
+@layer utilities {
+  .font-archivo {
+    font-family: var(--font-archivo);
+  }
+  
+  .font-dynalight {
+    font-family: var(--font-dynalight);
+  }
+}

@@ -9,7 +9,7 @@ export function Logo(props: React.SVGProps<SVGSVGElement>) {
       viewBox="0 0 199 33"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={clsx("w-auto h-8", className)}
+      className={clsx("w-auto h-8 logo-svg", className)}
       {...rest}
     >
       <path

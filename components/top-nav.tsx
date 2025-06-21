@@ -21,11 +21,16 @@ import {
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
-import { ThemeToggle } from "@/components/theme-toggle";
+// import { ThemeToggle } from "@/components/theme-toggle"; // временно скрыто
 import { NotificationBadge } from "@/components/notification-badge";
 import { Logo } from "./icons/Logo";
+import { LogoWhite } from "./icons/LogoWhite";
 
-export function TopNav() {
+interface TopNavProps {
+  isHomePage?: boolean;
+}
+
+export function TopNav({ isHomePage = false }: TopNavProps) {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -46,13 +51,20 @@ export function TopNav() {
   ];
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <header className={`${
+      isHomePage 
+        ? "absolute top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/10" 
+        : "sticky top-0 z-50 bg-white border-b border-gray-200"
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center gap-2">
-              <Logo className="h-8 w-auto" />
+            {isHomePage ?
+             <LogoWhite className="h-8 w-auto" /> 
+             : <Logo className="h-8 w-auto" /> }
+       
             </Link>
           </div>
 
@@ -63,11 +75,19 @@ export function TopNav() {
               <Link
                 key={item.href}
                 href={item.href}
-              className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary ${
-                  pathname === item.href
-                  ? "text-primary"
-                  : "text-muted-foreground"
-                }`}
+              className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+                isHomePage
+                  ? `hover:text-blue-400 ${
+                      pathname === item.href
+                      ? "text-blue-400"
+                      : "text-white/80"
+                    }`
+                  : `hover:text-primary ${
+                      pathname === item.href
+                      ? "text-primary"
+                      : "text-muted-foreground"
+                    }`
+              }`}
               >
                 {item.label}
               </Link>
@@ -81,11 +101,19 @@ export function TopNav() {
                   <Link
                     key={item.href}
                     href={item.href}
-                  className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary ${
-                      pathname === item.href
-                      ? "text-primary"
-                      : "text-muted-foreground"
-                    }`}
+                  className={`flex items-center gap-1 text-sm font-medium transition-colors ${
+                    isHomePage
+                      ? `hover:text-blue-400 ${
+                          pathname === item.href
+                          ? "text-blue-400"
+                          : "text-white/80"
+                        }`
+                      : `hover:text-primary ${
+                          pathname === item.href
+                          ? "text-primary"
+                          : "text-muted-foreground"
+                        }`
+                  }`}
                   >
                     {item.label}
                   </Link>
@@ -94,8 +122,8 @@ export function TopNav() {
 
           {/* User Menu, Theme Toggle, and Auth Buttons */}
           <div className="flex items-center gap-2">
-            {/* Theme Toggle */}
-            <ThemeToggle />
+            {/* Theme Toggle - временно скрыто */}
+            {/* <ThemeToggle /> */}
 
             {/* Notifications (for authenticated users) */}
             {isAuthenticated && <NotificationBadge />}
@@ -104,14 +132,20 @@ export function TopNav() {
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2">
+                  <Button variant="ghost" className={`flex items-center gap-2 ${
+                    isHomePage 
+                      ? "text-white hover:bg-white/10" 
+                      : "hover:bg-gray-100"
+                  }`}>
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user?.avatar || ""} />
                       <AvatarFallback>
                         {user?.name?.charAt(0) || "U"}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="hidden sm:inline text-sm font-medium">
+                    <span className={`hidden sm:inline text-sm font-medium ${
+                      isHomePage ? "text-white" : ""
+                    }`}>
                       {user?.name || "User"}
                     </span>
                   </Button>
@@ -161,13 +195,13 @@ export function TopNav() {
               </DropdownMenu>
             ) : (
               <div className="hidden md:flex items-center gap-3">
-                <Button variant="ghost" asChild>
+                <Button variant="ghost" className={isHomePage ? "text-white hover:bg-white/10" : ""} asChild>
                   <Link href="/auth/login">
                     <LogIn className="mr-2 h-4 w-4" />
                     Log in
                   </Link>
                 </Button>
-                <Button asChild>
+                <Button className={isHomePage ? "bg-blue-600 hover:bg-blue-700 text-white" : ""} asChild>
                   <Link href="/auth/register">
                     <UserPlus className="mr-2 h-4 w-4" />
                     Sign up
@@ -179,7 +213,9 @@ export function TopNav() {
             {/* Mobile Menu Button */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
+                <Button variant="ghost" size="icon" className={`md:hidden ${
+                  isHomePage ? "text-white hover:bg-white/10" : ""
+                }`}>
                   <Menu className="h-5 w-5" />
                   <span className="sr-only">Toggle menu</span>
                 </Button>
@@ -209,10 +245,10 @@ export function TopNav() {
                         <Link
                           href={item.href}
                           className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-blue-600 ${
-                            pathname === item.href
-                              ? "text-blue-600"
-                              : "text-gray-700"
-                          }`}
+                              pathname === item.href
+                                ? "text-blue-600"
+                                : "text-gray-700"
+                            }`}
                         >
                           {item.label}
                         </Link>
@@ -256,7 +292,7 @@ export function TopNav() {
                           Log in
                         </Link>
                       </Button>
-                      <Button className="w-full justify-start" asChild>
+                      <Button className="w-full justify-start bg-blue-600 hover:bg-blue-700" asChild>
                         <Link
                           href="/auth/register"
                           onClick={() => setMobileMenuOpen(false)}
