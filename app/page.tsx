@@ -49,7 +49,7 @@ const SmartjectCard = dynamic(
   {
     loading: () => <CardSkeleton />,
     ssr: false,
-  },
+  }
 );
 
 // Memoized skeleton component
@@ -303,7 +303,7 @@ const ComparisonSection = memo(() => (
         {/* Startups - левая сторона */}
         <div className="flex flex-col items-start justify-center gap-8 p-4 relative flex-1 self-stretch grow bg-[#ffffff0d] rounded-[20px] shadow-100">
           <div className="inline-flex items-center gap-4 relative flex-[0_0_auto]">
-          <div className="w-[50px] h-[50px] flex items-center justify-center bg-[#ff6b00] rounded-2xl">
+            <div className="w-[50px] h-[50px] flex items-center justify-center bg-[#ff6b00] rounded-2xl">
               <span className="text-black font-thin text-6xl">-</span>
             </div>
             <div className="w-fit font-semibold text-slate-50 text-lg leading-5 whitespace-nowrap">
@@ -312,31 +312,35 @@ const ComparisonSection = memo(() => (
           </div>
 
           <div className="gap-3 w-full flex flex-col items-start relative flex-1 self-stretch grow">
-            <div className="gap-[25px] p-6 bg-[#ffffff0d] rounded-2xl flex flex-col items-start relative self-stretch w-full">
-              <div className="w-fit font-semibold text-slate-50 text-lg leading-5 whitespace-nowrap">
-                Fundraising bottlenecks
+            {/* Контейнер с двумя блоками в строку и gap между ними */}
+            <div className="flex gap-6 p-6 w-full h-[173px] bg-[#ffffff0d] rounded-2xl">
+              <div className="flex flex-col items-start flex-1">
+                <div className="w-fit font-semibold text-slate-50 text-lg leading-5 whitespace-nowrap">
+                  Fundraising bottlenecks
+                </div>
+                <p className="text-white text-sm leading-5">
+                  Require initial capital, pitching, and often months of
+                  pre-revenue development.
+                </p>
               </div>
-              <p className="self-stretch text-white text-sm leading-5">
-                Require initial capital, pitching, and often months of
-                pre-revenue development.
-              </p>
+
+              <div className="flex flex-col items-start flex-1">
+                <div className="w-fit font-semibold text-slate-50 text-lg leading-5 whitespace-nowrap">
+                  Legal & bureaucratic overhead
+                </div>
+                <p className="text-white text-sm leading-5">
+                  Need incorporation, legal setup, bank accounts, and tax
+                  compliance.
+                </p>
+              </div>
             </div>
 
-            <div className="gap-[25px] p-6 bg-[#ffffff0d] rounded-2xl flex flex-col items-start relative self-stretch w-full">
-              <div className="w-fit font-semibold text-slate-50 text-lg leading-5 whitespace-nowrap">
-                Legal & bureaucratic overhead
-              </div>
-              <p className="self-stretch text-white text-sm leading-5">
-                Need incorporation, legal setup, bank accounts, and tax
-                compliance.
-              </p>
-            </div>
-
-            <div className="gap-[25px] p-6 bg-[#ffffff0d] rounded-2xl flex flex-col items-start relative self-stretch w-full">
+            {/* Блок снизу на всю ширину */}
+            <div className="gap-[25px] p-6 bg-[#ffffff0d] rounded-2xl flex flex-col items-start w-full">
               <div className="w-fit font-semibold text-slate-50 text-lg leading-5 whitespace-nowrap">
                 High-risk, monolithic efforts
               </div>
-              <p className="self-stretch text-white text-sm leading-5">
+              <p className="text-white text-sm leading-5">
                 Require full-time dedication, co-founder alignment, and investor
                 trust.
               </p>
@@ -347,7 +351,7 @@ const ComparisonSection = memo(() => (
         {/* Smartjects Model - правая сторона */}
         <div className="flex flex-col items-start justify-center gap-8 p-4 relative flex-1 self-stretch grow bg-white rounded-[20px] shadow-100">
           <div className="inline-flex items-center gap-4 relative flex-[0_0_auto]">
-           <div className="w-[50px] h-[50px] flex items-center justify-center bg-[#ffd800] rounded-2xl">
+            <div className="w-[50px] h-[50px] flex items-center justify-center bg-[#ffd800] rounded-2xl">
               <span className="text-black font-thin text-4xl">+</span>
             </div>
             <div className="w-fit font-semibold text-black text-lg leading-5 whitespace-nowrap">
@@ -438,7 +442,7 @@ const SmartjectsGrid = memo(
         ))}
       </div>
     );
-  },
+  }
 );
 
 SmartjectsGrid.displayName = "SmartjectsGrid";
@@ -447,7 +451,7 @@ SmartjectsGrid.displayName = "SmartjectsGrid";
 export default function Home() {
   const { user } = useAuth();
   const { smartjects, isLoading, filters, setFilter, refetch } = useSmartjects(
-    user?.id,
+    user?.id
   );
   const [query, setQuery] = useState("");
 
@@ -495,19 +499,19 @@ export default function Home() {
       recent: sortAndLimit(
         filteredSmartjects,
         (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       ),
       mostNeeded: sortAndLimit(
         smartjects, // Use all smartjects for global ranking
-        (a, b) => (b.votes?.need || 0) - (a.votes?.need || 0),
+        (a, b) => (b.votes?.need || 0) - (a.votes?.need || 0)
       ),
       mostProvided: sortAndLimit(
         smartjects, // Use all smartjects for global ranking
-        (a, b) => (b.votes?.provide || 0) - (a.votes?.provide || 0),
+        (a, b) => (b.votes?.provide || 0) - (a.votes?.provide || 0)
       ),
       mostBelieved: sortAndLimit(
         smartjects, // Use all smartjects for global ranking
-        (a, b) => (b.votes?.believe || 0) - (a.votes?.believe || 0),
+        (a, b) => (b.votes?.believe || 0) - (a.votes?.believe || 0)
       ),
     };
   }, [filteredSmartjects, smartjects]);
