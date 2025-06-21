@@ -740,14 +740,14 @@ export default function Home() {
           <ComparisonSection />
         </div>
 
-        <div className="bg-gray-50 py-16">
+        <div className="py-16">
           <div className="container mx-auto px-4">
             <div className="flex flex-col items-start gap-[50px] relative border border-solid border-transparent mb-2">
               <div className="flex flex-col items-start gap-[50px] relative self-stretch w-full flex-[0_0_auto]">
                 <div className="flex items-center justify-center gap-2.5 relative self-stretch w-full flex-[0_0_auto]">
                   <div className="flex flex-col items-start gap-2 relative flex-1 grow">
                     <div className="inline-flex items-center justify-center gap-2.5 relative flex-[0_0_auto]">
-                      <div className="relative w-fit mt-[-1.00px] text-4xl font-bold text-gray-900 whitespace-nowrap">
+                      <div className="relative w-fit mt-[-1.00px] text-4xl font-semibold text-gray-900 whitespace-nowrap">
                         Discover smartjects
                       </div>
                     </div>
