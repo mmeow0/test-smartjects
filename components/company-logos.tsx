@@ -1,59 +1,67 @@
 export function CompanyLogos() {
   return (
-    <div className="flex flex-col items-start gap-[50px] px-0 py-[100px] relative border-t [border-top-style:solid] border-slate-200 bg-white">
-      <div className="flex-col items-center flex relative self-stretch w-full flex-[0_0_auto]">
-        <p className="relative self-stretch mt-[-1.00px] [font-family:'Inter-Regular',Helvetica] font-normal text-[#A0A0A0] text-base text-center tracking-[0] leading-5">
-          Trusted by innovative companies and research institutions
-        </p>
-      </div>
-
-      <div className="flex-wrap items-center justify-center gap-[0px_80px] flex relative self-stretch w-full flex-[0_0_auto]">
-        <div className="relative w-[171px] h-[60px] flex items-center justify-center">
-          <img
-            className="max-h-[60px] max-w-[171px] object-contain brightness-0 opacity-60"
-            alt="Amway"
-            src="/images/Amway.png"
-            style={{
-              filter:
-                "brightness(0) saturate(100%) invert(63%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(96%) contrast(89%)",
-            }}
-          />
+    <div className="bg-white border-t border-slate-200">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-[100px]">
+        {/* Header */}
+        <div className="text-center mb-8 sm:mb-12 lg:mb-[50px]">
+          <p className="font-normal text-[#A0A0A0] text-sm sm:text-base leading-5">
+            Trusted by innovative companies and research institutions
+          </p>
         </div>
 
-        <div className="relative w-[171px] h-[60px] flex items-center justify-center">
-          <img
-            className="max-h-[60px] max-w-[171px] object-contain"
-            alt="Saint-Gobain"
-            src="/images/sgobain.png"
-            style={{
-              filter:
-                "brightness(0) saturate(100%) invert(63%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(96%) contrast(89%)",
-            }}
-          />
-        </div>
+        {/* Company Logos Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12 lg:gap-20 items-center justify-items-center">
+          {/* Amway */}
+          <div className="flex items-center justify-center w-full h-12 sm:h-14 lg:h-[60px]">
+            <img
+              className="max-h-full max-w-full object-contain"
+              alt="Amway"
+              src="/images/Amway.png"
+              style={{
+                filter:
+                  "brightness(0) saturate(100%) invert(63%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(96%) contrast(89%)",
+              }}
+            />
+          </div>
 
-        <div className="relative w-[171px] h-[60px] flex items-center justify-center">
-          <img
-            className="max-h-[60px] max-w-[171px] object-contain"
-            alt="Kimberly"
-            src="/images/Kimberly.png"
-            style={{
-              filter:
-                "brightness(0) saturate(100%) invert(63%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(96%) contrast(89%)",
-            }}
-          />
-        </div>
+          {/* Saint-Gobain */}
+          <div className="flex items-center justify-center w-full h-12 sm:h-14 lg:h-[60px]">
+            <img
+              className="max-h-full max-w-full object-contain"
+              alt="Saint-Gobain"
+              src="/images/sgobain.png"
+              style={{
+                filter:
+                  "brightness(0) saturate(100%) invert(63%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(96%) contrast(89%)",
+              }}
+            />
+          </div>
 
-        <div className="relative w-[171px] h-[60px] flex items-center justify-center">
-          <img
-            className="max-h-[60px] max-w-[171px] object-contain"
-            alt="Stada"
-            src="/images/stada.png"
-            style={{
-              filter:
-                "brightness(0) saturate(100%) invert(63%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(96%) contrast(89%)",
-            }}
-          />
+          {/* Kimberly */}
+          <div className="flex items-center justify-center w-full h-12 sm:h-14 lg:h-[60px]">
+            <img
+              className="max-h-full max-w-full object-contain"
+              alt="Kimberly"
+              src="/images/Kimberly.png"
+              style={{
+                filter:
+                  "brightness(0) saturate(100%) invert(63%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(96%) contrast(89%)",
+              }}
+            />
+          </div>
+
+          {/* Stada */}
+          <div className="flex items-center justify-center w-full h-12 sm:h-14 lg:h-[60px]">
+            <img
+              className="max-h-full max-w-full object-contain"
+              alt="Stada"
+              src="/images/stada.png"
+              style={{
+                filter:
+                  "brightness(0) saturate(100%) invert(63%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(96%) contrast(89%)",
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>

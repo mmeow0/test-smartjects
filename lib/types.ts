@@ -43,38 +43,18 @@ export type UserType = {
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   subscriptionPlan?: "monthly" | "annual";
-  subscriptionStatus?: "active" | "canceled" | "past_due" | "unpaid" | "incomplete";
+  subscriptionStatus?:
+    | "active"
+    | "canceled"
+    | "past_due"
+    | "unpaid"
+    | "incomplete";
   subscriptionCurrentPeriodStart?: string;
   subscriptionCurrentPeriodEnd?: string;
   subscriptionCreatedAt?: string;
   subscriptionCanceledAt?: string;
   lastPaymentDate?: string;
 };
-</text>
-
-<old_text>
-      users: {
-        Row: {
-          id: string;
-          email: string;
-          name: string | null;
-          avatar_url: string | null;
-          account_type: string;
-          created_at: string;
-          bio: string | null;
-          location: string | null;
-          company: string | null;
-          website: string | null;
-          stripe_customer_id: string | null;
-          stripe_subscription_id: string | null;
-          subscription_plan: string | null;
-          subscription_status: string | null;
-          subscription_current_period_start: string | null;
-          subscription_current_period_end: string | null;
-          subscription_created_at: string | null;
-          subscription_canceled_at: string | null;
-          last_payment_date: string | null;
-        };
 
 export type UserSettingsType = {
   id: string;
@@ -117,7 +97,7 @@ export type NDARequest = {
   id: string;
   proposalId: string;
   signerUserId: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "pending" | "approved" | "rejected";
   requestMessage?: string;
   pendingAt: string;
   approvedAt?: string;

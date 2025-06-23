@@ -33,51 +33,43 @@ export function StayUpdatedSection() {
         </div>
 
         {/* Content */}
-        <div className="z-10 items-start gap-6 lg:gap-[30px] flex flex-col relative flex-1 grow text-center lg:text-left">
-          <div className="relative w-full lg:w-[660px] font-normal text-slate-50 text-3xl md:text-4xl lg:text-[50px] tracking-[-0.90px] leading-tight lg:leading-normal">
+        <div className="z-10 flex flex-col gap-4 sm:gap-6 lg:gap-[30px] flex-1 text-center lg:text-left">
+          <h2 className="font-normal text-slate-50 text-2xl sm:text-3xl md:text-4xl lg:text-[50px] tracking-tight lg:tracking-[-0.90px] leading-tight lg:leading-normal max-w-2xl lg:max-w-none">
             Stay updated
-          </div>
-          <p className="relative w-full lg:w-[593px] font-normal text-white text-base md:text-lg leading-6 md:leading-7">
+          </h2>
+          <p className="font-normal text-white text-sm sm:text-base md:text-lg leading-6 md:leading-7 max-w-lg lg:max-w-xl">
             Subscribe to our newsletter for the latest AI research and smartject
             updates
           </p>
         </div>
 
-        <div className="z-10 items-center lg:items-end gap-3 flex flex-col relative flex-1 grow w-full lg:w-auto">
+        <div className="z-10 flex flex-col items-center lg:items-end gap-4 sm:gap-6 flex-1 w-full lg:w-auto">
           <form
             onSubmit={handleSubmit}
-            className="flex flex-col w-full max-w-[454px] items-start gap-3"
+            className="flex flex-col sm:flex-row lg:flex-col xl:flex-row w-full max-w-md lg:max-w-lg items-stretch sm:items-center gap-3 sm:gap-4"
           >
-            <div className="flex flex-col w-full h-[52px] items-start justify-center gap-1 relative">
-              <div className="items-center w-full flex gap-2 relative self-stretch">
-                <div className="flex-col items-start flex-1 grow flex gap-2 relative self-stretch">
-                  <div className="flex h-[52px] items-start gap-2 relative self-stretch w-full">
-                    <div className="flex items-center gap-2.5 pl-4 pr-2 py-2 relative flex-1 self-stretch grow bg-white rounded-xl border border-solid border-gray-200 focus-within:ring-2 focus-within:ring-yellow-400 focus-within:border-yellow-400 transition-all">
-                      <div className="flex flex-col items-start justify-center relative flex-1 grow">
-                        <input
-                          className="inline-flex h-5 items-center border-none bg-transparent font-normal text-gray-600 text-base leading-6 p-0 w-full outline-none placeholder:text-gray-400"
-                          placeholder="Enter your email"
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            {/* Email Input */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2.5 pl-4 pr-3 py-3 sm:py-2 bg-white rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-yellow-400 focus-within:border-yellow-400 transition-all h-12 sm:h-[52px]">
+                <input
+                  className="flex-1 border-none bg-transparent font-normal text-gray-600 text-sm sm:text-base leading-6 outline-none placeholder:text-gray-400"
+                  placeholder="Enter your email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
             </div>
 
+            {/* Submit Button */}
             <button
               type="submit"
-              className="flex w-full sm:w-[200px] h-[52px] items-center justify-center gap-1.5 p-1.5 bg-yellow-400 rounded-xl hover:bg-yellow-500 focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-black transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex w-full sm:w-auto sm:flex-shrink-0 h-12 sm:h-[52px] items-center justify-center gap-1.5 px-6 sm:px-8 bg-yellow-400 rounded-xl hover:bg-yellow-500 focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 focus:ring-offset-black transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <div className="inline-flex items-center">
-                <div className="text-black text-sm font-medium leading-5 text-center">
-                  Subscribe
-                </div>
-              </div>
+              <span className="text-black text-sm sm:text-base font-medium leading-5 text-center whitespace-nowrap">
+                Subscribe
+              </span>
             </button>
           </form>
         </div>
