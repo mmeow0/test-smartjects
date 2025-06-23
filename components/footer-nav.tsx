@@ -132,9 +132,9 @@ export function FooterNav() {
                       <DropdownMenuItem asChild>
                         <Link href="/proposals">My Proposals</Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
+                      {/* <DropdownMenuItem asChild>
                         <Link href="/negotiations">My Negotiations</Link>
-                      </DropdownMenuItem>
+                      </DropdownMenuItem> */}
                       <DropdownMenuItem asChild>
                         <Link href="/contracts">My Contracts</Link>
                       </DropdownMenuItem>

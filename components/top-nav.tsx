@@ -190,9 +190,9 @@ export function TopNav({ isHomePage = false }: TopNavProps) {
                       {/* <DropdownMenuItem asChild>
                         <Link href="/matches">My Matches</Link>
                       </DropdownMenuItem> */}
-                      <DropdownMenuItem asChild>
+                      {/* <DropdownMenuItem asChild>
                         <Link href="/negotiations">My Negotiations</Link>
-                      </DropdownMenuItem>
+                      </DropdownMenuItem> */}
                       <DropdownMenuItem asChild>
                         <Link href="/contracts">My Contracts</Link>
                       </DropdownMenuItem>
