@@ -17,6 +17,9 @@ import { HeroSection } from "@/components/hero-section";
 
 import { CompanyLogos } from "@/components/company-logos";
 import { StayUpdatedSection } from "@/components/stay-updated-section";
+import { FooterNav } from "@/components/footer-nav";
+import { PolicyLinks } from "@/components/policy-links";
+import { Copyright } from "@/components/copyright";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/auth-provider";
 import { useSmartjects } from "@/hooks/use-smartjects";
@@ -206,7 +209,7 @@ HowItWorksSection.displayName = "HowItWorksSection";
 // Memoized comparison section with new black background design
 const ComparisonSection = memo(() => (
   <div className="flex flex-col items-center gap-[70px] relative bg-black rounded-[50px] overflow-hidden py-10">
-        <div className="absolute inset-0 z-0 overflow-hidden">
+    <div className="absolute inset-0 z-0 overflow-hidden">
       <div className="relative w-full h-full">
         <img
           className="absolute inset-0 w-full h-full object-cover object-top rotate-60"
@@ -751,7 +754,7 @@ export default function Home() {
           <ComparisonSection />
         </div>
 
-        <div className="py-16">
+        <div className="pt-16">
           <div className="container mx-auto px-4">
             <div className="flex flex-col items-start gap-[50px] relative border border-solid border-transparent mb-2">
               <div className="flex flex-col items-start gap-[50px] relative self-stretch w-full flex-[0_0_auto]">
@@ -1086,6 +1089,12 @@ export default function Home() {
         <div className="container mx-auto px-4 py-16">
           <StayUpdatedSection />
         </div>
+
+        <FooterNav />
+
+        <PolicyLinks />
+
+        <Copyright />
       </div>
     </>
   );
