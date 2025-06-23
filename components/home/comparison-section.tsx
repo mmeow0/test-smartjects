@@ -1,7 +1,7 @@
 import { memo } from "react";
 
 export const ComparisonSection = memo(() => (
-  <div className="relative bg-black rounded-[25px] sm:rounded-[35px] lg:rounded-[50px] overflow-hidden py-8 sm:py-12 lg:py-16 mx-4 sm:mx-6 lg:mx-8">
+  <div className="relative bg-black rounded-[25px] sm:rounded-[35px] lg:rounded-[50px] overflow-hidden py-8 sm:py-12 lg:py-16">
     {/* Background Image and Overlays */}
     <div className="absolute inset-0 z-0 overflow-hidden rounded-[25px] sm:rounded-[35px] lg:rounded-[50px]">
       <div className="relative w-full h-full">

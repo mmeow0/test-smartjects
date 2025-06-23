@@ -21,7 +21,7 @@ export default function Home() {
       {/* Main Content Area */}
       <div className="bg-white">
         {/* How It Works Section */}
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 pt-10">
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <HowItWorksSection />
         </section>
 
