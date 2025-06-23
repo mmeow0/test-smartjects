@@ -133,7 +133,7 @@ export const SearchFilters = memo(
     ]);
 
     return (
-      <div className="flex flex-col w-full gap-4 sm:gap-6">
+      <div className="flex flex-col lg:flex-row w-full gap-4 sm:gap-6 items-start lg:items-center bg-gray-50 rounded-2xl p-3">
         {/* Search Bar - Always Visible */}
         <div className="relative w-full">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 z-10" />
@@ -141,12 +141,12 @@ export const SearchFilters = memo(
             placeholder="Search smartjects..."
             value={query}
             onChange={onQueryChange}
-            className="pl-12 pr-4 py-3 sm:py-4 h-12 sm:h-14 border-0 bg-gray-100 rounded-2xl text-base focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="pl-12 pr-4 py-3 sm:py-4 h-12 sm:h-14 border-0 rounded-2xl text-base focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           />
         </div>
 
         {/* Mobile Filter Toggle Button */}
-        <div className="flex items-center justify-between lg:hidden">
+        <div className="flex items-center justify-between lg:hidden gap-5">
           <Button
             variant="outline"
             onClick={() => setShowMobileFilters(!showMobileFilters)}
