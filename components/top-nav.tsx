@@ -27,10 +27,10 @@ import { Logo } from "./icons/Logo";
 import { LogoWhite } from "./icons/LogoWhite";
 
 interface TopNavProps {
-  isHomePage?: boolean;
+  isDarkNav?: boolean;
 }
 
-export function TopNav({ isHomePage = false }: TopNavProps) {
+export function TopNav({ isDarkNav: isHomePage = false }: TopNavProps) {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

@@ -9,12 +9,12 @@ interface ClientLayoutProps {
 
 export function ClientLayout({ children }: ClientLayoutProps) {
   const pathname = usePathname();
-  const isHomePage = pathname === '/';
+  const isDarkNav = pathname === '/' ||  pathname === '/auth/login' ||  pathname === '/auth/register';
 
   return (
     <div className="flex flex-col min-h-screen">
-      <TopNav isHomePage={isHomePage} />
-      <main className={`${!isHomePage ? 'flex-1 px-4' : ''}`}>
+      <TopNav isDarkNav={isDarkNav} />
+      <main className={`${!isDarkNav ? 'flex-1 px-4' : ''}`}>
         {children}
       </main>
     </div>
