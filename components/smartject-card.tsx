@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  Card,
-} from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -25,6 +23,9 @@ import { useAuth } from "@/components/auth-provider";
 import type { SmartjectType } from "@/lib/types";
 import { voteService } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
+import { Audience } from "@/components/icons/Audience";
+import { Functions } from "@/components/icons/Functions";
+import { Industries } from "@/components/icons/Industries";
 
 interface SmartjectCardProps {
   smartject: SmartjectType;
@@ -86,6 +87,11 @@ export function SmartjectCard({
       });
     }
   };
+
+  const visibleAudience =
+    smartject.technologies?.slice(0, MAX_INDUSTRIES) || [];
+  const hiddenAudienceCount =
+    (smartject.technologies?.length || 0) - MAX_INDUSTRIES;
 
   // Determine which industries to show directly
   const visibleIndustries =
@@ -195,7 +201,7 @@ export function SmartjectCard({
           {smartject.industries?.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Factory className="h-4 w-4 text-orange-500" />
+                <Industries className="h-[25px]" />
                 <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">
                   Industries
                 </span>
@@ -240,54 +246,106 @@ export function SmartjectCard({
             </div>
           )}
 
-          {/* Business Functions */}
-          {smartject.businessFunctions?.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="h-4 w-4 bg-blue-400 rounded-full" />
-                <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">
-                  Business Functions
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {visibleBusinessFunctions.map((func, i) => (
-                  <span
-                    key={i}
-                    className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
-                  >
-                    {func}
+          {/* Tags sections */}
+          <div className="space-y-4">
+            {/* Industries */}
+            {smartject.technologies && smartject.technologies?.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Audience className="h-[25px]" />
+                  <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                    Audience
                   </span>
-                ))}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {visibleAudience.map((industry, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
+                    >
+                      {industry}
+                    </span>
+                  ))}
 
-                {hiddenBusinessFunctionsCount > 0 && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs cursor-pointer flex items-center">
-                          <Plus className="h-3 w-3 mr-1" />
-                          {hiddenBusinessFunctionsCount} more
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent className="p-2 max-w-xs">
-                        <div className="flex flex-wrap gap-1">
-                          {smartject.businessFunctions
-                            ?.slice(MAX_BUSINESS_FUNCTIONS)
-                            .map((func, i) => (
-                              <span
-                                key={i}
-                                className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
-                              >
-                                {func}
-                              </span>
-                            ))}
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
+                  {hiddenAudienceCount > 0 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs cursor-pointer flex items-center">
+                            <Plus className="h-3 w-3 mr-1" />
+                            {hiddenAudienceCount} more
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="p-2 max-w-xs">
+                          <div className="flex flex-wrap gap-1">
+                            {smartject.technologies
+                              ?.slice(MAX_INDUSTRIES)
+                              .map((industry, i) => (
+                                <span
+                                  key={i}
+                                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
+                                >
+                                  {industry}
+                                </span>
+                              ))}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Business Functions */}
+            {smartject.businessFunctions?.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Functions className="h-[25px]" />
+                  <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                    Business Functions
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {visibleBusinessFunctions.map((func, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
+                    >
+                      {func}
+                    </span>
+                  ))}
+
+                  {hiddenBusinessFunctionsCount > 0 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs cursor-pointer flex items-center">
+                            <Plus className="h-3 w-3 mr-1" />
+                            {hiddenBusinessFunctionsCount} more
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="p-2 max-w-xs">
+                          <div className="flex flex-wrap gap-1">
+                            {smartject.businessFunctions
+                              ?.slice(MAX_BUSINESS_FUNCTIONS)
+                              .map((func, i) => (
+                                <span
+                                  key={i}
+                                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
+                                >
+                                  {func}
+                                </span>
+                              ))}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
