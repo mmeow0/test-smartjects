@@ -60,38 +60,51 @@ export function ProposalsList({
     return (
       <div className="text-center py-6">
         <p className="text-muted-foreground mb-4">No proposals yet</p>
-        <Button onClick={onCreateProposal}>Create Proposal</Button>
+        <Button onClick={onCreateProposal} className="bg-yellow-400 hover:bg-yellow-500 text-black">Create Proposal</Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {proposals.map((proposal) => (
         <div key={proposal.id} className="border rounded-md p-4">
           <div className="flex justify-between items-start mb-3">
-            <div className="flex items-center">
-              <Avatar className="h-8 w-8 mr-2">
+            <div className="flex items-start flex-1 mr-2">
+              <Avatar className="h-8 w-8 mr-2 flex-shrink-0">
                 <AvatarFallback>{proposal.title.charAt(0)}</AvatarFallback>
               </Avatar>
-              <span className="font-medium">{proposal.title}</span>
-              {proposal.userId === currentUser?.id && (
-                <Badge className="ml-2" variant="default">
-                  My Proposal
-                </Badge>
-              )}
+              <div className="flex-1 min-w-0">
+                <div
+                  className="font-medium line-clamp-2 cursor-help"
+                  title={proposal.title}
+                >
+                  {proposal.title}
+                </div>
+                {proposal.userId === currentUser?.id && (
+                  <Badge className="mt-1 bg-yellow-500" variant="default">
+                    My Proposal
+                  </Badge>
+                )}
+              </div>
             </div>
-            <Badge variant="outline">{proposal.status}</Badge>
+            <Badge variant="outline" className="flex-shrink-0">
+              {proposal.status}
+            </Badge>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="flex items-center">
-              <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
-              <span>{proposal.budget || "Not specified"}</span>
+          <div className="flex justify-between gap-4 mb-4">
+            <div className="flex items-center flex-1">
+              <DollarSign className="h-4 w-4 mr-1 text-muted-foreground flex-shrink-0" />
+              <span className="text-sm truncate text-muted-foreground">
+                {proposal.budget || "Not specified"}
+              </span>
             </div>
-            <div className="flex items-center">
-              <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
-              <span>{proposal.timeline || "Not specified"}</span>
+            <div className="flex items-center flex-1 justify-end">
+              <Calendar className="h-4 w-4 mr-1 text-muted-foreground flex-shrink-0" />
+              <span className="text-sm truncate text-muted-foreground">
+                {proposal.timeline || "Not specified"}
+              </span>
             </div>
           </div>
 
@@ -105,7 +118,7 @@ export function ProposalsList({
             </Button>
             {proposal.userId !== currentUser?.id && (
               <Button
-                className="flex-1"
+                className="flex-1 bg-yellow-300 hover:bg-yellow-400 text-black"
                 onClick={() => onNegotiate(proposal.id)}
               >
                 Negotiate

@@ -67,7 +67,7 @@ export function CommentsSection({
               <p className="text-muted-foreground mb-4">
                 Please log in to join the discussion
               </p>
-              <Button asChild>
+              <Button asChild className="bg-yellow-400 hover:bg-yellow-500 text-black">
                 <Link href="/auth/login">Log In</Link>
               </Button>
             </div>
