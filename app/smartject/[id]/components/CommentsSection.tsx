@@ -47,6 +47,7 @@ export function CommentsSection({
               <div className="flex justify-end">
                 <Button
                   type="submit"
+                  className="bg-yellow-300 hover:bg-yellow-400 text-black"
                   disabled={!comment.trim() || isSubmitting}
                 >
                   {isSubmitting ? (
