@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Audience } from "@/components/icons/Audience";
 import { Functions } from "@/components/icons/Functions";
 import { Industries } from "@/components/icons/Industries";
+import { Provide } from "./icons/Provide";
 
 interface SmartjectCardProps {
   smartject: SmartjectType;
@@ -387,11 +388,11 @@ export function SmartjectCard({
                 <button
                   disabled={!isAuthenticated || user?.accountType === "free"}
                   className={`flex items-center gap-1 transition-colors
-                  ${userVotes?.need ? "text-blue-500" : ""}
+                  ${userVotes?.need ? "text-green-500" : ""}
                   ${
                     !isAuthenticated || user?.accountType === "free"
                       ? "opacity-50 cursor-not-allowed pointer-events-none"
-                      : "hover:text-blue-500"
+                      : "hover:text-green-500"
                   }
                 `}
                   onClick={() => handleVote("need")}
@@ -411,17 +412,23 @@ export function SmartjectCard({
               <TooltipTrigger asChild>
                 <button
                   disabled={!isAuthenticated || user?.accountType === "free"}
-                  className={`flex items-center gap-1 hover:text-green-500 transition-colors ${
-                    userVotes?.provide ? "text-green-500" : ""
+                  className={`flex items-center gap-1 transition-colors ${
+                    userVotes?.provide ? "stroke-blue-500 text-blue-500" : ""
                   }
                   ${
                     !isAuthenticated || user?.accountType === "free"
                       ? "opacity-50 cursor-not-allowed pointer-events-none"
-                      : "hover:text-green-500"
+                      : "hover:stroke-blue-500 hover:text-blue-500"
                   }`}
                   onClick={() => handleVote("provide")}
                 >
-                  <Wrench className="h-4 w-4" />
+                  <Provide
+                    className={`h-[18px] ${
+                      userVotes?.provide
+                        ? "text-blue-500 stroke-blue-500"
+                        : "text-gray-400 stroke-gray-400"
+                    } hover:text-blue-500 hover:stroke-blue-500`}
+                  />
                   <span>{smartject.votes.provide}</span>
                 </button>
               </TooltipTrigger>

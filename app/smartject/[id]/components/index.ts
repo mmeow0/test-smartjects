@@ -1,0 +1,8 @@
+export { SmartjectDetails } from "./SmartjectDetails";
+export { ProposalsList } from "./ProposalsList";
+export { VotingButtons } from "./VotingButtons";
+export { CommentsSection } from "./CommentsSection";
+export { ProposalSidebar } from "./ProposalSidebar";
+export { SmartjectContent } from "./SmartjectContent";
+export { SmartjectCard } from "./SmartjectCard";
+export { SmartjectTabs } from "./SmartjectTabs";

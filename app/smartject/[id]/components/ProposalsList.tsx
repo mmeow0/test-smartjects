@@ -1,0 +1,119 @@
+import React from "react";
+import Link from "next/link";
+import { Calendar, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+interface Proposal {
+  id: string;
+  title: string;
+  userId: string;
+  status: string;
+  budget?: string;
+  timeline?: string;
+}
+
+interface User {
+  id: string;
+  accountType: "free" | "paid";
+}
+
+interface ProposalsListProps {
+  proposals: Proposal[];
+  currentUser: User | null;
+  isAuthenticated: boolean;
+  onViewDetails: (proposalId: string) => void;
+  onNegotiate: (proposalId: string) => void;
+  onCreateProposal: () => void;
+}
+
+export function ProposalsList({
+  proposals,
+  currentUser,
+  isAuthenticated,
+  onViewDetails,
+  onNegotiate,
+  onCreateProposal,
+}: ProposalsListProps) {
+  // Check if user has access (authenticated and paid account)
+  const hasAccess = isAuthenticated && currentUser?.accountType === "paid";
+
+  if (!hasAccess) {
+    return (
+      <div className="text-center py-6">
+        <p className="text-muted-foreground mb-4">
+          {!isAuthenticated
+            ? "Please log in to view proposals"
+            : "Upgrade to a paid account to view proposals"}
+        </p>
+        <Button asChild>
+          <Link href={!isAuthenticated ? "/auth/login" : "/upgrade"}>
+            {!isAuthenticated ? "Log In" : "Upgrade"}
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  if (proposals.length === 0) {
+    return (
+      <div className="text-center py-6">
+        <p className="text-muted-foreground mb-4">No proposals yet</p>
+        <Button onClick={onCreateProposal}>Create Proposal</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {proposals.map((proposal) => (
+        <div key={proposal.id} className="border rounded-md p-4">
+          <div className="flex justify-between items-start mb-3">
+            <div className="flex items-center">
+              <Avatar className="h-8 w-8 mr-2">
+                <AvatarFallback>{proposal.title.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <span className="font-medium">{proposal.title}</span>
+              {proposal.userId === currentUser?.id && (
+                <Badge className="ml-2" variant="default">
+                  My Proposal
+                </Badge>
+              )}
+            </div>
+            <Badge variant="outline">{proposal.status}</Badge>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="flex items-center">
+              <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
+              <span>{proposal.budget || "Not specified"}</span>
+            </div>
+            <div className="flex items-center">
+              <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
+              <span>{proposal.timeline || "Not specified"}</span>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => onViewDetails(proposal.id)}
+            >
+              View Details
+            </Button>
+            {proposal.userId !== currentUser?.id && (
+              <Button
+                className="flex-1"
+                onClick={() => onNegotiate(proposal.id)}
+              >
+                Negotiate
+              </Button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
