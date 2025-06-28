@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { notificationService } from "@/lib/services/notification.service";
 
 export interface InterestExpression {
   id: string;
@@ -15,7 +16,10 @@ class InterestService {
   /**
    * Express interest in a proposal
    */
-  async expressInterest(proposalId: string, userId: string): Promise<{ success: boolean; error?: string }> {
+  async expressInterest(
+    proposalId: string,
+    userId: string,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if user already expressed interest
       const { data: existingInterest } = await this.supabase
@@ -27,8 +31,38 @@ class InterestService {
         .single();
 
       if (existingInterest) {
-        return { success: false, error: "You have already expressed interest in this proposal" };
+        return {
+          success: false,
+          error: "You have already expressed interest in this proposal",
+        };
       }
+
+      // Get proposal details and user details for notification
+      const [proposalResult, userResult] = await Promise.all([
+        this.supabase
+          .from("proposals")
+          .select("id, title, user_id")
+          .eq("id", proposalId)
+          .single(),
+        this.supabase
+          .from("users")
+          .select("id, name")
+          .eq("id", userId)
+          .single(),
+      ]);
+
+      if (proposalResult.error || !proposalResult.data) {
+        console.error("Error fetching proposal:", proposalResult.error);
+        return { success: false, error: "Proposal not found" };
+      }
+
+      if (userResult.error || !userResult.data) {
+        console.error("Error fetching user:", userResult.error);
+        return { success: false, error: "User not found" };
+      }
+
+      const proposal = proposalResult.data;
+      const user = userResult.data;
 
       // Create interest expression record
       const { error } = await this.supabase
@@ -38,12 +72,23 @@ class InterestService {
           sender_id: userId,
           content: "", // Empty content for interest expressions
           message_type: "interest_expression",
-          is_counter_offer: false
+          is_counter_offer: false,
         });
 
       if (error) {
         console.error("Error expressing interest:", error);
         return { success: false, error: "Failed to express interest" };
+      }
+
+      // Create notification for proposal owner
+      if (proposal.user_id !== userId) {
+        await notificationService.createProposalInterestNotification(
+          proposal.id,
+          proposal.title,
+          proposal.user_id,
+          user.id,
+          user.name,
+        );
       }
 
       return { success: true };
@@ -56,7 +101,10 @@ class InterestService {
   /**
    * Check if user has expressed interest in a proposal
    */
-  async hasExpressedInterest(proposalId: string, userId: string): Promise<boolean> {
+  async hasExpressedInterest(
+    proposalId: string,
+    userId: string,
+  ): Promise<boolean> {
     try {
       const { data, error } = await this.supabase
         .from("negotiation_messages")
@@ -80,7 +128,8 @@ class InterestService {
     try {
       const { data, error } = await this.supabase
         .from("negotiation_messages")
-        .select(`
+        .select(
+          `
           id,
           proposal_id,
           sender_id,
@@ -89,7 +138,8 @@ class InterestService {
             name,
             avatar_url
           )
-        `)
+        `,
+        )
         .eq("proposal_id", proposalId)
         .eq("message_type", "interest_expression")
         .order("created_at", { ascending: false });
@@ -105,7 +155,7 @@ class InterestService {
         userId: item.sender_id,
         userName: item.users?.name || "Unknown User",
         userAvatar: item.users?.avatar_url,
-        createdAt: item.created_at
+        createdAt: item.created_at,
       }));
     } catch (error) {
       console.error("Error in getInterestedUsers:", error);
@@ -116,7 +166,10 @@ class InterestService {
   /**
    * Remove interest expression (if user wants to withdraw)
    */
-  async removeInterest(proposalId: string, userId: string): Promise<{ success: boolean; error?: string }> {
+  async removeInterest(
+    proposalId: string,
+    userId: string,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const { error } = await this.supabase
         .from("negotiation_messages")

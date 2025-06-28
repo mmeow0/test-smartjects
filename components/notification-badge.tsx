@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Bell } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,92 +10,86 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
-
-interface Notification {
-  id: string
-  type: "match" | "proposal" | "contract" | "message"
-  title: string
-  description: string
-  timestamp: string
-  read: boolean
-  link: string
-}
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import {
+  Bell,
+  MessageSquare,
+  Users,
+  FileText,
+  CheckCircle,
+  Heart,
+  Trash2,
+} from "lucide-react";
+import { useNotifications } from "@/hooks/use-notifications";
 
 export function NotificationBadge() {
-  const router = useRouter()
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [isOpen, setIsOpen] = useState(false)
+  const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
 
-  // Mock notifications data
-  useEffect(() => {
-    // In a real app, we would fetch notifications from an API
-    const mockNotifications: Notification[] = [
-      {
-        id: "notif-1",
-        type: "match",
-        title: "New Match Found",
-        description: "Your proposal for 'AI-Powered Supply Chain Optimization' has a new match!",
-        timestamp: new Date(Date.now() - 30 * 60000).toISOString(), // 30 minutes ago
-        read: false,
-        link: "/matches/match-1",
-      },
-      {
-        id: "notif-2",
-        type: "message",
-        title: "New Message",
-        description: "Tech Solutions Inc. sent you a message regarding your proposal.",
-        timestamp: new Date(Date.now() - 2 * 3600000).toISOString(), // 2 hours ago
-        read: false,
-        link: "/matches/match-1/negotiate/proposal-1",
-      },
-      {
-        id: "notif-3",
-        type: "contract",
-        title: "Contract Ready",
-        description: "A contract for 'Automated Customer Support Chatbot' is ready for your signature.",
-        timestamp: new Date(Date.now() - 1 * 86400000).toISOString(), // 1 day ago
-        read: true,
-        link: "/matches/match-3/contract/proposal-5",
-      },
-    ]
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  } = useNotifications();
 
-    setNotifications(mockNotifications)
-  }, [])
+  const handleNotificationClick = async (notification: any) => {
+    if (!notification.readAt) {
+      await markAsRead(notification.id);
+    }
+    setIsOpen(false);
+    if (notification.link) {
+      router.push(notification.link);
+    }
+  };
 
-  const unreadCount = notifications.filter((notif) => !notif.read).length
-
-  const markAsRead = (id: string) => {
-    setNotifications((prev) => prev.map((notif) => (notif.id === id ? { ...notif, read: true } : notif)))
-  }
-
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })))
-  }
-
-  const handleNotificationClick = (notification: Notification) => {
-    markAsRead(notification.id)
-    setIsOpen(false)
-    router.push(notification.link)
-  }
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case "proposal_interest":
+        return <Heart className="h-4 w-4 text-pink-500" />;
+      case "proposal_message":
+        return <MessageSquare className="h-4 w-4 text-blue-500" />;
+      case "match_update":
+        return <Users className="h-4 w-4 text-green-500" />;
+      case "contract_update":
+        return <FileText className="h-4 w-4 text-purple-500" />;
+      case "nda_request":
+      case "nda_approved":
+      case "nda_rejected":
+        return <CheckCircle className="h-4 w-4 text-orange-500" />;
+      default:
+        return <Bell className="h-4 w-4 text-gray-500" />;
+    }
+  };
 
   const getRelativeTime = (timestamp: string) => {
-    const now = new Date()
-    const date = new Date(timestamp)
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.round(diffMs / 60000)
-    const diffHours = Math.round(diffMs / 3600000)
-    const diffDays = Math.round(diffMs / 86400000)
+    const now = new Date();
+    const date = new Date(timestamp);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+    const diffHours = Math.round(diffMs / 3600000);
+    const diffDays = Math.round(diffMs / 86400000);
 
-    if (diffMins < 60) {
-      return `${diffMins} min${diffMins !== 1 ? "s" : ""} ago`
+    if (diffMins < 1) {
+      return "Just now";
+    } else if (diffMins < 60) {
+      return `${diffMins} min${diffMins !== 1 ? "s" : ""} ago`;
     } else if (diffHours < 24) {
-      return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`
+      return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
     } else {
-      return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`
+      return `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
     }
+  };
+
+  if (isLoading) {
+    return (
+      <Button variant="ghost" size="icon" className="relative" disabled>
+        <Bell className="h-4 w-4" />
+      </Button>
+    );
   }
 
   return (
@@ -117,7 +111,12 @@ export function NotificationBadge() {
         <DropdownMenuLabel className="flex justify-between items-center">
           <span>Notifications</span>
           {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" className="h-auto p-0 text-xs" onClick={markAllAsRead}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-auto p-0 text-xs"
+              onClick={markAllAsRead}
+            >
               Mark all as read
             </Button>
           )}
@@ -127,26 +126,52 @@ export function NotificationBadge() {
           notifications.map((notification) => (
             <DropdownMenuItem
               key={notification.id}
-              className={`flex flex-col items-start p-3 cursor-pointer ${!notification.read ? "bg-muted/50" : ""}`}
+              className={`flex items-start p-3 cursor-pointer space-x-3 ${!notification.readAt ? "bg-muted/30" : ""}`}
               onClick={() => handleNotificationClick(notification)}
             >
-              <div className="flex justify-between w-full">
-                <span className="font-medium">{notification.title}</span>
-                <span className="text-xs text-muted-foreground">{getRelativeTime(notification.timestamp)}</span>
+              <div className="flex-shrink-0 mt-1">
+                {getNotificationIcon(notification.type)}
               </div>
-              <p className="text-sm text-muted-foreground mt-1">{notification.description}</p>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start">
+                  <span className="font-medium text-sm truncate pr-2">
+                    {notification.title}
+                  </span>
+                  <span className="text-xs text-muted-foreground flex-shrink-0">
+                    {getRelativeTime(notification.createdAt)}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                  {notification.message}
+                </p>
+                {notification.senderName && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    From: {notification.senderName}
+                  </p>
+                )}
+                {!notification.readAt && (
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1"></div>
+                )}
+              </div>
             </DropdownMenuItem>
           ))
         ) : (
-          <div className="p-4 text-center text-muted-foreground">No notifications</div>
+          <div className="p-4 text-center text-muted-foreground">
+            No notifications
+          </div>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem className="justify-center" asChild>
-          <Button variant="ghost" size="sm" className="w-full" onClick={() => router.push("/notifications")}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full"
+            onClick={() => router.push("/notifications")}
+          >
             View all notifications
           </Button>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

@@ -1,18 +1,24 @@
 import { getSupabaseBrowserClient } from "../supabase";
+import { notificationService } from "@/lib/services/notification.service";
 
 export const negotiationService = {
   // Get negotiation data for the negotiate page
-  async getNegotiationData(matchId: string, proposalId: string, otherUserId?: string) {
+  async getNegotiationData(
+    matchId: string,
+    proposalId: string,
+    otherUserId?: string,
+  ) {
     const supabase = getSupabaseBrowserClient();
 
     try {
       // Handle "new" matchId case
       const isNewMatch = matchId === "new";
-      
+
       // Get the proposal with related data
       const { data: proposalData, error: proposalError } = await supabase
         .from("proposals")
-        .select(`
+        .select(
+          `
           *,
           smartjects (
             id,
@@ -35,10 +41,11 @@ export const negotiationService = {
               completed
             )
           )
-        `)
+        `,
+        )
         .eq("id", proposalId)
         .single();
-        
+
       if (proposalError) {
         console.error("Error fetching proposal data:", proposalError);
         return null;
@@ -47,13 +54,13 @@ export const negotiationService = {
       // Determine provider and needer based on proposal type
       let providerId: string;
       let neederId: string;
-      
+
       if (proposalData.type === "provide") {
         // Proposal owner is providing the service
         providerId = proposalData.user_id as string;
         neederId = ""; // Will be determined from messages
       } else {
-        // Proposal owner needs the service  
+        // Proposal owner needs the service
         neederId = proposalData.user_id as string;
         providerId = ""; // Will be determined from messages
       }
@@ -61,7 +68,8 @@ export const negotiationService = {
       // Get negotiation messages to find the other party
       const { data: messagesData, error: messagesError } = await supabase
         .from("negotiation_messages")
-        .select(`
+        .select(
+          `
           id,
           sender_id,
           content,
@@ -72,7 +80,8 @@ export const negotiationService = {
           users (
             name
           )
-        `)
+        `,
+        )
         .eq("proposal_id", proposalId)
         .order("created_at", { ascending: true });
 
@@ -82,14 +91,16 @@ export const negotiationService = {
 
       // Determine the other party ID
       let otherPartyId: string | null = null;
-      
+
       if (otherUserId) {
         // Other party ID provided explicitly (for new negotiations)
         otherPartyId = otherUserId;
       } else {
         // Find the other party from messages (for existing negotiations)
-        const otherPartyMessage = messagesData?.find(msg => msg.sender_id !== proposalData.user_id);
-        otherPartyId = otherPartyMessage?.sender_id as string || null;
+        const otherPartyMessage = messagesData?.find(
+          (msg) => msg.sender_id !== proposalData.user_id,
+        );
+        otherPartyId = (otherPartyMessage?.sender_id as string) || null;
       }
 
       // Handle case where no other party is determined yet (new negotiation)
@@ -132,7 +143,7 @@ export const negotiationService = {
         const proposalOwnerData = {
           id: proposalData.user_id as string,
           name: (proposalData.users as any)?.name || "Unknown User",
-          avatar_url: (proposalData.users as any)?.avatar_url || ""
+          avatar_url: (proposalData.users as any)?.avatar_url || "",
         };
 
         if (proposalData.type === "provide") {
@@ -188,42 +199,53 @@ export const negotiationService = {
           budget: (proposalData.budget as string) || "",
           timeline: (proposalData.timeline as string) || "",
           scope: (proposalData.scope as string) || "",
-          deliverables: proposalData.deliverables ? 
-            (proposalData.deliverables as string).split('\n').filter((d: string) => d.trim()) : [] as string[],
+          deliverables: proposalData.deliverables
+            ? (proposalData.deliverables as string)
+                .split("\n")
+                .filter((d: string) => d.trim())
+            : ([] as string[]),
         },
-        milestones: (proposalData.proposal_milestones as any)?.map((milestone: any) => ({
-          id: (milestone.id as string) || "",
-          name: (milestone.name as string) || "",
-          description: (milestone.description as string) || "",
-          percentage: (milestone.percentage as number) || 0,
-          amount: (milestone.amount as string) || "",
-          deliverables: milestone.proposal_deliverables?.map((deliverable: any) => ({
-            id: (deliverable.id as string) || "",
-            description: (deliverable.description as string) || "",
-            completed: (deliverable.completed as boolean) || false,
+        milestones:
+          (proposalData.proposal_milestones as any)?.map((milestone: any) => ({
+            id: (milestone.id as string) || "",
+            name: (milestone.name as string) || "",
+            description: (milestone.description as string) || "",
+            percentage: (milestone.percentage as number) || 0,
+            amount: (milestone.amount as string) || "",
+            deliverables:
+              milestone.proposal_deliverables?.map((deliverable: any) => ({
+                id: (deliverable.id as string) || "",
+                description: (deliverable.description as string) || "",
+                completed: (deliverable.completed as boolean) || false,
+              })) || [],
           })) || [],
-        })) || [],
-        messages: messagesData?.map((message: any) => ({
-          id: (message.id as string) || "",
-          sender: (providerId && message.sender_id === providerId ? "provider" : "needer") as "provider" | "needer",
-          senderName: (message.users?.name as string) || "",
-          content: (message.content as string) || "",
-          timestamp: (message.created_at as string) || "",
-          isCounterOffer: (message.is_counter_offer as boolean) || false,
-          counterOffer: message.is_counter_offer ? {
-            budget: (message.counter_offer_budget as string) || "",
-            timeline: (message.counter_offer_timeline as string) || "",
-          } : undefined,
-        })) || [],
-        files: filesData?.map((file: any) => ({
-          id: file.id,
-          file_name: file.file_name,
-          file_url: file.file_url,
-          file_type: file.file_type,
-          file_size: file.file_size,
-          uploaded_by: file.uploaded_by,
-          created_at: file.created_at
-        })) || [],
+        messages:
+          messagesData?.map((message: any) => ({
+            id: (message.id as string) || "",
+            sender: (providerId && message.sender_id === providerId
+              ? "provider"
+              : "needer") as "provider" | "needer",
+            senderName: (message.users?.name as string) || "",
+            content: (message.content as string) || "",
+            timestamp: (message.created_at as string) || "",
+            isCounterOffer: (message.is_counter_offer as boolean) || false,
+            counterOffer: message.is_counter_offer
+              ? {
+                  budget: (message.counter_offer_budget as string) || "",
+                  timeline: (message.counter_offer_timeline as string) || "",
+                }
+              : undefined,
+          })) || [],
+        files:
+          filesData?.map((file: any) => ({
+            id: file.id,
+            file_name: file.file_name,
+            file_url: file.file_url,
+            file_type: file.file_type,
+            file_size: file.file_size,
+            uploaded_by: file.uploaded_by,
+            created_at: file.created_at,
+          })) || [],
       };
 
       return negotiationData;
@@ -234,7 +256,11 @@ export const negotiationService = {
   },
 
   // Get negotiation data with explicit other user ID (for new negotiations)
-  async getNegotiationDataWithOtherUser(matchId: string, proposalId: string, otherUserId: string) {
+  async getNegotiationDataWithOtherUser(
+    matchId: string,
+    proposalId: string,
+    otherUserId: string,
+  ) {
     return this.getNegotiationData(matchId, proposalId, otherUserId);
   },
 
@@ -245,14 +271,17 @@ export const negotiationService = {
     content: string,
     isCounterOffer: boolean = false,
     counterOfferBudget?: string,
-    counterOfferTimeline?: string
+    counterOfferTimeline?: string,
   ): Promise<boolean> {
     const supabase = getSupabaseBrowserClient();
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    if(!user){
-       console.error("Error user:", userError);
+    if (!user) {
+      console.error("Error user:", userError);
       return false;
     }
 
@@ -265,7 +294,10 @@ export const negotiationService = {
         .single();
 
       if (proposalError || !proposalData) {
-        console.error("Error fetching proposal for match creation:", proposalError);
+        console.error(
+          "Error fetching proposal for match creation:",
+          proposalError,
+        );
         return false;
       }
 
@@ -284,7 +316,7 @@ export const negotiationService = {
       // If this is the first message from the non-proposal-owner, create/update match
       const isFirstMessage = !existingMessages || existingMessages.length === 0;
       const isProposalOwner = user.id === proposalData.user_id;
-      
+
       if (isFirstMessage && !isProposalOwner) {
         // This is the first response to the proposal - need to create/update match
         let providerId: string;
@@ -322,7 +354,7 @@ export const negotiationService = {
               smartject_id: proposalData.smartject_id as string,
               provider_id: providerId,
               needer_id: neederId,
-              status: 'negotiating'
+              status: "negotiating",
             });
 
           if (createMatchError) {
@@ -337,34 +369,101 @@ export const negotiationService = {
     }
 
     // Add the negotiation message
-    const { error } = await supabase
-      .from("negotiation_messages")
-      .insert({
-        proposal_id: proposalId,
-        sender_id: user.id,
-        content,
-        is_counter_offer: isCounterOffer,
-        counter_offer_budget: counterOfferBudget,
-        counter_offer_timeline: counterOfferTimeline,
-      });
+    const { error } = await supabase.from("negotiation_messages").insert({
+      proposal_id: proposalId,
+      sender_id: user.id,
+      content,
+      is_counter_offer: isCounterOffer,
+      counter_offer_budget: counterOfferBudget,
+      counter_offer_timeline: counterOfferTimeline,
+    });
 
     if (error) {
       console.error("Error adding negotiation message:", error);
       return false;
     }
 
+    // Create notification for the message
+    try {
+      // Get proposal details and sender details for notification
+      const [proposalResult, senderResult] = await Promise.all([
+        supabase
+          .from("proposals")
+          .select("id, title, user_id")
+          .eq("id", proposalId)
+          .single(),
+        supabase.from("users").select("id, name").eq("id", user.id).single(),
+      ]);
+
+      if (proposalResult.data && senderResult.data) {
+        const proposal = proposalResult.data;
+        const sender = senderResult.data;
+
+        // Create notification for proposal owner if sender is not the owner
+        if (proposal.user_id !== user.id) {
+          await notificationService.createProposalMessageNotification(
+            proposal.id,
+            proposal.title,
+            proposal.user_id,
+            sender.id,
+            sender.name,
+            content,
+          );
+        } else {
+          // If proposal owner is sending message, notify the other party
+          // Find the other party from existing messages
+          const { data: otherPartyMessages } = await supabase
+            .from("negotiation_messages")
+            .select(
+              "sender_id, users!negotiation_messages_sender_id_fkey(id, name)",
+            )
+            .eq("proposal_id", proposalId)
+            .neq("sender_id", user.id)
+            .limit(1);
+
+          if (otherPartyMessages && otherPartyMessages.length > 0) {
+            const otherParty = otherPartyMessages[0];
+            const otherPartyUser = (otherParty as any).users;
+
+            if (otherPartyUser) {
+              await notificationService.createNotification({
+                recipientUserId: otherParty.sender_id,
+                senderUserId: sender.id,
+                type: "proposal_message",
+                title: "New Message from Proposal Owner",
+                message: `${sender.name} sent a message about "${proposal.title}": ${content.substring(0, 100)}${content.length > 100 ? "..." : ""}`,
+                link: `/proposals/${proposal.id}`,
+                relatedProposalId: proposal.id,
+              });
+            }
+          }
+        }
+      }
+    } catch (notificationError) {
+      console.error("Error creating notification:", notificationError);
+      // Don't fail the message sending if notification creation fails
+    }
+
     return true;
   },
 
-  async updateNegotiationStatus(matchId: string, status: 'new' | 'negotiating' | 'terms_agreed' | 'contract_created' | 'cancelled'): Promise<boolean> {
+  async updateNegotiationStatus(
+    matchId: string,
+    status:
+      | "new"
+      | "negotiating"
+      | "terms_agreed"
+      | "contract_created"
+      | "cancelled",
+  ): Promise<boolean> {
     const supabase = getSupabaseBrowserClient();
 
     try {
       const { error } = await supabase
         .from("matches")
-        .update({ 
+        .update({
           status: status,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq("id", matchId);
 
@@ -381,7 +480,10 @@ export const negotiationService = {
   },
 
   // Get or create match by proposal and other user
-  async getOrCreateMatchByProposal(proposalId: string, otherUserId: string): Promise<string | null> {
+  async getOrCreateMatchByProposal(
+    proposalId: string,
+    otherUserId: string,
+  ): Promise<string | null> {
     const supabase = getSupabaseBrowserClient();
 
     try {
@@ -437,7 +539,7 @@ export const negotiationService = {
           smartject_id: proposalData.smartject_id as string,
           provider_id: providerId,
           needer_id: neederId,
-          status: 'new'
+          status: "new",
         })
         .select("id")
         .single();
