@@ -40,6 +40,8 @@ import { Badge } from "@/components/ui/badge";
 import { useProposal } from "@/hooks/use-proposal";
 import { useInterest } from "@/hooks/use-interest";
 import { negotiationService } from "@/lib/services/negotiation.service";
+import { notificationService } from "@/lib/services/notification.service";
+import { contractService } from "@/lib/services/contract.service";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 // Define deliverable type
@@ -492,7 +494,7 @@ export default function NegotiatePage({
     }
   };
 
-  const handleAcceptTerms = () => {
+  const handleAcceptTerms = async () => {
     // Validate milestones if they're being used
     if (useMilestones) {
       if (milestones.length === 0) {
@@ -516,14 +518,119 @@ export default function NegotiatePage({
       }
     }
 
-    // In a real app, we would call an API to accept the terms
-    toast({
-      title: "Terms accepted",
-      description: "You've accepted the terms. A contract will be generated.",
-    });
+    if (!negotiation || !user?.id) {
+      toast({
+        title: "Error",
+        description: "Missing negotiation data or user information.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    // Redirect to the contract page
-    router.push(`/matches/${id}/contract/${proposalId}`);
+    try {
+      // Get the terms from current proposal
+      const currentBudget = negotiation.currentProposal?.budget;
+      const currentTimeline = negotiation.currentProposal?.timeline;
+
+      // Create contract terms
+      const terms = {
+        budget: currentBudget || "",
+        timeline: currentTimeline || "",
+        scope: negotiation.currentProposal.scope,
+        deliverables: negotiation.currentProposal.deliverables,
+        requirements: "",
+        expertise: "",
+        approach: "",
+        team: "",
+        additionalInfo: "",
+        milestones: useMilestones
+          ? milestones.map((m) => ({
+              name: m.name,
+              description: m.description,
+              percentage: m.percentage,
+              amount: m.amount,
+            }))
+          : [],
+      };
+
+      // Create contract
+      const contractId = await contractService.createContractFromNegotiation(
+        id,
+        proposalId,
+        "", // providerId - will be fetched from match
+        "", // neederId - will be fetched from match
+        terms,
+      );
+
+      if (!contractId) {
+        toast({
+          title: "Error",
+          description: "Failed to create contract. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update match status to indicate contract has been created
+      try {
+        await negotiationService.updateNegotiationStatus(
+          id,
+          "contract_created",
+        );
+      } catch (error) {
+        console.error("Error updating match status:", error);
+      }
+
+      // Create notification for the other party
+      try {
+        // Find the other party (not the proposal author)
+        const otherPartyId =
+          negotiation.provider?.id === user.id
+            ? negotiation.needer?.id
+            : negotiation.provider?.id;
+
+        if (otherPartyId && user?.name) {
+          // Get proposal title from database
+          const supabase = getSupabaseBrowserClient();
+          const { data: proposalData } = await supabase
+            .from("proposals")
+            .select("title")
+            .eq("id", proposalId)
+            .single();
+
+          const proposalTitle =
+            proposalData?.title as string || negotiation.smartjectTitle || "Proposal";
+
+          await notificationService.createTermsAcceptedNotification(
+            proposalId,
+            proposalTitle,
+            otherPartyId,
+            user.id,
+            user.name,
+            id,
+          );
+        }
+      } catch (notificationError) {
+        console.error("Error creating notification:", notificationError);
+        // Don't fail the flow if notification creation fails
+      }
+
+      toast({
+        title: "Terms accepted",
+        description:
+          "Contract created successfully! You've accepted the terms.",
+      });
+
+      // Redirect to the contract page
+      router.push(`/matches/${id}/contract/${proposalId}`);
+    } catch (error) {
+      console.error("Error creating contract:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create contract. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatDate = (dateString: string) => {

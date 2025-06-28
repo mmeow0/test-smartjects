@@ -37,6 +37,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { contractService } from "@/lib/services/contract.service";
 import { negotiationService } from "@/lib/services/negotiation.service";
 import { useInterest } from "@/hooks/use-interest";
+import { notificationService } from "@/lib/services/notification.service";
 
 interface Deliverable {
   id: string;
@@ -607,6 +608,34 @@ export default function IndividualNegotiatePage({
         }
       } catch (error) {
         console.error("Error updating match status:", error);
+      }
+
+      // Create notification for the other party
+      try {
+        if (negotiation.otherUser?.id && user?.name) {
+          // Get proposal title from database
+          const supabase = getSupabaseBrowserClient();
+          const { data: proposalData } = await supabase
+            .from("proposals")
+            .select("title")
+            .eq("id", proposalId)
+            .single();
+
+          const proposalTitle =
+            proposalData?.title as string || negotiation.smartjectTitle || "Proposal";
+
+          await notificationService.createTermsAcceptedNotification(
+            proposalId,
+            proposalTitle,
+            negotiation.otherUser.id,
+            user.id,
+            user.name,
+            id,
+          );
+        }
+      } catch (notificationError) {
+        console.error("Error creating notification:", notificationError);
+        // Don't fail the flow if notification creation fails
       }
 
       toast({

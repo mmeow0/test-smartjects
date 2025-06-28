@@ -25,6 +25,7 @@ import {
   Trash2,
   Mail,
   MoreVertical,
+  ThumbsUp,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -67,6 +68,8 @@ export default function NotificationsPage() {
         return <Users className="h-5 w-5 text-green-500" />;
       case "contract_update":
         return <FileText className="h-5 w-5 text-purple-500" />;
+      case "terms_accepted":
+        return <ThumbsUp className="h-5 w-5 text-green-600" />;
       case "nda_request":
       case "nda_approved":
       case "nda_rejected":

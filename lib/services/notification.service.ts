@@ -11,7 +11,8 @@ export interface Notification {
     | "contract_update"
     | "nda_request"
     | "nda_approved"
-    | "nda_rejected";
+    | "nda_rejected"
+    | "terms_accepted";
   title: string;
   message: string;
   link?: string;
@@ -246,6 +247,29 @@ class NotificationService {
       message: `${senderName} sent a message about "${proposalTitle}": ${messagePreview.substring(0, 100)}${messagePreview.length > 100 ? "..." : ""}`,
       link: `/proposals/${proposalId}`,
       relatedProposalId: proposalId,
+    });
+  }
+
+  /**
+   * Create notification for terms acceptance
+   */
+  async createTermsAcceptedNotification(
+    proposalId: string,
+    proposalTitle: string,
+    recipientUserId: string,
+    acceptorUserId: string,
+    acceptorUserName: string,
+    matchId: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    return this.createNotification({
+      recipientUserId: recipientUserId,
+      senderUserId: acceptorUserId,
+      type: "terms_accepted",
+      title: "Terms Accepted!",
+      message: `${acceptorUserName} has accepted the terms for your proposal "${proposalTitle}". A contract has been created.`,
+      link: `/matches/${matchId}/contract/${proposalId}`,
+      relatedProposalId: proposalId,
+      relatedMatchId: matchId,
     });
   }
 

@@ -20,6 +20,7 @@ import {
   CheckCircle,
   Heart,
   Trash2,
+  ThumbsUp,
 } from "lucide-react";
 import { useNotifications } from "@/hooks/use-notifications";
 
@@ -56,6 +57,8 @@ export function NotificationBadge() {
         return <Users className="h-4 w-4 text-green-500" />;
       case "contract_update":
         return <FileText className="h-4 w-4 text-purple-500" />;
+      case "terms_accepted":
+        return <ThumbsUp className="h-4 w-4 text-green-600" />;
       case "nda_request":
       case "nda_approved":
       case "nda_rejected":
