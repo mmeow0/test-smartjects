@@ -9,6 +9,7 @@ export interface Notification {
     | "proposal_message"
     | "match_update"
     | "contract_update"
+    | "contract_signed"
     | "nda_request"
     | "nda_approved"
     | "nda_rejected"
@@ -268,6 +269,32 @@ class NotificationService {
       title: "Terms Accepted!",
       message: `${acceptorUserName} has accepted the terms for your proposal "${proposalTitle}". A contract has been created.`,
       link: `/matches/${matchId}/contract/${proposalId}`,
+      relatedProposalId: proposalId,
+      relatedMatchId: matchId,
+    });
+  }
+
+  /**
+   * Create notification for contract signing
+   */
+  async createContractSignedNotification(
+    proposalId: string,
+    proposalTitle: string,
+    recipientUserId: string,
+    signerUserId: string,
+    signerUserName: string,
+    matchId: string,
+    isProvider: boolean,
+    contractId: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    const signerRole = isProvider ? "Provider" : "Needer";
+    return this.createNotification({
+      recipientUserId: recipientUserId,
+      senderUserId: signerUserId,
+      type: "contract_signed",
+      title: "Contract Signed!",
+      message: `${signerUserName} (${signerRole}) has signed the contract for "${proposalTitle}". The contract is now waiting for your signature.`,
+      link: `/contracts/${contractId}`,
       relatedProposalId: proposalId,
       relatedMatchId: matchId,
     });

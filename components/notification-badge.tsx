@@ -59,6 +59,8 @@ export function NotificationBadge() {
         return <FileText className="h-4 w-4 text-purple-500" />;
       case "terms_accepted":
         return <ThumbsUp className="h-4 w-4 text-green-600" />;
+      case "contract_signed":
+        return <CheckCircle className="h-4 w-4 text-blue-600" />;
       case "nda_request":
       case "nda_approved":
       case "nda_rejected":
