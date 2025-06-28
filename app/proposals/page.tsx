@@ -10,6 +10,8 @@ import {
   Clock,
   Filter,
   Search,
+  Trash2,
+  MoreVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +31,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/components/auth-provider";
 import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 import { proposalService } from "@/lib/services";
@@ -42,6 +60,10 @@ export default function ProposalsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const [proposals, setProposals] = useState<ProposalType[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [proposalToDelete, setProposalToDelete] = useState<ProposalType | null>(
+    null
+  );
   const { toast } = useToast();
   // Load proposals when authenticated
   useEffect(() => {
@@ -90,20 +112,67 @@ export default function ProposalsPage() {
         })
         .sort((a, b) => {
           // Sort by date (newest first)
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
         });
     },
     [searchTerm, statusFilter]
   );
 
+  const handleDeleteClick = (proposal: ProposalType, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation to proposal details
+    setProposalToDelete(proposal);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!proposalToDelete || !user?.id) return;
+
+    try {
+      const success = await proposalService.deleteProposal(
+        proposalToDelete.id,
+        user.id
+      );
+
+      if (success) {
+        setProposals((prevProposals) =>
+          prevProposals.filter((p) => p.id !== proposalToDelete.id)
+        );
+        toast({
+          title: "Success",
+          description: "Proposal deleted successfully",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete proposal",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting proposal:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete proposal",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setProposalToDelete(null);
+    }
+  };
+
   if (authLoading || !canAccess) {
-    return null
+    return null;
   }
 
   // Helper function to display field value or "not specified"
   const displayField = (value: string | undefined | null) => {
     if (!value || value.trim() === "") {
-      return <span className="text-muted-foreground italic">not specified</span>;
+      return (
+        <span className="text-muted-foreground italic">not specified</span>
+      );
     }
     return value;
   };
@@ -225,7 +294,31 @@ export default function ProposalsPage() {
                         {new Date(proposal.updatedAt).toLocaleDateString()}
                       </CardDescription>
                     </div>
-                    {getStatusBadge(proposal.status)}
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(proposal.status)}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={(e) => handleDeleteClick(proposal, e)}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -233,12 +326,16 @@ export default function ProposalsPage() {
                     <div>
                       <p className="text-sm text-muted-foreground">Budget</p>
                       <p className="font-medium">
-                        {proposal.budget ? `$${proposal.budget.toLocaleString()}` : displayField(proposal.budget)}
+                        {proposal.budget
+                          ? `$${proposal.budget.toLocaleString()}`
+                          : displayField(proposal.budget)}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Timeline</p>
-                      <p className="font-medium">{displayField(proposal.timeline)}</p>
+                      <p className="font-medium">
+                        {displayField(proposal.timeline)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">
@@ -285,7 +382,31 @@ export default function ProposalsPage() {
                         {new Date(proposal.updatedAt).toLocaleDateString()}
                       </CardDescription>
                     </div>
-                    {getStatusBadge(proposal.status)}
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(proposal.status)}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={(e) => handleDeleteClick(proposal, e)}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -293,12 +414,16 @@ export default function ProposalsPage() {
                     <div>
                       <p className="text-sm text-muted-foreground">Budget</p>
                       <p className="font-medium">
-                        {proposal.budget ? `$${proposal.budget.toLocaleString()}` : displayField(proposal.budget)}
+                        {proposal.budget
+                          ? `$${proposal.budget.toLocaleString()}`
+                          : displayField(proposal.budget)}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Timeline</p>
-                      <p className="font-medium">{displayField(proposal.timeline)}</p>
+                      <p className="font-medium">
+                        {displayField(proposal.timeline)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">
@@ -328,6 +453,27 @@ export default function ProposalsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Proposal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{proposalToDelete?.title}"? This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

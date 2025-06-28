@@ -1,27 +1,43 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { use, useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/components/auth-provider"
-import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
-import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { FileUploader } from "@/components/file-uploader"
-import { ArrowLeft, ArrowRight, Save, Send, FileText, Calendar, DollarSign, Check } from "lucide-react"
-import { ProposalDocumentPreview } from "@/components/proposal-document-preview"
-import type { DocumentVersion } from "@/components/document-version-history"
-import { DatePicker } from "@/components/ui/date-picker"
-import { Switch } from "@/components/ui/switch"
+import { use, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/auth-provider";
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { FileUploader } from "@/components/file-uploader";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Save,
+  Send,
+  FileText,
+  Calendar,
+  DollarSign,
+  Check,
+} from "lucide-react";
+import { ProposalDocumentPreview } from "@/components/proposal-document-preview";
+import type { DocumentVersion } from "@/components/document-version-history";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -29,46 +45,58 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { AlertCircle, Plus, Trash2, ListChecks, Circle, CheckCircle2, X } from "lucide-react"
-import { proposalService } from "@/lib/services/proposal.service"
-import { fileService } from "@/lib/services/file.service"
-import { PrivateFieldManager } from "@/components/private-field-manager/private-field-manager"
-import type { ProposalPrivateFields } from "@/lib/types"
+} from "@/components/ui/dialog";
+import {
+  AlertCircle,
+  Plus,
+  Trash2,
+  ListChecks,
+  Circle,
+  CheckCircle2,
+  X,
+} from "lucide-react";
+import { proposalService } from "@/lib/services/proposal.service";
+import { fileService } from "@/lib/services/file.service";
+import { PrivateFieldManager } from "@/components/private-field-manager/private-field-manager";
+import type { ProposalPrivateFields } from "@/lib/types";
 
 // Define deliverable type
 interface Deliverable {
-  id: string
-  description: string
-  completed: boolean
+  id: string;
+  description: string;
+  completed: boolean;
 }
 
 // Define milestone type
 interface Milestone {
-  id: string
-  name: string
-  description: string
-  percentage: number
-  amount: string
-  deliverables: Deliverable[]
+  id: string;
+  name: string;
+  description: string;
+  percentage: number;
+  amount: string;
+  deliverables: Deliverable[];
 }
 
-export default function EditProposalPage({ params }: { params: Promise<{ id: string }> }) {
+export default function EditProposalPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
-  
-  const router = useRouter()
-  const { toast } = useToast()
-  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
-  const [isLoading, setIsLoading] = useState(true)
+
+  const router = useRouter();
+  const { toast } = useToast();
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchProposalData = async () => {
     try {
-      const proposal = await proposalService.getProposalById(id)
+      const proposal = await proposalService.getProposalById(id);
 
       if (!proposal) {
-        toast({ title: "Proposal not found", variant: "destructive" })
-        router.push("/proposals")
-        return
+        toast({ title: "Proposal not found", variant: "destructive" });
+        router.push("/proposals");
+        return;
       }
 
       setFormData({
@@ -80,12 +108,13 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
         timeline: proposal.timeline || "",
         budget: proposal.budget || "",
         deliverables: proposal.deliverables || "",
-        requirements: proposal.type === "need" ? proposal.requirements || "" : "",
+        requirements:
+          proposal.type === "need" ? proposal.requirements || "" : "",
         expertise: proposal.type === "provide" ? proposal.expertise || "" : "",
         approach: proposal.type === "provide" ? proposal.approach || "" : "",
         team: proposal.type === "provide" ? proposal.team || "" : "",
         additionalInfo: proposal.additionalInfo || "",
-      })
+      });
 
       // Set private fields if they exist
       if (proposal.privateFields) {
@@ -99,37 +128,42 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
           approach: proposal.privateFields.approach || "",
           team: proposal.privateFields.team || "",
           additionalInfo: proposal.privateFields.additionalInfo || "",
-        })
+        });
 
         // Enable fields that have private content
-        const enabledFields: Record<string, boolean> = {}
+        const enabledFields: Record<string, boolean> = {};
         if (proposal.privateFields) {
-          Object.keys(proposal.privateFields).forEach(field => {
-            enabledFields[field] = Boolean(proposal.privateFields?.[field as keyof ProposalPrivateFields])
-          })
+          Object.keys(proposal.privateFields).forEach((field) => {
+            enabledFields[field] = Boolean(
+              proposal.privateFields?.[field as keyof ProposalPrivateFields],
+            );
+          });
         }
-        setEnabledPrivateFields(enabledFields)
+        setEnabledPrivateFields(enabledFields);
       }
-    
-      setFiles(proposal.files)
-      setProposalType(proposal.type)
-      setIsCooperationProposal(proposal.isCooperationProposal || false)
-      setMilestones(proposal.milestones || [])
-      setUseMilestones(Boolean(proposal.milestones && proposal.milestones.length > 0))
 
-      setIsLoading(false)
+      setFiles(proposal.files);
+      setProposalType(proposal.type);
+      setIsCooperationProposal(proposal.isCooperationProposal || false);
+      setMilestones(proposal.milestones || []);
+      setUseMilestones(
+        Boolean(proposal.milestones && proposal.milestones.length > 0),
+      );
+
+      setIsLoading(false);
     } catch (error) {
-      console.error("Error fetching proposal data:", error)
-      toast({ title: "Failed to load proposal", variant: "destructive" })
-      setIsLoading(false)
+      console.error("Error fetching proposal data:", error);
+      toast({ title: "Failed to load proposal", variant: "destructive" });
+      setIsLoading(false);
     }
-  }
-
+  };
 
   // Form state
-  const [currentStep, setCurrentStep] = useState(1)
-  const [proposalType, setProposalType] = useState<"need" | "provide" | null>(null)
-  const [isCooperationProposal, setIsCooperationProposal] = useState(false)
+  const [currentStep, setCurrentStep] = useState(1);
+  const [proposalType, setProposalType] = useState<"need" | "provide" | null>(
+    null,
+  );
+  const [isCooperationProposal, setIsCooperationProposal] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     smartjectId: "",
@@ -144,7 +178,7 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
     approach: "",
     team: "",
     additionalInfo: "",
-  })
+  });
 
   // Private fields state for confidential information
   const [privateFields, setPrivateFields] = useState<ProposalPrivateFields>({
@@ -157,10 +191,12 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
     approach: "",
     team: "",
     additionalInfo: "",
-  })
+  });
 
   // Track which fields have private versions enabled
-  const [enabledPrivateFields, setEnabledPrivateFields] = useState<Record<string, boolean>>({
+  const [enabledPrivateFields, setEnabledPrivateFields] = useState<
+    Record<string, boolean>
+  >({
     scope: false,
     timeline: false,
     budget: false,
@@ -170,22 +206,26 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
     approach: false,
     team: false,
     additionalInfo: false,
-  })
-  const [files, setFiles] = useState<{
-    id: string;
-    name: string;
-    size: number;
-    type: string;
-    path: string;
-  }[]>([])
-  const [isSaving, setIsSaving] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [documentVersions, setDocumentVersions] = useState<DocumentVersion[]>([])
+  });
+  const [files, setFiles] = useState<
+    {
+      id: string;
+      name: string;
+      size: number;
+      type: string;
+      path: string;
+    }[]
+  >([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [documentVersions, setDocumentVersions] = useState<DocumentVersion[]>(
+    [],
+  );
 
   // Milestone state
-  const [useMilestones, setUseMilestones] = useState(false)
-  const [milestones, setMilestones] = useState<Milestone[]>([])
-  const [showMilestoneDialog, setShowMilestoneDialog] = useState(false)
+  const [useMilestones, setUseMilestones] = useState(false);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [showMilestoneDialog, setShowMilestoneDialog] = useState(false);
   const [currentMilestone, setCurrentMilestone] = useState<Milestone>({
     id: "",
     name: "",
@@ -193,29 +233,34 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
     percentage: 0,
     amount: "",
     deliverables: [],
-  })
-  const [editingMilestoneId, setEditingMilestoneId] = useState<string | null>(null)
-  const [totalPercentage, setTotalPercentage] = useState(0)
-  const [newDeliverable, setNewDeliverable] = useState("")
+  });
+  const [editingMilestoneId, setEditingMilestoneId] = useState<string | null>(
+    null,
+  );
+  const [totalPercentage, setTotalPercentage] = useState(0);
+  const [newDeliverable, setNewDeliverable] = useState("");
 
   // Load proposal data when authenticated
   useEffect(() => {
     if (authLoading || !canAccess) {
-      return
+      return;
     }
-    
+
     // Fetch proposal data
-    fetchProposalData()
-  }, [authLoading, canAccess, user, id])
+    fetchProposalData();
+  }, [authLoading, canAccess, user, id]);
 
   // Calculate total percentage whenever milestones change
   useEffect(() => {
-    const total = milestones.reduce((sum, milestone) => sum + milestone.percentage, 0)
-    setTotalPercentage(total)
-  }, [milestones])
+    const total = milestones.reduce(
+      (sum, milestone) => sum + milestone.percentage,
+      0,
+    );
+    setTotalPercentage(total);
+  }, [milestones]);
 
   if (authLoading || !canAccess) {
-    return null
+    return null;
   }
 
   if (isLoading) {
@@ -233,25 +278,27 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
           <div className="h-96 w-full bg-gray-200 rounded-md animate-pulse"></div>
         </div>
       </div>
-    )
+    );
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handlePrivateFieldChange = (fieldName: string, value: string) => {
-    setPrivateFields((prev) => ({ ...prev, [fieldName]: value }))
-  }
+    setPrivateFields((prev) => ({ ...prev, [fieldName]: value }));
+  };
 
   const handleTogglePrivateField = (fieldName: string, enabled: boolean) => {
-    setEnabledPrivateFields((prev) => ({ ...prev, [fieldName]: enabled }))
+    setEnabledPrivateFields((prev) => ({ ...prev, [fieldName]: enabled }));
     // Clear private field value if disabled
     if (!enabled) {
-      setPrivateFields((prev) => ({ ...prev, [fieldName]: "" }))
+      setPrivateFields((prev) => ({ ...prev, [fieldName]: "" }));
     }
-  }
+  };
 
   const handleFileChange = async (uploadedFiles: File[]) => {
     try {
@@ -262,13 +309,17 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
         type: string;
         path: string;
       }[] = [];
-      
+
       for (const file of uploadedFiles) {
         // Загружаем файл в Supabase
         const filePath = await proposalService.uploadFile(id, file);
         if (filePath) {
           // Сохраняем ссылку на файл в базе данных
-          const success = await proposalService.saveFileReference(id, file, filePath);
+          const success = await proposalService.saveFileReference(
+            id,
+            file,
+            filePath,
+          );
           if (success) {
             newFiles.push({
               id: Date.now().toString(),
@@ -280,12 +331,13 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
           }
         }
       }
-      setFiles(prevFiles => [...prevFiles, ...newFiles]);
+      setFiles((prevFiles) => [...prevFiles, ...newFiles]);
     } catch (error) {
       console.error("Error uploading files:", error);
       toast({
         title: "Ошибка",
-        description: "Не удалось загрузить файлы. Пожалуйста, попробуйте снова.",
+        description:
+          "Не удалось загрузить файлы. Пожалуйста, попробуйте снова.",
         variant: "destructive",
       });
     }
@@ -297,22 +349,29 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
       setCurrentStep(5);
       window.scrollTo(0, 0);
     } else if (currentStep < 5) {
-      setCurrentStep(currentStep + 1)
-      window.scrollTo(0, 0)
+      setCurrentStep(currentStep + 1);
+      window.scrollTo(0, 0);
     }
-  }
+  };
 
   const handleSaveDraft = async () => {
-    setIsSaving(true)
+    setIsSaving(true);
 
     try {
       // Prepare private fields (only include fields that are enabled and have content)
-      const proposalPrivateFields = Object.keys(enabledPrivateFields).reduce((acc, fieldName) => {
-        if (enabledPrivateFields[fieldName] && privateFields[fieldName as keyof typeof privateFields]) {
-          acc[fieldName as keyof typeof privateFields] = privateFields[fieldName as keyof typeof privateFields];
-        }
-        return acc;
-      }, {} as typeof privateFields);
+      const proposalPrivateFields = Object.keys(enabledPrivateFields).reduce(
+        (acc, fieldName) => {
+          if (
+            enabledPrivateFields[fieldName] &&
+            privateFields[fieldName as keyof typeof privateFields]
+          ) {
+            acc[fieldName as keyof typeof privateFields] =
+              privateFields[fieldName as keyof typeof privateFields];
+          }
+          return acc;
+        },
+        {} as typeof privateFields,
+      );
 
       const updatedProposal = {
         title: formData.title,
@@ -329,9 +388,9 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
         additionalInfo: formData.additionalInfo,
         privateFields: proposalPrivateFields,
         status: "draft" as const,
-      }
+      };
 
-      const success = await proposalService.updateProposal(id, updatedProposal)
+      const success = await proposalService.updateProposal(id, updatedProposal);
 
       if (success) {
         // Create a new version entry
@@ -341,56 +400,64 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
           date: new Date().toISOString(),
           author: user?.name || "User",
           changes: ["Updated proposal draft"],
-        }
+        };
 
-        setDocumentVersions([newVersion, ...documentVersions])
+        setDocumentVersions([newVersion, ...documentVersions]);
 
         toast({
           title: "Draft saved",
           description: "Your proposal draft has been saved successfully.",
-        })
+        });
       } else {
-        throw new Error("Failed to save draft")
+        throw new Error("Failed to save draft");
       }
     } catch (error) {
-      console.error("Error saving draft:", error)
+      console.error("Error saving draft:", error);
       toast({
         title: "Error",
         description: "Failed to save draft. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleSubmit = async () => {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     // For cooperation proposals, only basic validation is needed
-    if (isCooperationProposal) {  
+    if (isCooperationProposal) {
       // Skip milestone validation and other detailed validations
     } else {
       // Validate milestones if they're being used
       if (useMilestones && totalPercentage !== 100) {
         toast({
           title: "Invalid milestone percentages",
-          description: "The total percentage of all milestones must equal 100%.",
+          description:
+            "The total percentage of all milestones must equal 100%.",
           variant: "destructive",
-        })
-        setIsSubmitting(false)
-        return
+        });
+        setIsSubmitting(false);
+        return;
       }
     }
 
     try {
       // Prepare private fields (only include fields that are enabled and have content)
-      const proposalPrivateFields = Object.keys(enabledPrivateFields).reduce((acc, fieldName) => {
-        if (enabledPrivateFields[fieldName] && privateFields[fieldName as keyof typeof privateFields]) {
-          acc[fieldName as keyof typeof privateFields] = privateFields[fieldName as keyof typeof privateFields];
-        }
-        return acc;
-      }, {} as typeof privateFields);
+      const proposalPrivateFields = Object.keys(enabledPrivateFields).reduce(
+        (acc, fieldName) => {
+          if (
+            enabledPrivateFields[fieldName] &&
+            privateFields[fieldName as keyof typeof privateFields]
+          ) {
+            acc[fieldName as keyof typeof privateFields] =
+              privateFields[fieldName as keyof typeof privateFields];
+          }
+          return acc;
+        },
+        {} as typeof privateFields,
+      );
 
       const updatedProposal = {
         title: formData.title,
@@ -407,41 +474,41 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
         additionalInfo: formData.additionalInfo,
         privateFields: proposalPrivateFields,
         status: "submitted" as const,
-      }
+      };
 
-      const success = await proposalService.updateProposal(id, updatedProposal)
+      const success = await proposalService.updateProposal(id, updatedProposal);
 
       if (success) {
         toast({
           title: "Proposal updated",
           description: "Your proposal has been updated successfully.",
-        })
-        router.push(`/proposals/${id}`)
+        });
+        router.push(`/proposals/${id}`);
       } else {
-        throw new Error("Failed to update proposal")
+        throw new Error("Failed to update proposal");
       }
     } catch (error) {
-      console.error("Error updating proposal:", error)
+      console.error("Error updating proposal:", error);
       toast({
         title: "Error",
         description: "Failed to update proposal. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const prevStep = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
-      window.scrollTo(0, 0)
+      setCurrentStep(currentStep - 1);
+      window.scrollTo(0, 0);
     }
-  }
+  };
 
   // Milestone functions
   const openAddMilestoneDialog = () => {
-    setEditingMilestoneId(null)
+    setEditingMilestoneId(null);
     setCurrentMilestone({
       id: Date.now().toString(),
       name: "",
@@ -449,17 +516,17 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
       percentage: 0,
       amount: "",
       deliverables: [],
-    })
-    setNewDeliverable("")
-    setShowMilestoneDialog(true)
-  }
+    });
+    setNewDeliverable("");
+    setShowMilestoneDialog(true);
+  };
 
   const openEditMilestoneDialog = (milestone: Milestone) => {
-    setEditingMilestoneId(milestone.id)
-    setCurrentMilestone({ ...milestone })
-    setNewDeliverable("")
-    setShowMilestoneDialog(true)
-  }
+    setEditingMilestoneId(milestone.id);
+    setCurrentMilestone({ ...milestone });
+    setNewDeliverable("");
+    setShowMilestoneDialog(true);
+  };
 
   const handleSaveMilestone = () => {
     // Validate milestone data
@@ -468,8 +535,8 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
         title: "Missing information",
         description: "Please provide a name for the milestone.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (currentMilestone.percentage <= 0) {
@@ -477,149 +544,155 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
         title: "Invalid percentage",
         description: "Percentage must be greater than 0.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     // Check if adding/updating this milestone would exceed 100%
     const otherMilestonesTotal = milestones
       .filter((m) => m.id !== currentMilestone.id)
-      .reduce((sum, m) => sum + m.percentage, 0)
+      .reduce((sum, m) => sum + m.percentage, 0);
 
     if (otherMilestonesTotal + currentMilestone.percentage > 100) {
       toast({
         title: "Percentage too high",
-        description: "The total percentage of all milestones cannot exceed 100%.",
+        description:
+          "The total percentage of all milestones cannot exceed 100%.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (editingMilestoneId) {
       // Update existing milestone
-      setMilestones(milestones.map((m) => (m.id === editingMilestoneId ? currentMilestone : m)))
+      setMilestones(
+        milestones.map((m) =>
+          m.id === editingMilestoneId ? currentMilestone : m,
+        ),
+      );
       toast({
         title: "Milestone updated",
         description: "The milestone has been updated successfully.",
-      })
+      });
     } else {
       // Add new milestone
-      setMilestones([...milestones, currentMilestone])
+      setMilestones([...milestones, currentMilestone]);
       toast({
         title: "Milestone added",
         description: "The milestone has been added successfully.",
-      })
+      });
     }
 
-    setShowMilestoneDialog(false)
-  }
+    setShowMilestoneDialog(false);
+  };
 
   const handleDeleteMilestone = (id: string) => {
-    setMilestones(milestones.filter((m) => m.id !== id))
+    setMilestones(milestones.filter((m) => m.id !== id));
     toast({
       title: "Milestone deleted",
       description: "The milestone has been deleted successfully.",
-    })
-  }
+    });
+  };
 
   const formatCurrency = (value: string) => {
     // Remove any non-digit characters
-    const numericValue = value.replace(/[^0-9]/g, "")
+    const numericValue = value.replace(/[^0-9]/g, "");
 
     // Format as currency
     if (numericValue) {
-      return `$${Number.parseInt(numericValue).toLocaleString()}`
+      return `$${Number.parseInt(numericValue).toLocaleString()}`;
     }
-    return ""
-  }
+    return "";
+  };
 
   const handleMilestoneAmountChange = (value: string) => {
     setCurrentMilestone({
       ...currentMilestone,
       amount: formatCurrency(value),
-    })
-  }
-
+    });
+  };
 
   const handleMilestonePercentageChange = (percentage: number) => {
-    const newPercentage = Math.max(0, Math.min(100, percentage))
+    const newPercentage = Math.max(0, Math.min(100, percentage));
     setCurrentMilestone({
       ...currentMilestone,
       percentage: newPercentage,
-    })
-  }
+    });
+  };
 
   // Add a new deliverable to the current milestone
   const handleAddDeliverable = () => {
-    if (!newDeliverable.trim()) return
+    if (!newDeliverable.trim()) return;
 
     const newDeliverableItem: Deliverable = {
       id: Date.now().toString(),
       description: newDeliverable.trim(),
       completed: false,
-    }
+    };
 
     setCurrentMilestone({
       ...currentMilestone,
       deliverables: [...currentMilestone.deliverables, newDeliverableItem],
-    })
+    });
 
-    setNewDeliverable("")
-  }
+    setNewDeliverable("");
+  };
 
   // Remove a deliverable from the current milestone
   const handleRemoveDeliverable = (id: string) => {
     setCurrentMilestone({
       ...currentMilestone,
       deliverables: currentMilestone.deliverables.filter((d) => d.id !== id),
-    })
-  }
+    });
+  };
 
   // Toggle the completed status of a deliverable
   const handleToggleDeliverable = (id: string) => {
     setCurrentMilestone({
       ...currentMilestone,
-      deliverables: currentMilestone.deliverables.map((d) => (d.id === id ? { ...d, completed: !d.completed } : d)),
-    })
-  }
+      deliverables: currentMilestone.deliverables.map((d) =>
+        d.id === id ? { ...d, completed: !d.completed } : d,
+      ),
+    });
+  };
 
   const handleDeleteFile = async (fileId: string) => {
     try {
-      const success = await fileService.deleteFile(fileId)
+      const success = await fileService.deleteFile(fileId);
       if (success) {
-        setFiles(files.filter(file => file.id !== fileId))
+        setFiles(files.filter((file) => file.id !== fileId));
         toast({
           title: "Файл удален",
           description: "Файл был успешно удален.",
-        })
+        });
       } else {
-        throw new Error("Failed to delete file")
+        throw new Error("Failed to delete file");
       }
     } catch (error) {
-      console.error("Error deleting file:", error)
+      console.error("Error deleting file:", error);
       toast({
         title: "Ошибка",
         description: "Не удалось удалить файл. Пожалуйста, попробуйте снова.",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const handleDownloadFile = async (filePath: string, fileName: string) => {
     try {
-      const url =  await fileService.downloadFile(filePath, fileName)
+      const url = await fileService.downloadFile(filePath, fileName);
       if (url) {
         window.open(url, "_blank"); // или <img src={url} />
       }
     } catch (error) {
-      console.error("Error downloading file:", error)
+      console.error("Error downloading file:", error);
       toast({
         title: "Ошибка",
         description: "Не удалось скачать файл. Пожалуйста, попробуйте снова.",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -631,7 +704,9 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               <RadioGroup
                 id="proposalType"
                 value={proposalType || ""}
-                onValueChange={(value) => setProposalType(value as "need" | "provide")}
+                onValueChange={(value) =>
+                  setProposalType(value as "need" | "provide")
+                }
                 className="flex flex-col space-y-2"
               >
                 <div className="flex items-center space-x-2">
@@ -654,7 +729,16 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               <div className="p-4 border rounded-md">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-medium">{formData.smartjectTitle}</h3>
+                    <h3 className="font-medium">
+                      <a
+                        href={`/smartject/${formData.smartjectId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {formData.smartjectTitle}
+                      </a>
+                    </h3>
                   </div>
                   <Badge>{formData.smartjectId}</Badge>
                 </div>
@@ -695,18 +779,20 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                     className="h-4 w-4 rounded border-gray-300"
                   />
                   <Label htmlFor="cooperation" className="cursor-pointer">
-                    This is a proposal for cooperation (partnership or collaboration)
+                    This is a proposal for cooperation (partnership or
+                    collaboration)
                   </Label>
                 </div>
                 {isCooperationProposal && (
                   <p className="text-sm text-muted-foreground">
-                    Cooperation proposals will skip detailed project planning and go directly to document upload.
+                    Cooperation proposals will skip detailed project planning
+                    and go directly to document upload.
                   </p>
                 )}
               </div>
             )}
           </div>
-        )
+        );
 
       case 2:
         return (
@@ -716,14 +802,20 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               label="Project Scope"
               publicValue={formData.scope}
               privateValue={privateFields.scope || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, scope: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("scope", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, scope: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("scope", value)
+              }
               fieldType="textarea"
               placeholder="Define the scope of the project"
               privatePlaceholder="Confidential scope details..."
               rows={4}
               hasPrivateField={enabledPrivateFields.scope}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("scope", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("scope", enabled)
+              }
               isProposalOwner={true}
             />
 
@@ -732,13 +824,19 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               label="Timeline"
               publicValue={formData.timeline}
               privateValue={privateFields.timeline || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, timeline: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("timeline", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, timeline: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("timeline", value)
+              }
               fieldType="input"
               placeholder="e.g., 3 months, 12 weeks"
               privatePlaceholder="Confidential timeline details..."
               hasPrivateField={enabledPrivateFields.timeline}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("timeline", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("timeline", enabled)
+              }
               isProposalOwner={true}
             />
 
@@ -747,13 +845,19 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               label="Budget"
               publicValue={formData.budget}
               privateValue={privateFields.budget || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, budget: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("budget", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, budget: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("budget", value)
+              }
               fieldType="input"
               placeholder="e.g., $5,000, $10,000-$15,000"
               privatePlaceholder="Confidential budget details..."
               hasPrivateField={enabledPrivateFields.budget}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("budget", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("budget", enabled)
+              }
               isProposalOwner={true}
             />
 
@@ -762,18 +866,24 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               label="Deliverables"
               publicValue={formData.deliverables}
               privateValue={privateFields.deliverables || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, deliverables: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("deliverables", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, deliverables: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("deliverables", value)
+              }
               fieldType="textarea"
               placeholder="List the specific deliverables expected from this project"
               privatePlaceholder="Confidential deliverables details..."
               rows={4}
               hasPrivateField={enabledPrivateFields.deliverables}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("deliverables", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("deliverables", enabled)
+              }
               isProposalOwner={true}
             />
           </div>
-        )
+        );
 
       case 3:
         return proposalType === "need" ? (
@@ -783,14 +893,20 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               label="Requirements"
               publicValue={formData.requirements}
               privateValue={privateFields.requirements || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, requirements: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("requirements", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, requirements: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("requirements", value)
+              }
               fieldType="textarea"
               placeholder="Specify your detailed requirements for this project"
               privatePlaceholder="Confidential requirements details..."
               rows={6}
               hasPrivateField={enabledPrivateFields.requirements}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("requirements", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("requirements", enabled)
+              }
               isProposalOwner={true}
             />
 
@@ -799,14 +915,20 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               label="Additional Information"
               publicValue={formData.additionalInfo}
               privateValue={privateFields.additionalInfo || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, additionalInfo: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("additionalInfo", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, additionalInfo: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("additionalInfo", value)
+              }
               fieldType="textarea"
               placeholder="Any other information that might be helpful for potential providers"
               privatePlaceholder="Confidential additional information..."
               rows={4}
               hasPrivateField={enabledPrivateFields.additionalInfo}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("additionalInfo", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("additionalInfo", enabled)
+              }
               isProposalOwner={true}
             />
           </div>
@@ -817,14 +939,20 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               label="Expertise & Experience"
               publicValue={formData.expertise}
               privateValue={privateFields.expertise || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, expertise: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("expertise", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, expertise: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("expertise", value)
+              }
               fieldType="textarea"
               placeholder="Describe your relevant expertise and experience for this project"
               privatePlaceholder="Confidential expertise details..."
               rows={4}
               hasPrivateField={enabledPrivateFields.expertise}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("expertise", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("expertise", enabled)
+              }
               isProposalOwner={true}
             />
 
@@ -833,14 +961,20 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               label="Implementation Approach"
               publicValue={formData.approach}
               privateValue={privateFields.approach || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, approach: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("approach", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, approach: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("approach", value)
+              }
               fieldType="textarea"
               placeholder="Describe your approach to implementing this smartject"
               privatePlaceholder="Confidential approach details..."
               rows={4}
               hasPrivateField={enabledPrivateFields.approach}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("approach", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("approach", enabled)
+              }
               isProposalOwner={true}
             />
 
@@ -849,14 +983,20 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               label="Team & Resources"
               publicValue={formData.team}
               privateValue={privateFields.team || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, team: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("team", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, team: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("team", value)
+              }
               fieldType="textarea"
               placeholder="Describe the team and resources you'll allocate to this project"
               privatePlaceholder="Confidential team details..."
               rows={3}
               hasPrivateField={enabledPrivateFields.team}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("team", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("team", enabled)
+              }
               isProposalOwner={true}
             />
 
@@ -865,25 +1005,34 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               label="Additional Information"
               publicValue={formData.additionalInfo}
               privateValue={privateFields.additionalInfo || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, additionalInfo: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("additionalInfo", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, additionalInfo: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("additionalInfo", value)
+              }
               fieldType="textarea"
               placeholder="Any other information that might strengthen your proposal"
               privatePlaceholder="Confidential additional information..."
               rows={3}
               hasPrivateField={enabledPrivateFields.additionalInfo}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("additionalInfo", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("additionalInfo", enabled)
+              }
               isProposalOwner={true}
             />
           </div>
-        )
+        );
 
       case 4:
         return (
           <div className="space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label htmlFor="use-milestones" className="flex items-center gap-2">
+                <Label
+                  htmlFor="use-milestones"
+                  className="flex items-center gap-2"
+                >
                   <span>Use payment milestones</span>
                   {useMilestones && totalPercentage !== 100 && (
                     <span className="text-xs text-red-500 flex items-center">
@@ -892,15 +1041,20 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                     </span>
                   )}
                 </Label>
-                <Switch id="use-milestones" checked={useMilestones} onCheckedChange={setUseMilestones} />
+                <Switch
+                  id="use-milestones"
+                  checked={useMilestones}
+                  onCheckedChange={setUseMilestones}
+                />
               </div>
 
               {useMilestones && (
                 <>
                   <div className="border rounded-md p-3 bg-muted/30">
                     <p className="text-sm">
-                      Define payment milestones to break down the project into manageable phases. Each milestone should
-                      have a percentage of the total budget.
+                      Define payment milestones to break down the project into
+                      manageable phases. Each milestone should have a percentage
+                      of the total budget.
                     </p>
                     <div className="mt-2 text-sm flex justify-between">
                       <span>
@@ -915,45 +1069,68 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                   {milestones.length > 0 ? (
                     <div className="space-y-2">
                       {milestones.map((milestone) => (
-                        <div key={milestone.id} className="border rounded-md p-3 flex justify-between items-start">
+                        <div
+                          key={milestone.id}
+                          className="border rounded-md p-3 flex justify-between items-start"
+                        >
                           <div className="w-full">
                             <div className="font-medium">{milestone.name}</div>
-                            <div className="text-sm text-muted-foreground">{milestone.description}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {milestone.description}
+                            </div>
                             <div className="mt-1 flex gap-3 text-sm">
                               <span>{milestone.percentage}%</span>
                               <span>{milestone.amount}</span>
-                    
                             </div>
 
                             {/* Display deliverables if any */}
-                            {milestone.deliverables && milestone.deliverables.length > 0 && (
-                              <div className="mt-2 pt-2 border-t">
-                                <div className="flex items-center text-xs text-muted-foreground mb-1">
-                                  <ListChecks className="h-3 w-3 mr-1" /> Deliverables
+                            {milestone.deliverables &&
+                              milestone.deliverables.length > 0 && (
+                                <div className="mt-2 pt-2 border-t">
+                                  <div className="flex items-center text-xs text-muted-foreground mb-1">
+                                    <ListChecks className="h-3 w-3 mr-1" />{" "}
+                                    Deliverables
+                                  </div>
+                                  <ul className="text-sm space-y-1 mt-1">
+                                    {milestone.deliverables.map(
+                                      (deliverable) => (
+                                        <li
+                                          key={deliverable.id}
+                                          className="flex items-start gap-2"
+                                        >
+                                          <span className="mt-0.5">
+                                            {deliverable.completed ? (
+                                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                            ) : (
+                                              <Circle className="h-4 w-4 text-muted-foreground" />
+                                            )}
+                                          </span>
+                                          <span className="flex-1">
+                                            {deliverable.description}
+                                          </span>
+                                        </li>
+                                      ),
+                                    )}
+                                  </ul>
                                 </div>
-                                <ul className="text-sm space-y-1 mt-1">
-                                  {milestone.deliverables.map((deliverable) => (
-                                    <li key={deliverable.id} className="flex items-start gap-2">
-                                      <span className="mt-0.5">
-                                        {deliverable.completed ? (
-                                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                        ) : (
-                                          <Circle className="h-4 w-4 text-muted-foreground" />
-                                        )}
-                                      </span>
-                                      <span className="flex-1">{deliverable.description}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
+                              )}
                           </div>
                           <div className="flex gap-1 ml-2">
-                            <Button variant="ghost" size="icon" onClick={() => openEditMilestoneDialog(milestone)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditMilestoneDialog(milestone)}
+                            >
                               <FileText className="h-4 w-4" />
                               <span className="sr-only">Edit</span>
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteMilestone(milestone.id)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                handleDeleteMilestone(milestone.id)
+                              }
+                            >
                               <Trash2 className="h-4 w-4" />
                               <span className="sr-only">Delete</span>
                             </Button>
@@ -965,11 +1142,17 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                     <div className="border border-dashed rounded-md p-6 flex flex-col items-center justify-center text-center text-muted-foreground">
                       <FileText className="h-8 w-8 mb-2" />
                       <p>No milestones defined yet</p>
-                      <p className="text-sm">Add milestones to define the payment schedule</p>
+                      <p className="text-sm">
+                        Add milestones to define the payment schedule
+                      </p>
                     </div>
                   )}
 
-                  <Button variant="outline" className="w-full" onClick={openAddMilestoneDialog}>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={openAddMilestoneDialog}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Milestone
                   </Button>
@@ -977,7 +1160,7 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               )}
             </div>
           </div>
-        )
+        );
 
       case 5:
         return (
@@ -986,39 +1169,40 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               <Label>Supporting Documents</Label>
               <FileUploader onFilesChange={handleFileChange} />
               <p className="text-sm text-muted-foreground">
-                Upload any supporting documents such as diagrams, specifications, or portfolios (max 5 files, 10MB each)
+                Upload any supporting documents such as diagrams,
+                specifications, or portfolios (max 5 files, 10MB each)
               </p>
-               {files.map((file, index) => (
-                    <li
-                      key={index}
-                      className="flex items-center justify-between p-3 border rounded-md"
+              {files.map((file, index) => (
+                <li
+                  key={index}
+                  className="flex items-center justify-between p-3 border rounded-md"
+                >
+                  <div className="flex items-center">
+                    <FileText className="h-5 w-5 mr-2 text-blue-500" />
+                    <span>{file.name}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-sm text-muted-foreground mr-4">
+                      {file.size}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDownloadFile(file.path, file.name)}
                     >
-                      <div className="flex items-center">
-                        <FileText className="h-5 w-5 mr-2 text-blue-500" />
-                        <span>{file.name}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="text-sm text-muted-foreground mr-4">
-                          {file.size}
-                        </span>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleDownloadFile(file.path, file.name)}
-                        >
-                          Скачать
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleDeleteFile(file.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          Удалить
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
+                      Скачать
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteFile(file.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      Удалить
+                    </Button>
+                  </div>
+                </li>
+              ))}
             </div>
 
             <div className="space-y-4 mt-8">
@@ -1094,30 +1278,44 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                 createdAt={new Date().toISOString()}
                 versions={documentVersions}
                 milestones={milestones}
-                files={files.map(f => f.name)}
+                files={files.map((f) => f.name)}
                 organizationName={user?.organizationName}
                 contactPhone={user?.phone}
               />
             </div>
           </div>
-        )
+        );
 
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center mb-6">
-          <Button variant="ghost" onClick={() => router.back()} className="mr-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="mr-4"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
           <div>
             <h1 className="text-2xl font-bold">Edit Proposal</h1>
-            <p className="text-muted-foreground">Update your proposal for {formData.smartjectTitle}</p>
+            <p className="text-muted-foreground">
+              Update your proposal for{" "}
+              <a
+                href={`/smartject/${formData.smartjectId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium"
+              >
+                {formData.smartjectTitle}
+              </a>
+            </p>
           </div>
         </div>
 
@@ -1136,7 +1334,9 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                       : "Documents & Review"}
             </p>
             <p className="text-sm text-muted-foreground">
-              {currentStep === 5 ? "Final Step" : `${currentStep * 20}% Complete`}
+              {currentStep === 5
+                ? "Final Step"
+                : `${currentStep * 20}% Complete`}
             </p>
           </div>
           <Progress value={currentStep * 20} className="h-2" />
@@ -1167,10 +1367,10 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                       ? "Update your detailed requirements for this smartject"
                       : "Revise your expertise and approach to implementing this smartject"
                     : currentStep === 4
-                    ? "Define payment milestones for the project"
-                    : isCooperationProposal
-                    ? "Upload supporting documents and submit your cooperation proposal"
-                    : "Upload supporting documents and review your proposal"}
+                      ? "Define payment milestones for the project"
+                      : isCooperationProposal
+                        ? "Upload supporting documents and submit your cooperation proposal"
+                        : "Upload supporting documents and review your proposal"}
             </CardDescription>
           </CardHeader>
           <CardContent>{renderStepContent()}</CardContent>
@@ -1184,16 +1384,26 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               )}
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleSaveDraft} disabled={isSaving}>
+              <Button
+                variant="outline"
+                onClick={handleSaveDraft}
+                disabled={isSaving}
+              >
                 <Save className="h-4 w-4 mr-2" />
                 {isSaving ? "Saving..." : "Save Draft"}
               </Button>
               {currentStep < 5 ? (
-                <Button 
+                <Button
                   onClick={nextStep}
-                  disabled={currentStep === 4 && useMilestones && totalPercentage !== 100}
+                  disabled={
+                    currentStep === 4 &&
+                    useMilestones &&
+                    totalPercentage !== 100
+                  }
                 >
-                  {currentStep === 1 && isCooperationProposal ? "Skip to Review" : "Next"}
+                  {currentStep === 1 && isCooperationProposal
+                    ? "Skip to Review"
+                    : "Next"}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
@@ -1211,9 +1421,13 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
       <Dialog open={showMilestoneDialog} onOpenChange={setShowMilestoneDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingMilestoneId ? "Edit Milestone" : "Add Milestone"}</DialogTitle>
+            <DialogTitle>
+              {editingMilestoneId ? "Edit Milestone" : "Add Milestone"}
+            </DialogTitle>
             <DialogDescription>
-              {editingMilestoneId ? "Update the details of this milestone" : "Define a new milestone for the project"}
+              {editingMilestoneId
+                ? "Update the details of this milestone"
+                : "Define a new milestone for the project"}
             </DialogDescription>
           </DialogHeader>
 
@@ -1224,7 +1438,12 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                 id="milestone-name"
                 placeholder="e.g., Project Kickoff, MVP Delivery"
                 value={currentMilestone.name}
-                onChange={(e) => setCurrentMilestone({ ...currentMilestone, name: e.target.value })}
+                onChange={(e) =>
+                  setCurrentMilestone({
+                    ...currentMilestone,
+                    name: e.target.value,
+                  })
+                }
               />
             </div>
 
@@ -1234,7 +1453,12 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                 id="milestone-description"
                 placeholder="Describe what will be delivered in this milestone"
                 value={currentMilestone.description}
-                onChange={(e) => setCurrentMilestone({ ...currentMilestone, description: e.target.value })}
+                onChange={(e) =>
+                  setCurrentMilestone({
+                    ...currentMilestone,
+                    description: e.target.value,
+                  })
+                }
               />
             </div>
 
@@ -1248,9 +1472,15 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                   max="100"
                   placeholder="e.g., 25"
                   value={currentMilestone.percentage || ""}
-                  onChange={(e) => handleMilestonePercentageChange(Number.parseInt(e.target.value) || 0)}
+                  onChange={(e) =>
+                    handleMilestonePercentageChange(
+                      Number.parseInt(e.target.value) || 0,
+                    )
+                  }
                 />
-                <p className="text-xs text-muted-foreground">Percentage of total budget</p>
+                <p className="text-xs text-muted-foreground">
+                  Percentage of total budget
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -1261,10 +1491,11 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                   value={currentMilestone.amount}
                   onChange={(e) => handleMilestoneAmountChange(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">Payment amount for this milestone</p>
+                <p className="text-xs text-muted-foreground">
+                  Payment amount for this milestone
+                </p>
               </div>
             </div>
-
 
             {/* Deliverables Section */}
             <div className="space-y-2 pt-2 border-t">
@@ -1275,7 +1506,10 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
               {currentMilestone.deliverables.length > 0 ? (
                 <div className="border rounded-md p-2 space-y-2 max-h-[200px] overflow-y-auto">
                   {currentMilestone.deliverables.map((deliverable) => (
-                    <div key={deliverable.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+                    <div
+                      key={deliverable.id}
+                      className="flex items-center gap-2 p-2 bg-muted/50 rounded-md"
+                    >
                       <Button
                         type="button"
                         variant="ghost"
@@ -1290,7 +1524,9 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                         )}
                         <span className="sr-only">Toggle completion</span>
                       </Button>
-                      <span className="flex-1 text-sm">{deliverable.description}</span>
+                      <span className="flex-1 text-sm">
+                        {deliverable.description}
+                      </span>
                       <Button
                         type="button"
                         variant="ghost"
@@ -1317,24 +1553,33 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
                   onChange={(e) => setNewDeliverable(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newDeliverable.trim()) {
-                      e.preventDefault()
-                      handleAddDeliverable()
+                      e.preventDefault();
+                      handleAddDeliverable();
                     }
                   }}
                 />
-                <Button type="button" size="sm" onClick={handleAddDeliverable} disabled={!newDeliverable.trim()}>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleAddDeliverable}
+                  disabled={!newDeliverable.trim()}
+                >
                   <Plus className="h-4 w-4" />
                   <span className="sr-only">Add</span>
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Add specific items that will be delivered as part of this milestone
+                Add specific items that will be delivered as part of this
+                milestone
               </p>
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMilestoneDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowMilestoneDialog(false)}
+            >
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
@@ -1346,5 +1591,5 @@ export default function EditProposalPage({ params }: { params: Promise<{ id: str
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

@@ -97,7 +97,7 @@ export default function CreateProposalPage() {
   // Form state
   const [currentStep, setCurrentStep] = useState(1);
   const [proposalType, setProposalType] = useState<"need" | "provide" | null>(
-    null
+    null,
   );
   const [isCooperationProposal, setIsCooperationProposal] = useState(false);
   const [formData, setFormData] = useState({
@@ -129,7 +129,9 @@ export default function CreateProposalPage() {
   });
 
   // Track which fields have private versions enabled
-  const [enabledPrivateFields, setEnabledPrivateFields] = useState<Record<string, boolean>>({
+  const [enabledPrivateFields, setEnabledPrivateFields] = useState<
+    Record<string, boolean>
+  >({
     scope: false,
     timeline: false,
     budget: false,
@@ -166,18 +168,16 @@ export default function CreateProposalPage() {
     deliverables: [],
   });
   const [editingMilestoneId, setEditingMilestoneId] = useState<string | null>(
-    null
+    null,
   );
   const [totalPercentage, setTotalPercentage] = useState(0);
   const [newDeliverable, setNewDeliverable] = useState("");
-
-
 
   // Calculate total percentage whenever milestones change
   useEffect(() => {
     const total = milestones.reduce(
       (sum, milestone) => sum + milestone.percentage,
-      0
+      0,
     );
     setTotalPercentage(total);
   }, [milestones]);
@@ -221,14 +221,12 @@ export default function CreateProposalPage() {
     fetchSmartject();
   }, [smartjectId, toast]);
 
-
-
   if (authLoading || !canAccess) {
     return null;
   }
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -264,12 +262,19 @@ export default function CreateProposalPage() {
 
     try {
       // Prepare private fields (only include fields that are enabled and have content)
-      const proposalPrivateFields = Object.keys(enabledPrivateFields).reduce((acc, fieldName) => {
-        if (enabledPrivateFields[fieldName] && privateFields[fieldName as keyof typeof privateFields]) {
-          acc[fieldName as keyof typeof privateFields] = privateFields[fieldName as keyof typeof privateFields];
-        }
-        return acc;
-      }, {} as typeof privateFields);
+      const proposalPrivateFields = Object.keys(enabledPrivateFields).reduce(
+        (acc, fieldName) => {
+          if (
+            enabledPrivateFields[fieldName] &&
+            privateFields[fieldName as keyof typeof privateFields]
+          ) {
+            acc[fieldName as keyof typeof privateFields] =
+              privateFields[fieldName as keyof typeof privateFields];
+          }
+          return acc;
+        },
+        {} as typeof privateFields,
+      );
 
       // Save the proposal to Supabase
       const proposalId = await proposalService.createProposal({
@@ -359,7 +364,8 @@ export default function CreateProposalPage() {
       if (useMilestones && totalPercentage !== 100) {
         toast({
           title: "Invalid milestone percentages",
-          description: "The total percentage of all milestones must equal 100%.",
+          description:
+            "The total percentage of all milestones must equal 100%.",
           variant: "destructive",
         });
         return;
@@ -370,12 +376,19 @@ export default function CreateProposalPage() {
 
     try {
       // Prepare private fields (only include fields that are enabled and have content)
-      const proposalPrivateFields = Object.keys(enabledPrivateFields).reduce((acc, fieldName) => {
-        if (enabledPrivateFields[fieldName] && privateFields[fieldName as keyof typeof privateFields]) {
-          acc[fieldName as keyof typeof privateFields] = privateFields[fieldName as keyof typeof privateFields];
-        }
-        return acc;
-      }, {} as typeof privateFields);
+      const proposalPrivateFields = Object.keys(enabledPrivateFields).reduce(
+        (acc, fieldName) => {
+          if (
+            enabledPrivateFields[fieldName] &&
+            privateFields[fieldName as keyof typeof privateFields]
+          ) {
+            acc[fieldName as keyof typeof privateFields] =
+              privateFields[fieldName as keyof typeof privateFields];
+          }
+          return acc;
+        },
+        {} as typeof privateFields,
+      );
 
       // Save the proposal to Supabase
       const proposalId = await proposalService.createProposal({
@@ -406,7 +419,7 @@ export default function CreateProposalPage() {
         // 1. Создаём все milestones и получаем их с id
         const createdMilestones = await proposalService.createMilestones(
           proposalId,
-          milestones
+          milestones,
         );
         if (!createdMilestones) {
           throw new Error("Failed to create milestones");
@@ -420,7 +433,7 @@ export default function CreateProposalPage() {
             const deliverablesCreated =
               await proposalService.createDeliverables(
                 created.id,
-                milestone.deliverables
+                milestone.deliverables,
               );
             if (!deliverablesCreated) {
               throw new Error("Failed to create deliverables");
@@ -444,7 +457,7 @@ export default function CreateProposalPage() {
           const saved = await proposalService.saveFileReference(
             proposalId,
             file,
-            filePath
+            filePath,
           );
           if (!saved) {
             throw new Error("Failed to save file reference");
@@ -453,11 +466,6 @@ export default function CreateProposalPage() {
       }
 
       // Показываем уведомление об успешной отправке
-      toast({
-        title: "Proposal submitted",
-        description: "Your proposal has been submitted successfully.",
-      });
-
       toast({
         title: "Proposal submitted",
         description: "Your proposal has been submitted successfully.",
@@ -556,8 +564,8 @@ export default function CreateProposalPage() {
       // Update existing milestone
       setMilestones(
         milestones.map((m) =>
-          m.id === editingMilestoneId ? currentMilestone : m
-        )
+          m.id === editingMilestoneId ? currentMilestone : m,
+        ),
       );
       toast({
         title: "Milestone updated",
@@ -640,7 +648,7 @@ export default function CreateProposalPage() {
     setCurrentMilestone({
       ...currentMilestone,
       deliverables: currentMilestone.deliverables.map((d) =>
-        d.id === id ? { ...d, completed: !d.completed } : d
+        d.id === id ? { ...d, completed: !d.completed } : d,
       ),
     });
   };
@@ -672,7 +680,6 @@ export default function CreateProposalPage() {
                     I Provide (I can implement this smartject for someone)
                   </Label>
                 </div>
-
               </RadioGroup>
               {!proposalType && (
                 <p className="text-sm text-muted-foreground">
@@ -693,7 +700,16 @@ export default function CreateProposalPage() {
                 <div className="p-4 border rounded-md">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-medium">{smartject.title}</h3>
+                      <h3 className="font-medium">
+                        <a
+                          href={`/smartject/${smartjectId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          {smartject.title}
+                        </a>
+                      </h3>
                       <p className="text-sm text-muted-foreground">
                         {smartject.mission?.substring(0, 100) || ""}...
                       </p>
@@ -746,12 +762,14 @@ export default function CreateProposalPage() {
                     className="h-4 w-4 rounded border-gray-300"
                   />
                   <Label htmlFor="cooperation" className="cursor-pointer">
-                    This is a proposal for cooperation (partnership or collaboration)
+                    This is a proposal for cooperation (partnership or
+                    collaboration)
                   </Label>
                 </div>
                 {isCooperationProposal && (
                   <p className="text-sm text-muted-foreground">
-                    Cooperation proposals will skip detailed project planning and go directly to document upload.
+                    Cooperation proposals will skip detailed project planning
+                    and go directly to document upload.
                   </p>
                 )}
               </div>
@@ -767,14 +785,20 @@ export default function CreateProposalPage() {
               label="Project Scope"
               publicValue={formData.scope}
               privateValue={privateFields.scope || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, scope: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("scope", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, scope: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("scope", value)
+              }
               fieldType="textarea"
               placeholder="Define the scope of the project"
               privatePlaceholder="Confidential scope details..."
               rows={4}
               hasPrivateField={enabledPrivateFields.scope}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("scope", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("scope", enabled)
+              }
               isProposalOwner={true}
             />
 
@@ -783,13 +807,19 @@ export default function CreateProposalPage() {
               label="Timeline"
               publicValue={formData.timeline}
               privateValue={privateFields.timeline || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, timeline: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("timeline", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, timeline: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("timeline", value)
+              }
               fieldType="input"
               placeholder="e.g., 3 months, 12 weeks"
               privatePlaceholder="Confidential timeline details..."
               hasPrivateField={enabledPrivateFields.timeline}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("timeline", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("timeline", enabled)
+              }
               isProposalOwner={true}
             />
 
@@ -798,13 +828,19 @@ export default function CreateProposalPage() {
               label="Budget"
               publicValue={formData.budget}
               privateValue={privateFields.budget || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, budget: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("budget", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, budget: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("budget", value)
+              }
               fieldType="input"
               placeholder="e.g., $5,000, $10,000-$15,000"
               privatePlaceholder="Confidential budget details..."
               hasPrivateField={enabledPrivateFields.budget}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("budget", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("budget", enabled)
+              }
               isProposalOwner={true}
             />
 
@@ -813,14 +849,20 @@ export default function CreateProposalPage() {
               label="Deliverables"
               publicValue={formData.deliverables}
               privateValue={privateFields.deliverables || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, deliverables: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("deliverables", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, deliverables: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("deliverables", value)
+              }
               fieldType="textarea"
               placeholder="List the specific deliverables expected from this project"
               privatePlaceholder="Confidential deliverables details..."
               rows={4}
               hasPrivateField={enabledPrivateFields.deliverables}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("deliverables", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("deliverables", enabled)
+              }
               isProposalOwner={true}
             />
           </div>
@@ -834,14 +876,20 @@ export default function CreateProposalPage() {
               label="Requirements"
               publicValue={formData.requirements}
               privateValue={privateFields.requirements || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, requirements: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("requirements", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, requirements: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("requirements", value)
+              }
               fieldType="textarea"
               placeholder="Specify your detailed requirements for this project"
               privatePlaceholder="Confidential requirements details..."
               rows={6}
               hasPrivateField={enabledPrivateFields.requirements}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("requirements", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("requirements", enabled)
+              }
               isProposalOwner={true}
             />
 
@@ -850,14 +898,20 @@ export default function CreateProposalPage() {
               label="Additional Information"
               publicValue={formData.additionalInfo}
               privateValue={privateFields.additionalInfo || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, additionalInfo: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("additionalInfo", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, additionalInfo: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("additionalInfo", value)
+              }
               fieldType="textarea"
               placeholder="Any other information that might be helpful for potential providers"
               privatePlaceholder="Confidential additional information..."
               rows={4}
               hasPrivateField={enabledPrivateFields.additionalInfo}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("additionalInfo", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("additionalInfo", enabled)
+              }
               isProposalOwner={true}
             />
           </div>
@@ -868,14 +922,20 @@ export default function CreateProposalPage() {
               label="Expertise & Experience"
               publicValue={formData.expertise}
               privateValue={privateFields.expertise || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, expertise: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("expertise", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, expertise: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("expertise", value)
+              }
               fieldType="textarea"
               placeholder="Describe your relevant expertise and experience for this project"
               privatePlaceholder="Confidential expertise details..."
               rows={4}
               hasPrivateField={enabledPrivateFields.expertise}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("expertise", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("expertise", enabled)
+              }
               isProposalOwner={true}
             />
 
@@ -884,14 +944,20 @@ export default function CreateProposalPage() {
               label="Implementation Approach"
               publicValue={formData.approach}
               privateValue={privateFields.approach || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, approach: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("approach", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, approach: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("approach", value)
+              }
               fieldType="textarea"
               placeholder="Describe your approach to implementing this smartject"
               privatePlaceholder="Confidential approach details..."
               rows={4}
               hasPrivateField={enabledPrivateFields.approach}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("approach", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("approach", enabled)
+              }
               isProposalOwner={true}
             />
 
@@ -900,14 +966,20 @@ export default function CreateProposalPage() {
               label="Team & Resources"
               publicValue={formData.team}
               privateValue={privateFields.team || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, team: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("team", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, team: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("team", value)
+              }
               fieldType="textarea"
               placeholder="Describe the team and resources you'll allocate to this project"
               privatePlaceholder="Confidential team details..."
               rows={3}
               hasPrivateField={enabledPrivateFields.team}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("team", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("team", enabled)
+              }
               isProposalOwner={true}
             />
 
@@ -916,14 +988,20 @@ export default function CreateProposalPage() {
               label="Additional Information"
               publicValue={formData.additionalInfo}
               privateValue={privateFields.additionalInfo || ""}
-              onPublicChangeAction={(value) => setFormData((prev) => ({ ...prev, additionalInfo: value }))}
-              onPrivateChangeAction={(value) => handlePrivateFieldChange("additionalInfo", value)}
+              onPublicChangeAction={(value) =>
+                setFormData((prev) => ({ ...prev, additionalInfo: value }))
+              }
+              onPrivateChangeAction={(value) =>
+                handlePrivateFieldChange("additionalInfo", value)
+              }
               fieldType="textarea"
               placeholder="Any other information that might strengthen your proposal"
               privatePlaceholder="Confidential additional information..."
               rows={3}
               hasPrivateField={enabledPrivateFields.additionalInfo}
-              onTogglePrivateFieldAction={(enabled) => handleTogglePrivateField("additionalInfo", enabled)}
+              onTogglePrivateFieldAction={(enabled) =>
+                handleTogglePrivateField("additionalInfo", enabled)
+              }
               isProposalOwner={true}
             />
           </div>
@@ -1014,7 +1092,7 @@ export default function CreateProposalPage() {
                                             {deliverable.description}
                                           </span>
                                         </li>
-                                      )
+                                      ),
                                     )}
                                   </ul>
                                 </div>
@@ -1128,20 +1206,22 @@ export default function CreateProposalPage() {
                     </div>
                   </div>
                 )}
-                {!isCooperationProposal && useMilestones && milestones.length > 0 && (
-                  <>
-                    <Separator />
-                    <div>
-                      <p className="text-sm font-medium flex items-center gap-1">
-                        <ListChecks className="h-4 w-4" /> Milestones
-                      </p>
-                      <p>
-                        {milestones.length} defined ({totalPercentage}% of
-                        budget allocated)
-                      </p>
-                    </div>
-                  </>
-                )}
+                {!isCooperationProposal &&
+                  useMilestones &&
+                  milestones.length > 0 && (
+                    <>
+                      <Separator />
+                      <div>
+                        <p className="text-sm font-medium flex items-center gap-1">
+                          <ListChecks className="h-4 w-4" /> Milestones
+                        </p>
+                        <p>
+                          {milestones.length} defined ({totalPercentage}% of
+                          budget allocated)
+                        </p>
+                      </div>
+                    </>
+                  )}
               </div>
             </div>
 
@@ -1166,7 +1246,7 @@ export default function CreateProposalPage() {
                 createdAt={new Date().toISOString()}
                 versions={draftVersions}
                 milestones={milestones}
-                files={files.map(f => f.name)}
+                files={files.map((f) => f.name)}
                 organizationName={user?.organizationName}
                 contactPhone={user?.phone}
               />
@@ -1194,7 +1274,19 @@ export default function CreateProposalPage() {
           <div>
             <h1 className="text-2xl font-bold">Create Proposal</h1>
             <p className="text-muted-foreground">
-              Create a detailed proposal for a smartject
+              Create a detailed proposal for{" "}
+              {smartject ? (
+                <a
+                  href={`/smartject/${smartjectId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium"
+                >
+                  {smartject.title}
+                </a>
+              ) : (
+                "a smartject"
+              )}
             </p>
           </div>
         </div>
@@ -1206,12 +1298,12 @@ export default function CreateProposalPage() {
               {currentStep === 1
                 ? "Basic Information"
                 : currentStep === 2
-                ? "Project Details"
-                : currentStep === 3
-                ? "Specific Requirements"
-                : currentStep === 4
-                ? "Payment Milestones"
-                : "Documents & Review"}
+                  ? "Project Details"
+                  : currentStep === 3
+                    ? "Specific Requirements"
+                    : currentStep === 4
+                      ? "Payment Milestones"
+                      : "Documents & Review"}
             </p>
             <p className="text-sm text-muted-foreground">
               {currentStep === 5
@@ -1228,29 +1320,29 @@ export default function CreateProposalPage() {
               {currentStep === 1
                 ? "Basic Information"
                 : currentStep === 2
-                ? "Project Details"
-                : currentStep === 3
-                ? proposalType === "need"
-                  ? "Your Requirements"
-                  : "Your Expertise & Approach"
-                : currentStep === 4
-                ? "Payment Milestones"
-                : "Supporting Documents & Review"}
+                  ? "Project Details"
+                  : currentStep === 3
+                    ? proposalType === "need"
+                      ? "Your Requirements"
+                      : "Your Expertise & Approach"
+                    : currentStep === 4
+                      ? "Payment Milestones"
+                      : "Supporting Documents & Review"}
             </CardTitle>
             <CardDescription>
               {currentStep === 1
                 ? "Provide basic information about your proposal"
                 : currentStep === 2
-                ? "Define the scope, timeline, and budget for the project"
-                : currentStep === 3
-                ? proposalType === "need"
-                  ? "Specify your detailed requirements for this smartject"
-                  : "Describe your expertise and approach to implementing this smartject"
-                : currentStep === 4
-                ? "Define payment milestones for the project"
-                : isCooperationProposal
-                ? "Upload supporting documents and submit your cooperation proposal"
-                : "Upload supporting documents and review your proposal"}
+                  ? "Define the scope, timeline, and budget for the project"
+                  : currentStep === 3
+                    ? proposalType === "need"
+                      ? "Specify your detailed requirements for this smartject"
+                      : "Describe your expertise and approach to implementing this smartject"
+                    : currentStep === 4
+                      ? "Define payment milestones for the project"
+                      : isCooperationProposal
+                        ? "Upload supporting documents and submit your cooperation proposal"
+                        : "Upload supporting documents and review your proposal"}
             </CardDescription>
           </CardHeader>
           <CardContent>{renderStepContent()}</CardContent>
@@ -1284,10 +1376,14 @@ export default function CreateProposalPage() {
                   onClick={nextStep}
                   disabled={
                     (currentStep === 1 && !proposalType) ||
-                    (currentStep === 4 && useMilestones && totalPercentage !== 100)
+                    (currentStep === 4 &&
+                      useMilestones &&
+                      totalPercentage !== 100)
                   }
                 >
-                  {currentStep === 1 && isCooperationProposal ? "Skip to Review" : "Next"}
+                  {currentStep === 1 && isCooperationProposal
+                    ? "Skip to Review"
+                    : "Next"}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
@@ -1367,7 +1463,7 @@ export default function CreateProposalPage() {
                   value={currentMilestone.percentage || ""}
                   onChange={(e) =>
                     handleMilestonePercentageChange(
-                      Number.parseInt(e.target.value) || 0
+                      Number.parseInt(e.target.value) || 0,
                     )
                   }
                 />

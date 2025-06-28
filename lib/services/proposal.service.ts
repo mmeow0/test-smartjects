@@ -20,7 +20,7 @@ export const proposalService = {
           signed_at,
           created_at
         )
-      `
+      `,
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
@@ -48,15 +48,19 @@ export const proposalService = {
       team: proposal.team,
       additionalInfo: proposal.additional_info,
       privateFields: proposal.private_fields || {},
-      ndaSignatures: proposal.proposal_nda_signatures
-        ?.filter((sig: any) => sig.hasOwnProperty('status') && sig.status === 'approved')
-        .map((sig: any) => ({
-          id: sig.id,
-          proposalId: proposal.id,
-          signerUserId: sig.signer_user_id,
-          signedAt: sig.approved_at || sig.signed_at,
-          createdAt: sig.created_at,
-        })) || [],
+      ndaSignatures:
+        proposal.proposal_nda_signatures
+          ?.filter(
+            (sig: any) =>
+              sig.hasOwnProperty("status") && sig.status === "approved",
+          )
+          .map((sig: any) => ({
+            id: sig.id,
+            proposalId: proposal.id,
+            signerUserId: sig.signer_user_id,
+            signedAt: sig.approved_at || sig.signed_at,
+            createdAt: sig.created_at,
+          })) || [],
       status: proposal.status,
       createdAt: proposal.created_at,
       updatedAt: proposal.updated_at,
@@ -65,7 +69,7 @@ export const proposalService = {
 
   // Get proposals by smartject ID
   async getProposalsBySmartjectId(
-    smartjectId: string
+    smartjectId: string,
   ): Promise<ProposalType[]> {
     const supabase = getSupabaseBrowserClient();
 
@@ -84,7 +88,7 @@ export const proposalService = {
           signed_at,
           created_at
         )
-      `
+      `,
       )
       .eq("smartject_id", smartjectId)
       .order("created_at", { ascending: false });
@@ -92,7 +96,7 @@ export const proposalService = {
     if (error) {
       console.error(
         `Error fetching proposals for smartject ${smartjectId}:`,
-        error
+        error,
       );
       return [];
     }
@@ -115,15 +119,19 @@ export const proposalService = {
       team: proposal.team,
       additionalInfo: proposal.additional_info,
       privateFields: proposal.private_fields || {},
-      ndaSignatures: proposal.proposal_nda_signatures
-        ?.filter((sig: any) => sig.hasOwnProperty('status') && sig.status === 'approved')
-        .map((sig: any) => ({
-          id: sig.id,
-          proposalId: proposal.id,
-          signerUserId: sig.signer_user_id,
-          signedAt: sig.approved_at || sig.signed_at,
-          createdAt: sig.created_at,
-        })) || [],
+      ndaSignatures:
+        proposal.proposal_nda_signatures
+          ?.filter(
+            (sig: any) =>
+              sig.hasOwnProperty("status") && sig.status === "approved",
+          )
+          .map((sig: any) => ({
+            id: sig.id,
+            proposalId: proposal.id,
+            signerUserId: sig.signer_user_id,
+            signedAt: sig.approved_at || sig.signed_at,
+            createdAt: sig.created_at,
+          })) || [],
       status: proposal.status,
       createdAt: proposal.created_at,
       updatedAt: proposal.updated_at,
@@ -140,7 +148,8 @@ export const proposalService = {
 
     const { data, error } = await supabase
       .from("proposals")
-      .select(`
+      .select(
+        `
         *,
         smartjects (
           title
@@ -170,7 +179,8 @@ export const proposalService = {
           signed_at,
           created_at
         )
-      `)
+      `,
+      )
       .eq("id", id)
       .single();
 
@@ -197,15 +207,19 @@ export const proposalService = {
       team: data.team,
       additionalInfo: data.additional_info,
       privateFields: data.private_fields || {},
-      ndaSignatures: data.proposal_nda_signatures
-        ?.filter((sig: any) => sig.hasOwnProperty('status') && sig.status === 'approved')
-        .map((sig: any) => ({
-          id: sig.id,
-          proposalId: data.id,
-          signerUserId: sig.signer_user_id,
-          signedAt: sig.approved_at || sig.signed_at,
-          createdAt: sig.created_at,
-        })) || [],
+      ndaSignatures:
+        data.proposal_nda_signatures
+          ?.filter(
+            (sig: any) =>
+              sig.hasOwnProperty("status") && sig.status === "approved",
+          )
+          .map((sig: any) => ({
+            id: sig.id,
+            proposalId: data.id,
+            signerUserId: sig.signer_user_id,
+            signedAt: sig.approved_at || sig.signed_at,
+            createdAt: sig.created_at,
+          })) || [],
       status: data.status,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
@@ -233,14 +247,14 @@ export const proposalService = {
           name: file.name,
           size: file.size,
           type: file.type,
-          path: file.path
+          path: file.path,
         })) ?? [],
     };
   },
 
   // Create a new proposal
   async createProposal(
-    proposal: Partial<ProposalType>
+    proposal: Partial<ProposalType>,
   ): Promise<string | null> {
     const supabase = getSupabaseBrowserClient();
 
@@ -279,7 +293,7 @@ export const proposalService = {
   // Update a proposal
   async updateProposal(
     id: string,
-    proposal: Partial<ProposalType>
+    proposal: Partial<ProposalType>,
   ): Promise<boolean> {
     const supabase = getSupabaseBrowserClient();
 
@@ -331,11 +345,14 @@ export const proposalService = {
             .delete()
             .in(
               "milestone_id",
-              existingMilestones.map((m) => m.id)
+              existingMilestones.map((m) => m.id),
             );
 
           if (deliverablesError) {
-            console.error("Error deleting old deliverables:", deliverablesError);
+            console.error(
+              "Error deleting old deliverables:",
+              deliverablesError,
+            );
             return false;
           }
         }
@@ -352,18 +369,19 @@ export const proposalService = {
         }
 
         // Создаем новые milestones
-        const { data: newMilestones, error: createMilestonesError } = await supabase
-          .from("proposal_milestones")
-          .insert(
-            proposal.milestones.map((milestone) => ({
-              proposal_id: id,
-              name: milestone.name,
-              description: milestone.description,
-              percentage: milestone.percentage,
-              amount: milestone.amount,
-            }))
-          )
-          .select("id, name");
+        const { data: newMilestones, error: createMilestonesError } =
+          await supabase
+            .from("proposal_milestones")
+            .insert(
+              proposal.milestones.map((milestone) => ({
+                proposal_id: id,
+                name: milestone.name,
+                description: milestone.description,
+                percentage: milestone.percentage,
+                amount: milestone.amount,
+              })),
+            )
+            .select("id, name");
 
         if (createMilestonesError) {
           console.error("Error creating milestones:", createMilestonesError);
@@ -375,7 +393,11 @@ export const proposalService = {
           const milestone = proposal.milestones[i];
           const newMilestoneId = newMilestones?.[i]?.id;
 
-          if (newMilestoneId && milestone.deliverables && milestone.deliverables.length > 0) {
+          if (
+            newMilestoneId &&
+            milestone.deliverables &&
+            milestone.deliverables.length > 0
+          ) {
             const { error: deliverablesError } = await supabase
               .from("proposal_deliverables")
               .insert(
@@ -383,7 +405,7 @@ export const proposalService = {
                   milestone_id: newMilestoneId,
                   description: deliverable.description,
                   completed: deliverable.completed,
-                }))
+                })),
               );
 
             if (deliverablesError) {
@@ -403,7 +425,7 @@ export const proposalService = {
 
   async createMilestones(
     proposalId: string,
-    milestones: Partial<MilestoneType>[]
+    milestones: Partial<MilestoneType>[],
   ): Promise<{ id: string; name: string }[] | null> {
     const supabase = getSupabaseBrowserClient();
 
@@ -431,7 +453,7 @@ export const proposalService = {
   // Create deliverables for a milestone
   async createDeliverables(
     milestoneId: string,
-    deliverables: Partial<DeliverableType>[]
+    deliverables: Partial<DeliverableType>[],
   ): Promise<boolean> {
     const supabase = getSupabaseBrowserClient();
 
@@ -482,7 +504,7 @@ export const proposalService = {
   async saveFileReference(
     proposalId: string,
     file: File,
-    filePath: string
+    filePath: string,
   ): Promise<boolean> {
     const supabase = getSupabaseBrowserClient();
 
@@ -538,12 +560,15 @@ export const proposalService = {
       // Process user's own proposals
       if (userProposals) {
         for (const proposal of userProposals) {
-          const proposalMessages = allMessages?.filter(msg => msg.proposal_id === proposal.id) || [];
-          
+          const proposalMessages =
+            allMessages?.filter((msg) => msg.proposal_id === proposal.id) || [];
+
           if (proposalMessages.length === 0) continue;
 
           // Find other party (someone who messaged about this proposal)
-          const otherMessage = proposalMessages.find(msg => msg.sender_id !== userId);
+          const otherMessage = proposalMessages.find(
+            (msg) => msg.sender_id !== userId,
+          );
           const otherPartyId = otherMessage?.sender_id;
 
           let otherPartyName = "Unknown User";
@@ -553,7 +578,7 @@ export const proposalService = {
               .select("name, avatar_url")
               .eq("id", otherPartyId)
               .single();
-            
+
             if (userData) {
               otherPartyName = userData.name || "Unknown User";
             }
@@ -566,14 +591,19 @@ export const proposalService = {
             .select("title")
             .eq("id", proposal.smartject_id)
             .single();
-          
+
           if (smartjectData) {
             smartjectTitle = smartjectData.title;
           }
 
-          const lastActivity = proposalMessages.length > 0 
-            ? proposalMessages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].created_at
-            : new Date().toISOString();
+          const lastActivity =
+            proposalMessages.length > 0
+              ? proposalMessages.sort(
+                  (a, b) =>
+                    new Date(b.created_at).getTime() -
+                    new Date(a.created_at).getTime(),
+                )[0].created_at
+              : new Date().toISOString();
 
           negotiations.push({
             id: `match-${proposal.smartject_id}-${proposal.id}`,
@@ -590,18 +620,72 @@ export const proposalService = {
             messageCount: proposalMessages.length,
             lastActivity,
             isProposalOwner: true,
-            status: 'active' as const
+            status: "active" as const,
           });
         }
       }
 
       // Sort by last activity
-      return negotiations.sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime());
-
+      return negotiations.sort(
+        (a, b) =>
+          new Date(b.lastActivity).getTime() -
+          new Date(a.lastActivity).getTime(),
+      );
     } catch (error) {
       console.error("Error in getUserNegotiations:", error);
       // Return empty array instead of mock data for real implementation
       return [];
+    }
+  },
+
+  async deleteProposal(id: string, userId: string): Promise<boolean> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // First verify the proposal belongs to the user
+      const { data: proposal, error: fetchError } = await supabase
+        .from("proposals")
+        .select("user_id")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) {
+        console.error("Error fetching proposal for deletion:", fetchError);
+        return false;
+      }
+
+      if (proposal.user_id !== userId) {
+        console.error("User not authorized to delete this proposal");
+        return false;
+      }
+
+      // Delete related milestones first (if any)
+      await supabase.from("proposal_milestones").delete().eq("proposal_id", id);
+
+      // Delete related deliverables (if any)
+      await supabase
+        .from("proposal_deliverables")
+        .delete()
+        .eq("proposal_id", id);
+
+      // Delete related files (if any)
+      await supabase.from("proposal_files").delete().eq("proposal_id", id);
+
+      // Finally delete the proposal
+      const { error: deleteError } = await supabase
+        .from("proposals")
+        .delete()
+        .eq("id", id);
+
+      if (deleteError) {
+        console.error("Error deleting proposal:", deleteError);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in deleteProposal:", error);
+      return false;
     }
   },
 };
