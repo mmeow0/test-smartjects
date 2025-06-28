@@ -461,12 +461,12 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
               <FileText className="h-4 w-4 mr-2" />
               Upload Document
             </Button>
-            {contract?.status === "active" && (
+            {/* {contract?.status === "active" && (
               <Button variant="outline" onClick={handleReportIssue}>
                 <AlertTriangle className="h-4 w-4 mr-2" />
                 Report Issue
               </Button>
-            )}
+            )} */}
           </CardFooter>
         </Card>
 
@@ -510,7 +510,7 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
                 <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
 
-              {contract?.status === "active" && (
+              {/* {contract?.status === "active" && (
                 <Button 
                   variant="outline" 
                   className="w-full justify-between" 
@@ -519,14 +519,14 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
                   Schedule Meeting
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
-              )}
+              )} */}
 
-              {contract?.status === "active" && (
+              {/* {contract?.status === "active" && (
                 <Button variant="destructive" className="w-full justify-between">
                   Request Contract Modification
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
-              )}
+              )} */}
             </CardContent>
           </Card>
         </div>
@@ -682,7 +682,7 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
         </TabsContent>
       </Tabs>
 
-      {contract?.status === "active" && (
+      {/* {contract?.status === "active" && (
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Contract Actions</CardTitle>
@@ -717,7 +717,7 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
 
       {contract?.status === "completed" && (
         <Card>
