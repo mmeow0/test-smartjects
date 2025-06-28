@@ -35,11 +35,11 @@ import {
   EyeOff,
   AlertCircle,
 } from "lucide-react";
-import { proposalService } from "@/lib/services/proposal.service";
 import { ndaService } from "@/lib/services/nda.service";
 import { userService } from "@/lib/services/user.service";
 import { useProposal } from "@/hooks/use-proposal";
 import { useProposalNegotiations } from "@/hooks/use-proposal-negotiations";
+import { useInterest } from "@/hooks/use-interest";
 import type { UserType, NDARequest } from "@/lib/types";
 
 export default function ProposalDetailPage({
@@ -59,7 +59,7 @@ export default function ProposalDetailPage({
   >([]);
   const [loadingNdaSignatures, setLoadingNdaSignatures] = useState(false);
   const [approvedNdaRequests, setApprovedNdaRequests] = useState<Array<any>>(
-    []
+    [],
   );
   const [loadingApprovedRequests, setLoadingApprovedRequests] = useState(false);
   const [proposalOwner, setProposalOwner] = useState<UserType | null>(null);
@@ -69,6 +69,17 @@ export default function ProposalDetailPage({
   const [databaseError, setDatabaseError] = useState<string | null>(null);
   const { proposal, isLoading, refetch } = useProposal(id);
   const { conversations, completedConversations } = useProposalNegotiations(id);
+
+  // Interest functionality
+  const {
+    hasExpressedInterest,
+    isExpressingInterest,
+    expressInterest,
+    removeInterest,
+  } = useInterest({
+    proposalId: id,
+    isProposalOwner: proposal?.userId === user?.id,
+  });
 
   // Fetch NDA signatures when proposal loads
   useEffect(() => {
@@ -109,7 +120,7 @@ export default function ProposalDetailPage({
   // Helper function to display field value or "not specified"
   const displayField = (
     value: string | undefined | null,
-    hideNotSpecified = false
+    hideNotSpecified = false,
   ) => {
     if (!value || value.trim() === "") {
       return hideNotSpecified ? null : (
@@ -132,7 +143,7 @@ export default function ProposalDetailPage({
   // Check if user has approved NDA (either from signatures list OR from approved request)
   const hasApprovedNDA =
     proposal.ndaSignatures?.some(
-      (signature) => signature.signerUserId === user.id
+      (signature) => signature.signerUserId === user.id,
     ) || hasApprovedRequest;
   const hasPrivateFields =
     proposal.privateFields && Object.keys(proposal.privateFields).length > 0;
@@ -375,7 +386,9 @@ export default function ProposalDetailPage({
                 Files ({proposal.files.length})
               </TabsTrigger>
               {showNegotiationsTab && (
-                <TabsTrigger value="negotiations">Negotiations</TabsTrigger>
+                <TabsTrigger value="negotiations">
+                  {isProposalOwner ? "Inquiries" : "Negotiations"}
+                </TabsTrigger>
               )}
               {hasPrivateFields && (
                 <TabsTrigger value="nda-management">
@@ -383,17 +396,40 @@ export default function ProposalDetailPage({
                 </TabsTrigger>
               )}
             </TabsList>
-            {proposal.userId !== user.id &&
-              proposal.status === "submitted" &&
-              proposal.type !== "provide" && (
-                <Button
-                  onClick={() =>
-                    router.push(`/matches/new/negotiate/${proposal.id}`)
-                  }
-                >
-                  Negotiate
-                </Button>
-              )}
+            {proposal.userId !== user.id && proposal.status === "submitted" && (
+              <div className="flex gap-2">
+                {!hasExpressedInterest ? (
+                  <Button
+                    variant="outline"
+                    onClick={expressInterest}
+                    disabled={isExpressingInterest}
+                  >
+                    {isExpressingInterest
+                      ? "Submitting..."
+                      : "Express Interest"}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={removeInterest}
+                    disabled={isExpressingInterest}
+                  >
+                    {isExpressingInterest
+                      ? "Removing..."
+                      : "Interest Submitted ✓"}
+                  </Button>
+                )}
+                {proposal.type !== "provide" && (
+                  <Button
+                    onClick={() =>
+                      router.push(`/matches/new/negotiate/${proposal.id}`)
+                    }
+                  >
+                    Negotiate
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Migration Status Warning */}
@@ -446,8 +482,8 @@ export default function ProposalDetailPage({
                           {loadingOwner
                             ? "Loading..."
                             : isProposalOwner
-                            ? user?.name || "Unknown User"
-                            : proposalOwner?.name || "Unknown User"}
+                              ? user?.name || "Unknown User"
+                              : proposalOwner?.name || "Unknown User"}
                           {isProposalOwner && (
                             <span className="ml-2 text-xs text-blue-600">
                               (You)
@@ -458,8 +494,8 @@ export default function ProposalDetailPage({
                           {loadingOwner
                             ? "Loading..."
                             : isProposalOwner
-                            ? user?.email || "unknown@example.com"
-                            : proposalOwner?.email || "Email not available"}
+                              ? user?.email || "unknown@example.com"
+                              : proposalOwner?.email || "Email not available"}
                         </p>
                       </div>
                     </div>
@@ -486,7 +522,7 @@ export default function ProposalDetailPage({
                   <DetailSection title="Description">
                     {displayField(
                       proposal.description,
-                      proposal.isCooperationProposal
+                      proposal.isCooperationProposal,
                     )}
                   </DetailSection>
                   {!proposal.isCooperationProposal && (
@@ -541,7 +577,7 @@ export default function ProposalDetailPage({
                     <DetailSection title="Additional Info">
                       {displayField(
                         proposal.additionalInfo,
-                        proposal.isCooperationProposal
+                        proposal.isCooperationProposal,
                       )}
                     </DetailSection>
                   )}
@@ -785,7 +821,7 @@ export default function ProposalDetailPage({
                                 : 0) + approvedNdaRequests.length}{" "}
                               users with access • Updated{" "}
                               {new Date(
-                                proposal.updatedAt
+                                proposal.updatedAt,
                               ).toLocaleDateString()}
                             </p>
                           </div>
@@ -966,7 +1002,7 @@ export default function ProposalDetailPage({
                                       <p className="text-xs text-green-700">
                                         Approved:{" "}
                                         {new Date(
-                                          request.approvedAt
+                                          request.approvedAt,
                                         ).toLocaleDateString()}
                                       </p>
                                     </div>
@@ -1017,7 +1053,7 @@ export default function ProposalDetailPage({
                                         <p className="text-xs text-green-700">
                                           Signed:{" "}
                                           {new Date(
-                                            signature.signedAt
+                                            signature.signedAt,
                                           ).toLocaleDateString()}
                                         </p>
                                       </div>
@@ -1306,11 +1342,11 @@ export default function ProposalDetailPage({
                             </div>
                             <p className="text-xs text-amber-700 ml-6">
                               {new Date(
-                                proposal.createdAt
+                                proposal.createdAt,
                               ).toLocaleDateString()}{" "}
                               at{" "}
                               {new Date(
-                                proposal.createdAt
+                                proposal.createdAt,
                               ).toLocaleTimeString()}
                             </p>
                           </div>
@@ -1325,11 +1361,11 @@ export default function ProposalDetailPage({
                               </div>
                               <p className="text-xs text-purple-700 ml-6">
                                 {new Date(
-                                  proposal.updatedAt
+                                  proposal.updatedAt,
                                 ).toLocaleDateString()}{" "}
                                 at{" "}
                                 {new Date(
-                                  proposal.updatedAt
+                                  proposal.updatedAt,
                                 ).toLocaleTimeString()}
                               </p>
                             </div>
@@ -1340,7 +1376,7 @@ export default function ProposalDetailPage({
                             .sort(
                               (a, b) =>
                                 new Date(a.approvedAt).getTime() -
-                                new Date(b.approvedAt).getTime()
+                                new Date(b.approvedAt).getTime(),
                             )
                             .map((request) => (
                               <div
@@ -1359,11 +1395,11 @@ export default function ProposalDetailPage({
                                 </div>
                                 <p className="text-xs text-green-700 ml-6">
                                   {new Date(
-                                    request.approvedAt
+                                    request.approvedAt,
                                   ).toLocaleDateString()}{" "}
                                   at{" "}
                                   {new Date(
-                                    request.approvedAt
+                                    request.approvedAt,
                                   ).toLocaleTimeString()}
                                 </p>
                               </div>
@@ -1379,7 +1415,7 @@ export default function ProposalDetailPage({
                               .sort(
                                 (a, b) =>
                                   new Date(a.signedAt).getTime() -
-                                  new Date(b.signedAt).getTime()
+                                  new Date(b.signedAt).getTime(),
                               )
                               .map((signature, index) => (
                                 <div
@@ -1398,11 +1434,11 @@ export default function ProposalDetailPage({
                                   </div>
                                   <p className="text-xs text-green-700 ml-6">
                                     {new Date(
-                                      signature.signedAt
+                                      signature.signedAt,
                                     ).toLocaleDateString()}{" "}
                                     at{" "}
                                     {new Date(
-                                      signature.signedAt
+                                      signature.signedAt,
                                     ).toLocaleTimeString()}
                                   </p>
                                 </div>
@@ -1434,7 +1470,7 @@ export default function ProposalDetailPage({
                                 <p className="text-xs text-gray-500 mt-1">
                                   Last updated:{" "}
                                   {new Date(
-                                    proposal.updatedAt
+                                    proposal.updatedAt,
                                   ).toLocaleDateString()}
                                 </p>
                               </div>

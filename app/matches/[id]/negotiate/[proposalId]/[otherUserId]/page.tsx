@@ -22,6 +22,7 @@ import {
   ArrowLeft,
   Calendar,
   Check,
+  CheckCircle2,
   Clock,
   DollarSign,
   FileText,
@@ -35,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { contractService } from "@/lib/services/contract.service";
 import { negotiationService } from "@/lib/services/negotiation.service";
+import { useInterest } from "@/hooks/use-interest";
 
 interface Deliverable {
   id: string;
@@ -107,6 +109,17 @@ export default function IndividualNegotiatePage({
 
   const [negotiation, setNegotiation] =
     useState<IndividualNegotiationData | null>(null);
+
+  // Interest functionality
+  const {
+    hasExpressedInterest,
+    isExpressingInterest,
+    expressInterest,
+    removeInterest,
+  } = useInterest({
+    proposalId: proposalId,
+    isProposalOwner: negotiation?.proposalAuthor?.id === user?.id,
+  });
   const [negotiationLoading, setNegotiationLoading] = useState(true);
 
   const [message, setMessage] = useState("");
@@ -677,6 +690,41 @@ export default function IndividualNegotiatePage({
                   </p>
                 </div>
               </div>
+
+              {/* Interest Expression Button */}
+              {user?.id !== negotiation?.proposalAuthor?.id && (
+                <div className="mt-4 pt-4 border-t">
+                  {!hasExpressedInterest ? (
+                    <Button
+                      variant="outline"
+                      onClick={expressInterest}
+                      disabled={isExpressingInterest}
+                      className="w-full"
+                    >
+                      {isExpressingInterest
+                        ? "Expressing Interest..."
+                        : "Express Interest"}
+                    </Button>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        <span className="text-sm text-green-600 font-medium">
+                          Interest expressed
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={removeInterest}
+                        disabled={isExpressingInterest}
+                      >
+                        {isExpressingInterest ? "Removing..." : "Remove"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
