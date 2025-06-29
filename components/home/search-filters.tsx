@@ -11,7 +11,7 @@ interface SearchFiltersProps {
   query: string;
   onQueryChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   selectedIndustries: string[];
-  selectedTechnologies: string[];
+  selectedAudience: string[];
   selectedFunctions: string[];
   onToggleIndustry: (industry: string) => void;
   onToggleTechnology: (tech: string) => void;
@@ -31,7 +31,7 @@ interface SearchFiltersProps {
   onClearAllFilters: () => void;
   filters: {
     industries?: string[];
-    technologies?: string[];
+    audience?: string[];
     businessFunctions?: string[];
   };
   totalFiltersCount: number;
@@ -49,7 +49,7 @@ export const SearchFilters = memo(
     query,
     onQueryChange,
     selectedIndustries,
-    selectedTechnologies,
+    selectedAudience,
     selectedFunctions,
     onToggleIndustry,
     onToggleTechnology,
@@ -248,7 +248,7 @@ export const SearchFilters = memo(
               )}
             </div>
 
-            {/* Technologies Filter */}
+            {/* Audience Filter */}
             <div className="relative" ref={audienceRef}>
               <div
                 className="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 h-11 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors min-w-0"
@@ -256,10 +256,10 @@ export const SearchFilters = memo(
               >
                 <Audience className="w-4 h-4 flex-shrink-0" />
                 <span className="text-sm font-medium text-gray-700 truncate">
-                  Technologies
-                  {selectedTechnologies.length > 0 && (
+                  Audience
+                  {selectedAudience.length > 0 && (
                     <span className="ml-1 text-blue-600">
-                      ({selectedTechnologies.length})
+                      ({selectedAudience.length})
                     </span>
                   )}
                 </span>
@@ -267,11 +267,11 @@ export const SearchFilters = memo(
               </div>
               {showAudienceDropdown && (
                 <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-56 max-h-60 overflow-y-auto">
-                  {filters.technologies?.map((tech) => (
+                  {filters.audience?.map((tech) => (
                     <div
                       key={tech}
                       className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                        selectedTechnologies.includes(tech)
+                        selectedAudience.includes(tech)
                           ? "bg-blue-50 text-blue-700 font-medium"
                           : "text-gray-700"
                       }`}
@@ -281,7 +281,7 @@ export const SearchFilters = memo(
                     >
                       <div className="flex items-center justify-between">
                         <span className="truncate">{tech}</span>
-                        {selectedTechnologies.includes(tech) && (
+                        {selectedAudience.includes(tech) && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />
                         )}
                       </div>
@@ -430,7 +430,7 @@ export const SearchFilters = memo(
                 )}
               </div>
 
-              {/* Mobile Technologies Filter */}
+              {/* Mobile Audience Filter */}
               <div className="relative" ref={audienceRef}>
                 <div
                   className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
@@ -439,11 +439,11 @@ export const SearchFilters = memo(
                   <div className="flex items-center gap-2">
                     <Audience className="w-4 h-4" />
                     <span className="text-sm font-medium text-gray-700">
-                      Technologies
+                      Audience
                     </span>
-                    {selectedTechnologies.length > 0 && (
+                    {selectedAudience.length > 0 && (
                       <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
-                        {selectedTechnologies.length}
+                        {selectedAudience.length}
                       </span>
                     )}
                   </div>
@@ -451,11 +451,11 @@ export const SearchFilters = memo(
                 </div>
                 {showAudienceDropdown && (
                   <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-y-auto">
-                    {filters.technologies?.map((tech) => (
+                    {filters.audience?.map((tech) => (
                       <div
                         key={tech}
                         className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                          selectedTechnologies.includes(tech)
+                          selectedAudience.includes(tech)
                             ? "bg-blue-50 text-blue-700 font-medium"
                             : "text-gray-700"
                         }`}
@@ -465,7 +465,7 @@ export const SearchFilters = memo(
                       >
                         <div className="flex items-center justify-between">
                           <span>{tech}</span>
-                          {selectedTechnologies.includes(tech) && (
+                          {selectedAudience.includes(tech) && (
                             <div className="w-2 h-2 bg-blue-500 rounded-full" />
                           )}
                         </div>
@@ -551,7 +551,7 @@ export const SearchFilters = memo(
                 onRemove={onToggleIndustry}
               />
             ))}
-            {selectedTechnologies.map((tech) => (
+            {selectedAudience.map((tech) => (
               <FilterBadge
                 key={tech}
                 type="technology"

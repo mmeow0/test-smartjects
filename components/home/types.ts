@@ -2,7 +2,7 @@ import type { SmartjectType } from "@/lib/types";
 
 export interface SmartjectFilters {
   industries?: string[];
-  technologies?: string[];
+  audience?: string[];
   businessFunctions?: string[];
 }
 
@@ -43,7 +43,7 @@ export interface SearchFiltersProps {
   query: string;
   onQueryChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   selectedIndustries: string[];
-  selectedTechnologies: string[];
+  selectedAudience: string[];
   selectedFunctions: string[];
   onToggleIndustry: (industry: string) => void;
   onToggleTechnology: (tech: string) => void;
@@ -88,6 +88,6 @@ export interface DropdownState {
 
 export interface FilterState {
   selectedIndustries: string[];
-  selectedTechnologies: string[];
+  selectedAudience: string[];
   selectedFunctions: string[];
 }

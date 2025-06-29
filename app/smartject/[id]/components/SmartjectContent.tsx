@@ -27,14 +27,13 @@ interface Smartject {
   mission: string;
   problematics: string;
   scope: string;
-  audience: string;
   howItWorks: string;
   architecture: string;
   innovation: string;
   useCase: string;
   industries?: string[];
   businessFunctions?: string[];
-  technologies?: string[];
+  audience?: string[];
   researchPapers?: Array<{
     title: string;
     url: string;

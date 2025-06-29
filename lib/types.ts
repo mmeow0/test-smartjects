@@ -16,14 +16,13 @@ export type SmartjectType = {
   mission: string;
   problematics: string;
   scope: string;
-  audience: string;
   howItWorks: string;
   architecture: string;
   innovation: string;
   useCase: string;
   industries: string[];
   businessFunctions: string[];
-  technologies?: string[];
+  audience?: string[];
   researchPapers: { title: string; url: string }[];
   image?: string;
 };

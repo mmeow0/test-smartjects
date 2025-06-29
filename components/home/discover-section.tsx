@@ -17,7 +17,7 @@ export const DiscoverSection = () => {
 
   const [query, setQuery] = useState("");
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
-  const [selectedTechnologies, setSelectedTechnologies] = useState<string[]>(
+  const [selectedAudience, setSelectedAudience] = useState<string[]>(
     [],
   );
   const [selectedFunctions, setSelectedFunctions] = useState<string[]>([]);
@@ -45,14 +45,14 @@ export const DiscoverSection = () => {
 
   const handleToggleTechnology = useCallback(
     (tech: string) => {
-      setSelectedTechnologies((prev) => {
+      setSelectedAudience((prev) => {
         const updated = toggleItem(prev, tech);
-        const filterUpdated = toggleItem(filters.technologies || [], tech);
-        setFilter("technologies", filterUpdated);
+        const filterUpdated = toggleItem(filters.audience || [], tech);
+        setFilter("audience", filterUpdated);
         return updated;
       });
     },
-    [filters.technologies, setFilter],
+    [filters.audience, setFilter],
   );
 
   const handleToggleFunction = useCallback(
@@ -71,11 +71,11 @@ export const DiscoverSection = () => {
   const totalFiltersCount = useMemo(
     () =>
       selectedIndustries.length +
-      selectedTechnologies.length +
+      selectedAudience.length +
       selectedFunctions.length,
     [
       selectedIndustries.length,
-      selectedTechnologies.length,
+      selectedAudience.length,
       selectedFunctions.length,
     ],
   );
@@ -84,7 +84,7 @@ export const DiscoverSection = () => {
   const handleClearAllFilters = useCallback(() => {
     setSelectedIndustries([]);
     setSelectedFunctions([]);
-    setSelectedTechnologies([]);
+    setSelectedAudience([]);
     // Close all dropdowns
     setShowIndustriesDropdown(false);
     setShowAudienceDropdown(false);
@@ -130,11 +130,11 @@ export const DiscoverSection = () => {
 
       if (!matchesIndustries) return false;
 
-      const matchesTechnologies =
-        selectedTechnologies.length === 0 ||
-        selectedTechnologies.some((t) => s.technologies?.includes(t));
+      const matchesAudience =
+        selectedAudience.length === 0 ||
+        selectedAudience.some((t) => s.audience?.includes(t));
 
-      if (!matchesTechnologies) return false;
+      if (!matchesAudience) return false;
 
       const matchesFunctions =
         selectedFunctions.length === 0 ||
@@ -146,7 +146,7 @@ export const DiscoverSection = () => {
     smartjects,
     debouncedQuery,
     selectedIndustries,
-    selectedTechnologies,
+    selectedAudience,
     selectedFunctions,
     totalFiltersCount,
   ]);
@@ -199,7 +199,7 @@ export const DiscoverSection = () => {
             query={query}
             onQueryChange={handleSearchChange}
             selectedIndustries={selectedIndustries}
-            selectedTechnologies={selectedTechnologies}
+            selectedAudience={selectedAudience}
             selectedFunctions={selectedFunctions}
             onToggleIndustry={handleToggleIndustry}
             onToggleTechnology={handleToggleTechnology}

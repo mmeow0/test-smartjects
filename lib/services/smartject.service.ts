@@ -18,10 +18,14 @@ export const smartjectService = {
       return {};
     }
 
-    const result: { [smartjectId: string]: ("believe" | "need" | "provide")[] } = {};
+    const result: {
+      [smartjectId: string]: ("believe" | "need" | "provide")[];
+    } = {};
     data.forEach((vote: any) => {
       if (!result[vote.smartject_id]) result[vote.smartject_id] = [];
-      result[vote.smartject_id].push(vote.vote_type as "believe" | "need" | "provide");
+      result[vote.smartject_id].push(
+        vote.vote_type as "believe" | "need" | "provide"
+      );
     });
 
     return result;
@@ -43,8 +47,8 @@ export const smartjectService = {
       smartject_business_functions!inner (
         business_functions (name)
       ),
-      smartject_technologies!inner (
-        technologies (name)
+      smartject_audience!inner (
+        audience (name)
       ),
       votes (vote_type),
       comments(count)
@@ -80,15 +84,14 @@ export const smartjectService = {
         }
       }
 
-      const industries = item.smartject_industries?.map(
-        (i: any) => i.industries.name
-      ) || [];
-      const businessFunctions = item.smartject_business_functions?.map(
-        (f: any) => f.business_functions.name
-      ) || [];
-      const technologies = item.smartject_technologies?.map(
-        (t: any) => t.technologies.name
-      ) || [];
+      const industries =
+        item.smartject_industries?.map((i: any) => i.industries.name) || [];
+      const businessFunctions =
+        item.smartject_business_functions?.map(
+          (f: any) => f.business_functions.name
+        ) || [];
+      const audience =
+        item.smartject_audience?.map((a: any) => a.audience.name) || [];
 
       return {
         id: item.id as string,
@@ -100,15 +103,14 @@ export const smartjectService = {
         mission: (item.mission || "") as string,
         problematics: (item.problematics || "") as string,
         scope: (item.scope || "") as string,
-        audience: (item.audience || "") as string,
         howItWorks: (item.how_it_works || "") as string,
         architecture: (item.architecture || "") as string,
         innovation: (item.innovation || "") as string,
         useCase: (item.use_case || "") as string,
         industries,
         businessFunctions,
-        technologies,
-        relevantLinks: [] as { title: string; url: string; }[],
+        audience,
+        relevantLinks: [] as { title: string; url: string }[],
         researchPapers: [] as string[],
         image: item.image_url as string | undefined,
       };
@@ -135,8 +137,8 @@ export const smartjectService = {
         smartject_business_functions!inner (
           business_functions (name)
         ),
-        smartject_technologies!inner (
-          technologies (name)
+        smartject_audience!inner (
+          audience (name)
         )
       `
       )
@@ -197,19 +199,20 @@ export const smartjectService = {
       );
     }
     // Extract industries
-    const industries = data.smartject_industries?.map(
-      (industry: any) => industry.industries.name
-    ) || [];
+    const industries =
+      data.smartject_industries?.map(
+        (industry: any) => industry.industries.name
+      ) || [];
 
     // Extract business functions
-    const businessFunctions = data.smartject_business_functions?.map(
-      (func: any) => func.business_functions.name
-    ) || [];
+    const businessFunctions =
+      data.smartject_business_functions?.map(
+        (func: any) => func.business_functions.name
+      ) || [];
 
-    // Extract technologies
-    const technologies = data.smartject_technologies?.map(
-      (tech: any) => tech.technologies.name
-    ) || [];
+    // Extract audience
+    const audience =
+      data.smartject_audience?.map((aud: any) => aud.audience.name) || [];
 
     return {
       id: data.id as string,
@@ -221,16 +224,15 @@ export const smartjectService = {
       mission: (data.mission || "") as string,
       problematics: (data.problematics || "") as string,
       scope: (data.scope || "") as string,
-      audience: (data.audience || "") as string,
       howItWorks: (data.how_it_works || "") as string,
       architecture: (data.architecture || "") as string,
       innovation: (data.innovation || "") as string,
       useCase: (data.use_case || "") as string,
       industries,
       businessFunctions,
-      technologies,
+      audience,
       researchPapers: (data.research_papers || []) as string[],
-      relevantLinks: [] as { title: string; url: string; }[],
+      relevantLinks: [] as { title: string; url: string }[],
       image: data.image_url as string | undefined,
     };
   },
@@ -258,7 +260,9 @@ export const smartjectService = {
       if (!userVotesMap[vote.smartject_id]) {
         userVotesMap[vote.smartject_id] = [];
       }
-      userVotesMap[vote.smartject_id].push(vote.vote_type as "believe" | "need" | "provide");
+      userVotesMap[vote.smartject_id].push(
+        vote.vote_type as "believe" | "need" | "provide"
+      );
     }
 
     // Получаем smartjects, по которым были голоса
@@ -273,8 +277,8 @@ export const smartjectService = {
       smartject_business_functions (
         business_functions (name)
       ),
-      smartject_technologies (
-        technologies (name)
+      smartject_audience (
+        audience (name)
       ),
       votes (vote_type),
       comments(count)
@@ -310,15 +314,14 @@ export const smartjectService = {
         }
       }
 
-      const industries = item.smartject_industries?.map(
-        (i: any) => i.industries.name
-      ) || [];
-      const businessFunctions = item.smartject_business_functions?.map(
-        (f: any) => f.business_functions.name
-      ) || [];
-      const technologies = item.smartject_technologies?.map(
-        (t: any) => t.technologies.name
-      ) || [];
+      const industries =
+        item.smartject_industries?.map((i: any) => i.industries.name) || [];
+      const businessFunctions =
+        item.smartject_business_functions?.map(
+          (f: any) => f.business_functions.name
+        ) || [];
+      const audience =
+        item.smartject_audience?.map((a: any) => a.audience.name) || [];
 
       return {
         id: item.id as string,
@@ -330,15 +333,14 @@ export const smartjectService = {
         mission: (item.mission || "") as string,
         problematics: (item.problematics || "") as string,
         scope: (item.scope || "") as string,
-        audience: (item.audience || "") as string,
         howItWorks: (item.how_it_works || "") as string,
         architecture: (item.architecture || "") as string,
         innovation: (item.innovation || "") as string,
         useCase: (item.use_case || "") as string,
         industries,
         businessFunctions,
-        technologies,
-        relevantLinks: [] as { title: string; url: string; }[],
+        audience,
+        relevantLinks: [] as { title: string; url: string }[],
         researchPapers: [] as string[],
         image: item.image_url as string | undefined,
       };
@@ -347,14 +349,14 @@ export const smartjectService = {
 
   async getAvailableFilters(): Promise<{
     industries: string[];
-    technologies: string[];
+    audience: string[];
     businessFunctions: string[];
   }> {
     const supabase = getSupabaseBrowserClient();
 
-    const [industriesRes, technologiesRes, functionsRes] = await Promise.all([
+    const [industriesRes, audienceRes, functionsRes] = await Promise.all([
       supabase.from("industries").select("name"),
-      supabase.from("technologies").select("name"),
+      supabase.from("audience").select("name"),
       supabase.from("business_functions").select("name"),
     ]);
 
@@ -363,10 +365,10 @@ export const smartjectService = {
         ? []
         : industriesRes.data.map((i: any) => i.name);
 
-    const technologies =
-      technologiesRes.error || !technologiesRes.data
+    const audience =
+      audienceRes.error || !audienceRes.data
         ? []
-        : technologiesRes.data.map((t: any) => t.name);
+        : audienceRes.data.map((a: any) => a.name);
 
     const businessFunctions =
       functionsRes.error || !functionsRes.data
@@ -375,7 +377,7 @@ export const smartjectService = {
 
     return {
       industries,
-      technologies,
+      audience,
       businessFunctions,
     };
   },

@@ -195,7 +195,7 @@ SmartjectsGrid.displayName = "SmartjectsGrid";
 export default function SmartjectsHubPage() {
   const [query, setQuery] = useState("");
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
-  const [selectedTechnologies, setSelectedTechnologies] = useState<string[]>(
+  const [selectedAudience, setSelectedAudience] = useState<string[]>(
     [],
   );
   const [selectedFunctions, setSelectedFunctions] = useState<string[]>([]);
@@ -237,14 +237,14 @@ export default function SmartjectsHubPage() {
 
   const handleToggleTechnology = useCallback(
     (tech: string) => {
-      setSelectedTechnologies((prev) => {
+      setSelectedAudience((prev) => {
         const updated = toggleItem(prev, tech);
-        const filterUpdated = toggleItem(filters.technologies || [], tech);
-        setFilter("technologies", filterUpdated);
+        const filterUpdated = toggleItem(filters.audience || [], tech);
+        setFilter("audience", filterUpdated);
         return updated;
       });
     },
-    [filters.technologies, setFilter],
+    [filters.audience, setFilter],
   );
 
   const handleToggleFunction = useCallback(
@@ -263,11 +263,11 @@ export default function SmartjectsHubPage() {
   const totalFiltersCount = useMemo(
     () =>
       selectedIndustries.length +
-      selectedTechnologies.length +
+      selectedAudience.length +
       selectedFunctions.length,
     [
       selectedIndustries.length,
-      selectedTechnologies.length,
+      selectedAudience.length,
       selectedFunctions.length,
     ],
   );
@@ -276,7 +276,7 @@ export default function SmartjectsHubPage() {
   const handleClearAllFilters = useCallback(() => {
     setSelectedIndustries([]);
     setSelectedFunctions([]);
-    setSelectedTechnologies([]);
+    setSelectedAudience([]);
     // Close all dropdowns
     setShowIndustriesDropdown(false);
     setShowAudienceDropdown(false);
@@ -327,11 +327,11 @@ export default function SmartjectsHubPage() {
 
       if (!matchesIndustries) return false;
 
-      const matchesTechnologies =
-        selectedTechnologies.length === 0 ||
-        selectedTechnologies.some((t) => s.technologies?.includes(t));
+      const matchesAudience =
+        selectedAudience.length === 0 ||
+        selectedAudience.some((t) => s.audience?.includes(t));
 
-      if (!matchesTechnologies) return false;
+      if (!matchesAudience) return false;
 
       const matchesFunctions =
         selectedFunctions.length === 0 ||
@@ -343,7 +343,7 @@ export default function SmartjectsHubPage() {
     smartjects,
     debouncedQuery,
     selectedIndustries,
-    selectedTechnologies,
+    selectedAudience,
     selectedFunctions,
     totalFiltersCount,
   ]);
@@ -383,14 +383,14 @@ export default function SmartjectsHubPage() {
     if (
       filters.businessFunctions?.length ||
       filters.industries?.length ||
-      filters.technologies?.length
+      filters.audience?.length
     ) {
       console.log("availableFilters updated", filters);
     }
   }, [
     filters.businessFunctions?.length,
     filters.industries?.length,
-    filters.technologies?.length,
+    filters.audience?.length,
   ]);
 
   // Close dropdowns when clicking outside
@@ -509,11 +509,11 @@ export default function SmartjectsHubPage() {
                       </div>
                       {showAudienceDropdown && (
                         <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-y-auto">
-                          {filters.technologies?.map((tech) => (
+                          {filters.audience?.map((tech) => (
                             <div
                               key={tech}
                               className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                                selectedTechnologies.includes(tech)
+                                selectedAudience.includes(tech)
                                   ? "bg-blue-50 text-blue-700"
                                   : "text-gray-700"
                               }`}
@@ -610,7 +610,7 @@ export default function SmartjectsHubPage() {
                       onRemove={handleToggleIndustry}
                     />
                   ))}
-                  {selectedTechnologies.map((tech) => (
+                  {selectedAudience.map((tech) => (
                     <FilterBadge
                       key={tech}
                       type="technology"
@@ -650,10 +650,10 @@ export default function SmartjectsHubPage() {
                         onToggle={handleToggleIndustry}
                       />
                       <FilterCategory
-                        title="Technologies"
+                        title="Audience"
                         icon={<Cpu className="h-4 w-4 mr-2 text-blue-500" />}
-                        options={filters.technologies ?? []}
-                        selected={selectedTechnologies}
+                        options={filters.audience ?? []}
+                        selected={selectedAudience}
                         onToggle={handleToggleTechnology}
                       />
                       <FilterCategory

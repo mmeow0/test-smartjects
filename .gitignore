@@ -21,7 +21,9 @@ yarn-error.log*
 
 # vercel
 .vercel
-
+/test-hardhat/node_modules
+/hardhat/node_modules
+/thirdweb-contracts/node_modules
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -90,9 +90,9 @@ export function SmartjectCard({
   };
 
   const visibleAudience =
-    smartject.technologies?.slice(0, MAX_INDUSTRIES) || [];
+    smartject.audience?.slice(0, MAX_INDUSTRIES) || [];
   const hiddenAudienceCount =
-    (smartject.technologies?.length || 0) - MAX_INDUSTRIES;
+    (smartject.audience?.length || 0) - MAX_INDUSTRIES;
 
   // Determine which industries to show directly
   const visibleIndustries =
@@ -250,7 +250,7 @@ export function SmartjectCard({
           {/* Tags sections */}
           <div className="space-y-4">
             {/* Industries */}
-            {smartject.technologies && smartject.technologies?.length > 0 && (
+            {smartject.audience && smartject.audience?.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Audience className="h-[25px]" />
@@ -279,7 +279,7 @@ export function SmartjectCard({
                         </TooltipTrigger>
                         <TooltipContent className="p-2 max-w-xs">
                           <div className="flex flex-wrap gap-1">
-                            {smartject.technologies
+                            {smartject.audience
                               ?.slice(MAX_INDUSTRIES)
                               .map((industry, i) => (
                                 <span

@@ -32,14 +32,13 @@ interface SmartjectDetailsProps {
     mission: string;
     problematics: string;
     scope: string;
-    audience: string;
     howItWorks: string;
     architecture: string;
     innovation: string;
     useCase: string;
     industries?: string[];
     businessFunctions?: string[];
-    technologies?: string[];
+    audience?: string[];
     researchPapers?: Array<{
       title: string;
       url: string;
@@ -78,12 +77,6 @@ export function SmartjectDetails({ smartject }: SmartjectDetailsProps) {
       title: "Problem it solves",
       content: smartject.problematics,
       color: "text-amber-500",
-    },
-    {
-      icon: <Audience className="h-5 w-5" />,
-      title: "Target audience",
-      content: smartject.audience,
-      color: "text-orange-500",
     },
     {
       icon: <Architecture className="h-5 w-5 text-blue-500" />,
@@ -189,22 +182,22 @@ export function SmartjectDetails({ smartject }: SmartjectDetailsProps) {
               </CardContent>
             </Card>
           </div>,
-          // Technologies
-          <div key="technologies" className="relative px-4 py-2">
+          // Audience
+          <div key="audience" className="relative px-4 py-2">
             <div className="absolute left-4 right-4 top-0 h-px bg-border" />
             <div className="absolute top-4 bottom-4 left-0 w-px bg-border hidden md:block" />
             <Card className="h-full border-none shadow-none">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Audience className="h-5 w-5 text-blue-500" />
-                  Technologies
+                  Audience
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                {smartject.technologies &&
-                smartject.technologies?.length > 0 ? (
+                {smartject.audience &&
+                smartject.audience?.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {smartject.technologies.map((tech, index) => (
+                    {smartject.audience.map((tech, index) => (
                       <Badge
                         key={index}
                         variant="secondary"

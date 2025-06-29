@@ -6,13 +6,13 @@ import { useToast } from "@/hooks/use-toast";
 type Filters = {
   query?: string;
   industries?: string[];
-  technologies?: string[];
+  audience?: string[];
   businessFunctions?: string[];
 };
 
 type AvailableFilters = {
   industries: string[];
-  technologies: string[];
+  audience: string[];
   businessFunctions: string[];
 };
 
@@ -24,13 +24,13 @@ export function useSmartjects(userId?: string) {
   const [filters, setFilters] = useState<Filters>({
     query: "",
     industries: [],
-    technologies: [],
+    audience: [],
     businessFunctions: [],
   });
 
   const [availableFilters, setAvailableFilters] = useState<AvailableFilters>({
     industries: [],
-    technologies: [],
+    audience: [],
     businessFunctions: [],
   });
 
@@ -64,7 +64,7 @@ export function useSmartjects(userId?: string) {
       setFilters((prev) => ({
         ...prev,
         industries: filters.industries,
-        technologies: filters.technologies,
+        audience: filters.audience,
         businessFunctions: filters.businessFunctions,
       }));
     } catch (error) {
@@ -93,7 +93,7 @@ export function useSmartjects(userId?: string) {
     setFilters({
       query: "",
       industries: [],
-      technologies: [],
+      audience: [],
       businessFunctions: [],
     });
   };
@@ -111,9 +111,9 @@ export function useSmartjects(userId?: string) {
         filters.industries?.length === 0 ||
         filters.industries?.some((i) => s.industries?.includes(i));
 
-      const matchesTechnologies =
-        filters.technologies?.length === 0 ||
-        filters.technologies?.some((t) => s.technologies?.includes(t));
+      const matchesAudience =
+        filters.audience?.length === 0 ||
+        filters.audience?.some((t) => s.audience?.includes(t));
 
       const matchesFunctions =
         filters.businessFunctions?.length === 0 ||
@@ -124,7 +124,7 @@ export function useSmartjects(userId?: string) {
       return (
         matchesQuery &&
         matchesIndustries &&
-        matchesTechnologies &&
+        matchesAudience &&
         matchesFunctions
       );
     });

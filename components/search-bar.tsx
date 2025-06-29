@@ -10,7 +10,7 @@ export function SearchBar(props: { onChange: (val: string) => void }) {
       </div>
       <Input
         type="search"
-        placeholder="Search smartjects, industries, technologies..."
+        placeholder="Search smartjects, industries, audience..."
         className="pl-10 pr-16"
         onChange={(e) => props.onChange(e.target.value)}
       />
