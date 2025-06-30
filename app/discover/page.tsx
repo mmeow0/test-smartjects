@@ -225,6 +225,7 @@ export default function SmartjectsHubPage() {
     loadMore,
     filters,
     setFilter,
+    clearFilters,
     refetch,
     error,
     sortBy,
@@ -304,7 +305,9 @@ export default function SmartjectsHubPage() {
     setShowAudienceDropdown(false);
     setShowFunctionsDropdown(false);
     setShowSortDropdown(false);
-  }, []);
+    // Clear server-side filters
+    clearFilters();
+  }, [clearFilters]);
 
   // Memoized search change handler
   const handleSearchChange = useCallback(

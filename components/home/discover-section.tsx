@@ -14,6 +14,7 @@ export const DiscoverSection = () => {
     isLoading,
     filters,
     setFilter,
+    clearFilters,
     refetch,
     sortBy,
     setSortBy,
@@ -106,7 +107,9 @@ export const DiscoverSection = () => {
     setShowAudienceDropdown(false);
     setShowFunctionsDropdown(false);
     setShowSortDropdown(false);
-  }, []);
+    // Clear server-side filters
+    clearFilters();
+  }, [clearFilters]);
 
   // Memoized search change handler
   const handleSearchChange = useCallback(
