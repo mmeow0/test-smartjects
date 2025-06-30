@@ -1268,7 +1268,7 @@ export const contractService = {
       // Separate active and completed contracts
       const activeContracts = transformedContracts.filter(
         (contract) =>
-          contract.status === "active" || contract.status === "pending_start",
+          contract.status !== "completed",
       );
 
       const completedContracts = transformedContracts.filter(
