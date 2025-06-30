@@ -35,6 +35,15 @@ interface SearchFiltersProps {
     businessFunctions: string[];
   };
   totalFiltersCount: number;
+  industriesSearchTerm: string;
+  audienceSearchTerm: string;
+  functionsSearchTerm: string;
+  onIndustriesSearchChange: (term: string) => void;
+  onAudienceSearchChange: (term: string) => void;
+  onFunctionsSearchChange: (term: string) => void;
+  filteredIndustries: string[];
+  filteredAudience: string[];
+  filteredFunctions: string[];
 }
 
 const sortOptions = [
@@ -67,6 +76,15 @@ export const SearchFilters = memo(
     onClearAllFilters,
     meta,
     totalFiltersCount,
+    industriesSearchTerm,
+    audienceSearchTerm,
+    functionsSearchTerm,
+    onIndustriesSearchChange,
+    onAudienceSearchChange,
+    onFunctionsSearchChange,
+    filteredIndustries,
+    filteredAudience,
+    filteredFunctions,
   }: SearchFiltersProps) => {
     const [showMobileFilters, setShowMobileFilters] = useState(false);
 
@@ -133,202 +151,69 @@ export const SearchFilters = memo(
     ]);
 
     return (
-       <div className="flex flex-col w-full gap-4 mb-4">
-      <div className="flex flex-col lg:flex-row w-full gap-4 sm:gap-6 items-start lg:items-center bg-gray-50 rounded-2xl p-3">
-        {/* Search Bar - Always Visible */}
-        <div className="relative w-full">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 z-10" />
-          <Input
-            placeholder="Search smartjects..."
-            value={query}
-            onChange={onQueryChange}
-            className="pl-12 pr-4 py-3 sm:py-4 h-12 sm:h-14 border-0 rounded-2xl text-base focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-          />
-        </div>
-
-        {/* Mobile Filter Toggle Button */}
-        <div className="flex items-center justify-between lg:hidden gap-5">
-          <Button
-            variant="outline"
-            onClick={() => setShowMobileFilters(!showMobileFilters)}
-            className="flex items-center gap-2 h-12 px-4 rounded-xl bg-white border-gray-200 hover:bg-gray-50"
-          >
-            <Filter className="h-4 w-4" />
-            <span className="text-sm font-medium">
-              Filters
-              {totalFiltersCount > 0 && (
-                <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
-                  {totalFiltersCount}
-                </span>
-              )}
-            </span>
-            <ChevronDown
-              className={`h-4 w-4 transition-transform ${
-                showMobileFilters ? "rotate-180" : ""
-              }`}
+      <div className="flex flex-col w-full gap-4 mb-4">
+        <div className="flex flex-col lg:flex-row w-full gap-4 sm:gap-6 items-start lg:items-center bg-gray-50 rounded-2xl p-3">
+          {/* Search Bar - Always Visible */}
+          <div className="relative w-full">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 z-10" />
+            <Input
+              placeholder="Search smartjects..."
+              value={query}
+              onChange={onQueryChange}
+              className="pl-12 pr-4 py-3 sm:py-4 h-12 sm:h-14 border-0 rounded-2xl text-base focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
-          </Button>
+          </div>
 
-          {/* Sort Dropdown - Always visible on mobile */}
-          <div className="relative" ref={sortRef}>
-            <div
-              className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-3 h-12 cursor-pointer hover:bg-gray-50 transition-colors"
-              onClick={onToggleSortDropdown}
+          {/* Mobile Filter Toggle Button */}
+          <div className="flex items-center justify-between lg:hidden gap-5">
+            <Button
+              variant="outline"
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+              className="flex items-center gap-2 h-12 px-4 rounded-xl bg-white border-gray-200 hover:bg-gray-50"
             >
-              <span className="text-sm font-medium text-gray-700">
-                {sortOptions.find((opt) => opt.value === sortBy)?.label}
+              <Filter className="h-4 w-4" />
+              <span className="text-sm font-medium">
+                Filters
+                {totalFiltersCount > 0 && (
+                  <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                    {totalFiltersCount}
+                  </span>
+                )}
               </span>
-              <ChevronDown className="w-4 h-4 text-gray-500" />
-            </div>
-            {showSortDropdown && (
-              <div className="absolute top-14 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-44 overflow-hidden">
-                {sortOptions.map((option) => (
-                  <div
-                    key={option.value}
-                    className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                      sortBy === option.value
-                        ? "bg-blue-50 text-blue-700 font-medium"
-                        : "text-gray-700"
-                    }`}
-                    onClick={() => {
-                      onSortChange(option.value);
-                      onToggleSortDropdown();
-                    }}
-                  >
-                    {option.label}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${
+                  showMobileFilters ? "rotate-180" : ""
+                }`}
+              />
+            </Button>
 
-        {/* Desktop Filters - Always visible on large screens */}
-        <div className="hidden lg:flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
-          <div className="flex items-center gap-3 flex-1">
-            {/* Industries Filter */}
-            <div className="relative" ref={industriesRef}>
+            {/* Sort Dropdown - Always visible on mobile */}
+            <div className="relative" ref={sortRef}>
               <div
-                className="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 h-11 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors min-w-0"
-                onClick={onToggleIndustriesDropdown}
+                className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-3 h-12 cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={onToggleSortDropdown}
               >
-                <Industries className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm font-medium text-gray-700 truncate">
-                  Industries
-                  {selectedIndustries.length > 0 && (
-                    <span className="ml-1 text-blue-600">
-                      ({selectedIndustries.length})
-                    </span>
-                  )}
+                <span className="text-sm font-medium text-gray-700">
+                  {sortOptions.find((opt) => opt.value === sortBy)?.label}
                 </span>
-                <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                <ChevronDown className="w-4 h-4 text-gray-500" />
               </div>
-              {showIndustriesDropdown && (
-                <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-56 max-h-60 overflow-y-auto">
-                  {meta.industries?.map((industry) => (
+              {showSortDropdown && (
+                <div className="absolute top-14 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-44 overflow-hidden">
+                  {sortOptions.map((option) => (
                     <div
-                      key={industry}
+                      key={option.value}
                       className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                        selectedIndustries.includes(industry)
+                        sortBy === option.value
                           ? "bg-blue-50 text-blue-700 font-medium"
                           : "text-gray-700"
                       }`}
                       onClick={() => {
-                        onToggleIndustry(industry);
+                        onSortChange(option.value);
+                        onToggleSortDropdown();
                       }}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="truncate">{industry}</span>
-                        {selectedIndustries.includes(industry) && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Audience Filter */}
-            <div className="relative" ref={audienceRef}>
-              <div
-                className="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 h-11 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors min-w-0"
-                onClick={onToggleAudienceDropdown}
-              >
-                <Audience className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm font-medium text-gray-700 truncate">
-                  Audience
-                  {selectedAudience.length > 0 && (
-                    <span className="ml-1 text-blue-600">
-                      ({selectedAudience.length})
-                    </span>
-                  )}
-                </span>
-                <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
-              </div>
-              {showAudienceDropdown && (
-                <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-56 max-h-60 overflow-y-auto">
-                  {meta.audience?.map((tech) => (
-                    <div
-                      key={tech}
-                      className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                        selectedAudience.includes(tech)
-                          ? "bg-blue-50 text-blue-700 font-medium"
-                          : "text-gray-700"
-                      }`}
-                      onClick={() => {
-                        onToggleTechnology(tech);
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="truncate">{tech}</span>
-                        {selectedAudience.includes(tech) && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Functions Filter */}
-            <div className="relative" ref={functionsRef}>
-              <div
-                className="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 h-11 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors min-w-0"
-                onClick={onToggleFunctionsDropdown}
-              >
-                <Functions className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm font-medium text-gray-700 truncate">
-                  Functions
-                  {selectedFunctions.length > 0 && (
-                    <span className="ml-1 text-blue-600">
-                      ({selectedFunctions.length})
-                    </span>
-                  )}
-                </span>
-                <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
-              </div>
-              {showFunctionsDropdown && (
-                <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-56 max-h-60 overflow-y-auto">
-                  {meta.businessFunctions?.map((func) => (
-                    <div
-                      key={func}
-                      className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                        selectedFunctions.includes(func)
-                          ? "bg-blue-50 text-blue-700 font-medium"
-                          : "text-gray-700"
-                      }`}
-                      onClick={() => {
-                        onToggleFunction(func);
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="truncate">{func}</span>
-                        {selectedFunctions.includes(func) && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />
-                        )}
-                      </div>
+                      {option.label}
                     </div>
                   ))}
                 </div>
@@ -336,211 +221,463 @@ export const SearchFilters = memo(
             </div>
           </div>
 
-          {/* Desktop Sort */}
-          <div className="relative" ref={sortRef}>
-            <div
-              className="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 h-11 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors min-w-0"
-              onClick={onToggleSortDropdown}
-            >
-              <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                {sortOptions.find((opt) => opt.value === sortBy)?.label}
-              </span>
-              <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
-            </div>
-            {showSortDropdown && (
-              <div className="absolute top-12 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-44 overflow-hidden">
-                {sortOptions.map((option) => (
-                  <div
-                    key={option.value}
-                    className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                      sortBy === option.value
-                        ? "bg-blue-50 text-blue-700 font-medium"
-                        : "text-gray-700"
-                    }`}
-                    onClick={() => {
-                      onSortChange(option.value);
-                      onToggleSortDropdown();
-                    }}
-                  >
-                    {option.label}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Mobile Filters - Collapsible */}
-        {showMobileFilters && (
-          <div className="lg:hidden space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-gray-900">Filters</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowMobileFilters(false)}
-                className="p-1 h-8 w-8"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3">
-              {/* Mobile Industries Filter */}
+          {/* Desktop Filters - Always visible on large screens */}
+          <div className="hidden lg:flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
+            <div className="flex items-center gap-3 flex-1">
+              {/* Industries Filter */}
               <div className="relative" ref={industriesRef}>
                 <div
-                  className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
+                  className="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 h-11 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors min-w-0"
                   onClick={onToggleIndustriesDropdown}
                 >
-                  <div className="flex items-center gap-2">
-                    <Industries className="w-4 h-4" />
-                    <span className="text-sm font-medium text-gray-700">
-                      Industries
-                    </span>
+                  <Industries className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm font-medium text-gray-700 truncate">
+                    Industries
                     {selectedIndustries.length > 0 && (
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
-                        {selectedIndustries.length}
+                      <span className="ml-1 text-blue-600">
+                        ({selectedIndustries.length})
                       </span>
                     )}
-                  </div>
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
                 </div>
                 {showIndustriesDropdown && (
-                  <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-y-auto">
-                    {meta.industries?.map((industry) => (
-                      <div
-                        key={industry}
-                        className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                          selectedIndustries.includes(industry)
-                            ? "bg-blue-50 text-blue-700 font-medium"
-                            : "text-gray-700"
-                        }`}
-                        onClick={() => {
-                          onToggleIndustry(industry);
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span>{industry}</span>
-                          {selectedIndustries.includes(industry) && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                          )}
+                  <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-56 max-h-60 overflow-hidden">
+                    <div className="p-2 border-b border-gray-100">
+                      <Input
+                        placeholder="Search industries..."
+                        value={industriesSearchTerm}
+                        onChange={(e) =>
+                          onIndustriesSearchChange(e.target.value)
+                        }
+                        className="h-8 text-sm border-gray-200"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {filteredIndustries.length > 0 ? (
+                        filteredIndustries.map((industry) => (
+                          <div
+                            key={industry}
+                            className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
+                              selectedIndustries.includes(industry)
+                                ? "bg-blue-50 text-blue-700 font-medium"
+                                : "text-gray-700"
+                            }`}
+                            onClick={() => {
+                              onToggleIndustry(industry);
+                              onIndustriesSearchChange("");
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="truncate">{industry}</span>
+                              {selectedIndustries.includes(industry) && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-500">
+                          No industries found
                         </div>
-                      </div>
-                    ))}
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Mobile Audience Filter */}
+              {/* Audience Filter */}
               <div className="relative" ref={audienceRef}>
                 <div
-                  className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
+                  className="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 h-11 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors min-w-0"
                   onClick={onToggleAudienceDropdown}
                 >
-                  <div className="flex items-center gap-2">
-                    <Audience className="w-4 h-4" />
-                    <span className="text-sm font-medium text-gray-700">
-                      Audience
-                    </span>
+                  <Audience className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm font-medium text-gray-700 truncate">
+                    Audience
                     {selectedAudience.length > 0 && (
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
-                        {selectedAudience.length}
+                      <span className="ml-1 text-blue-600">
+                        ({selectedAudience.length})
                       </span>
                     )}
-                  </div>
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
                 </div>
                 {showAudienceDropdown && (
-                  <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-y-auto">
-                    {meta.audience?.map((tech) => (
-                      <div
-                        key={tech}
-                        className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                          selectedAudience.includes(tech)
-                            ? "bg-blue-50 text-blue-700 font-medium"
-                            : "text-gray-700"
-                        }`}
-                        onClick={() => {
-                          onToggleTechnology(tech);
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span>{tech}</span>
-                          {selectedAudience.includes(tech) && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                          )}
+                  <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-56 max-h-60 overflow-hidden">
+                    <div className="p-2 border-b border-gray-100">
+                      <Input
+                        placeholder="Search audience..."
+                        value={audienceSearchTerm}
+                        onChange={(e) => onAudienceSearchChange(e.target.value)}
+                        className="h-8 text-sm border-gray-200"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {filteredAudience.length > 0 ? (
+                        filteredAudience.map((tech) => (
+                          <div
+                            key={tech}
+                            className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
+                              selectedAudience.includes(tech)
+                                ? "bg-blue-50 text-blue-700 font-medium"
+                                : "text-gray-700"
+                            }`}
+                            onClick={() => {
+                              onToggleTechnology(tech);
+                              onAudienceSearchChange("");
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="truncate">{tech}</span>
+                              {selectedAudience.includes(tech) && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-500">
+                          No audience found
                         </div>
-                      </div>
-                    ))}
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Mobile Functions Filter */}
+              {/* Functions Filter */}
               <div className="relative" ref={functionsRef}>
                 <div
-                  className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
+                  className="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 h-11 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors min-w-0"
                   onClick={onToggleFunctionsDropdown}
                 >
-                  <div className="flex items-center gap-2">
-                    <Functions className="w-4 h-4" />
-                    <span className="text-sm font-medium text-gray-700">
-                      Functions
-                    </span>
+                  <Functions className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm font-medium text-gray-700 truncate">
+                    Functions
                     {selectedFunctions.length > 0 && (
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
-                        {selectedFunctions.length}
+                      <span className="ml-1 text-blue-600">
+                        ({selectedFunctions.length})
                       </span>
                     )}
-                  </div>
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
                 </div>
                 {showFunctionsDropdown && (
-                  <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-y-auto">
-                    {meta.businessFunctions?.map((func) => (
-                      <div
-                        key={func}
-                        className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                          selectedFunctions.includes(func)
-                            ? "bg-blue-50 text-blue-700 font-medium"
-                            : "text-gray-700"
-                        }`}
-                        onClick={() => {
-                          onToggleFunction(func);
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span>{func}</span>
-                          {selectedFunctions.includes(func) && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                          )}
+                  <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-56 max-h-60 overflow-hidden">
+                    <div className="p-2 border-b border-gray-100">
+                      <Input
+                        placeholder="Search functions..."
+                        value={functionsSearchTerm}
+                        onChange={(e) =>
+                          onFunctionsSearchChange(e.target.value)
+                        }
+                        className="h-8 text-sm border-gray-200"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {filteredFunctions.length > 0 ? (
+                        filteredFunctions.map((func) => (
+                          <div
+                            key={func}
+                            className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
+                              selectedFunctions.includes(func)
+                                ? "bg-blue-50 text-blue-700 font-medium"
+                                : "text-gray-700"
+                            }`}
+                            onClick={() => {
+                              onToggleFunction(func);
+                              onFunctionsSearchChange("");
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="truncate">{func}</span>
+                              {selectedFunctions.includes(func) && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-500">
+                          No functions found
                         </div>
-                      </div>
-                    ))}
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Clear All Filters */}
-            {totalFiltersCount > 0 && (
-              <div className="pt-2 border-t border-gray-200">
+            {/* Desktop Sort */}
+            <div className="relative" ref={sortRef}>
+              <div
+                className="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 h-11 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors min-w-0"
+                onClick={onToggleSortDropdown}
+              >
+                <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                  {sortOptions.find((opt) => opt.value === sortBy)?.label}
+                </span>
+                <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              </div>
+              {showSortDropdown && (
+                <div className="absolute top-12 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-44 overflow-hidden">
+                  {sortOptions.map((option) => (
+                    <div
+                      key={option.value}
+                      className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
+                        sortBy === option.value
+                          ? "bg-blue-50 text-blue-700 font-medium"
+                          : "text-gray-700"
+                      }`}
+                      onClick={() => {
+                        onSortChange(option.value);
+                        onToggleSortDropdown();
+                      }}
+                    >
+                      {option.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Filters - Collapsible */}
+          {showMobileFilters && (
+            <div className="lg:hidden space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-semibold text-gray-900">
+                  Filters
+                </h3>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    onClearAllFilters();
-                    setShowMobileFilters(false);
-                  }}
-                  className="w-full text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                  onClick={() => setShowMobileFilters(false)}
+                  className="p-1 h-8 w-8"
                 >
-                  Clear all filters
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
-            )}
-          </div>
-        )}
 
+              <div className="grid grid-cols-1 gap-3">
+                {/* Mobile Industries Filter */}
+                <div className="relative" ref={industriesRef}>
+                  <div
+                    className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
+                    onClick={onToggleIndustriesDropdown}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Industries className="w-4 h-4" />
+                      <span className="text-sm font-medium text-gray-700">
+                        Industries
+                      </span>
+                      {selectedIndustries.length > 0 && (
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                          {selectedIndustries.length}
+                        </span>
+                      )}
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  </div>
+                  {showIndustriesDropdown && (
+                    <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-hidden">
+                      <div className="p-2 border-b border-gray-100">
+                        <Input
+                          placeholder="Search industries..."
+                          value={industriesSearchTerm}
+                          onChange={(e) =>
+                            onIndustriesSearchChange(e.target.value)
+                          }
+                          className="h-8 text-sm border-gray-200"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-36 overflow-y-auto">
+                        {filteredIndustries.length > 0 ? (
+                          filteredIndustries.map((industry) => (
+                            <div
+                              key={industry}
+                              className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
+                                selectedIndustries.includes(industry)
+                                  ? "bg-blue-50 text-blue-700 font-medium"
+                                  : "text-gray-700"
+                              }`}
+                              onClick={() => {
+                                onToggleIndustry(industry);
+                                onIndustriesSearchChange("");
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span>{industry}</span>
+                                {selectedIndustries.includes(industry) && (
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-sm text-gray-500">
+                            No industries found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Mobile Audience Filter */}
+                <div className="relative" ref={audienceRef}>
+                  <div
+                    className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
+                    onClick={onToggleAudienceDropdown}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Audience className="w-4 h-4" />
+                      <span className="text-sm font-medium text-gray-700">
+                        Audience
+                      </span>
+                      {selectedAudience.length > 0 && (
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                          {selectedAudience.length}
+                        </span>
+                      )}
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  </div>
+                  {showAudienceDropdown && (
+                    <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-hidden">
+                      <div className="p-2 border-b border-gray-100">
+                        <Input
+                          placeholder="Search audience..."
+                          value={audienceSearchTerm}
+                          onChange={(e) =>
+                            onAudienceSearchChange(e.target.value)
+                          }
+                          className="h-8 text-sm border-gray-200"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-36 overflow-y-auto">
+                        {filteredAudience.length > 0 ? (
+                          filteredAudience.map((tech) => (
+                            <div
+                              key={tech}
+                              className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
+                                selectedAudience.includes(tech)
+                                  ? "bg-blue-50 text-blue-700 font-medium"
+                                  : "text-gray-700"
+                              }`}
+                              onClick={() => {
+                                onToggleTechnology(tech);
+                                onAudienceSearchChange("");
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span>{tech}</span>
+                                {selectedAudience.includes(tech) && (
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-sm text-gray-500">
+                            No audience found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Mobile Functions Filter */}
+                <div className="relative" ref={functionsRef}>
+                  <div
+                    className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
+                    onClick={onToggleFunctionsDropdown}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Functions className="w-4 h-4" />
+                      <span className="text-sm font-medium text-gray-700">
+                        Functions
+                      </span>
+                      {selectedFunctions.length > 0 && (
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                          {selectedFunctions.length}
+                        </span>
+                      )}
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  </div>
+                  {showFunctionsDropdown && (
+                    <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-hidden">
+                      <div className="p-2 border-b border-gray-100">
+                        <Input
+                          placeholder="Search functions..."
+                          value={functionsSearchTerm}
+                          onChange={(e) =>
+                            onFunctionsSearchChange(e.target.value)
+                          }
+                          className="h-8 text-sm border-gray-200"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-36 overflow-y-auto">
+                        {filteredFunctions.length > 0 ? (
+                          filteredFunctions.map((func) => (
+                            <div
+                              key={func}
+                              className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
+                                selectedFunctions.includes(func)
+                                  ? "bg-blue-50 text-blue-700 font-medium"
+                                  : "text-gray-700"
+                              }`}
+                              onClick={() => {
+                                onToggleFunction(func);
+                                onFunctionsSearchChange("");
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span>{func}</span>
+                                {selectedFunctions.includes(func) && (
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-sm text-gray-500">
+                            No functions found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Clear All Filters */}
+              {totalFiltersCount > 0 && (
+                <div className="pt-2 border-t border-gray-200">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      onClearAllFilters();
+                      setShowMobileFilters(false);
+                    }}
+                    className="w-full text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                  >
+                    Clear all filters
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Active Filters Tags - Show on both mobile and desktop */}

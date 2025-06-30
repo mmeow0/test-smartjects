@@ -205,6 +205,11 @@ export default function SmartjectsHubPage() {
   const [showFunctionsDropdown, setShowFunctionsDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
 
+  // Search states for filter dropdowns
+  const [industriesSearchTerm, setIndustriesSearchTerm] = useState("");
+  const [audienceSearchTerm, setAudienceSearchTerm] = useState("");
+  const [functionsSearchTerm, setFunctionsSearchTerm] = useState("");
+
   // Refs for dropdown close handling
   const industriesRef = useRef<HTMLDivElement>(null);
   const audienceRef = useRef<HTMLDivElement>(null);
@@ -226,7 +231,7 @@ export default function SmartjectsHubPage() {
     setSortBy,
     meta,
   } = useInfiniteSmartjects(user?.id, 12);
-  
+
   // Debounce search query for better performance
   const debouncedQuery = useDebounce(query, 300);
 
@@ -290,6 +295,10 @@ export default function SmartjectsHubPage() {
     setSelectedIndustries([]);
     setSelectedFunctions([]);
     setSelectedAudience([]);
+    // Clear search terms
+    setIndustriesSearchTerm("");
+    setAudienceSearchTerm("");
+    setFunctionsSearchTerm("");
     // Close all dropdowns
     setShowIndustriesDropdown(false);
     setShowAudienceDropdown(false);
@@ -304,6 +313,28 @@ export default function SmartjectsHubPage() {
     },
     [],
   );
+
+  // Filter functions for dropdown searches
+  const filteredIndustries = useMemo(() => {
+    if (!industriesSearchTerm) return meta.industries || [];
+    return (meta.industries || []).filter((industry) =>
+      industry.toLowerCase().includes(industriesSearchTerm.toLowerCase()),
+    );
+  }, [meta.industries, industriesSearchTerm]);
+
+  const filteredAudience = useMemo(() => {
+    if (!audienceSearchTerm) return meta.audience || [];
+    return (meta.audience || []).filter((audience) =>
+      audience.toLowerCase().includes(audienceSearchTerm.toLowerCase()),
+    );
+  }, [meta.audience, audienceSearchTerm]);
+
+  const filteredFunctions = useMemo(() => {
+    if (!functionsSearchTerm) return meta.businessFunctions || [];
+    return (meta.businessFunctions || []).filter((func) =>
+      func.toLowerCase().includes(functionsSearchTerm.toLowerCase()),
+    );
+  }, [meta.businessFunctions, functionsSearchTerm]);
 
   // Sort options
   const sortOptions = [
@@ -417,23 +448,43 @@ export default function SmartjectsHubPage() {
                         <ChevronDown className="w-4 h-4 text-gray-500" />
                       </div>
                       {showIndustriesDropdown && (
-                        <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-y-auto">
-                          {meta.industries?.map((industry) => (
-                            <div
-                              key={industry}
-                              className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                                selectedIndustries.includes(industry)
-                                  ? "bg-blue-50 text-blue-700"
-                                  : "text-gray-700"
-                              }`}
-                              onClick={() => {
-                                handleToggleIndustry(industry);
-                                setShowIndustriesDropdown(false);
-                              }}
-                            >
-                              {industry}
-                            </div>
-                          ))}
+                        <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-hidden">
+                          <div className="p-2 border-b border-gray-100">
+                            <Input
+                              placeholder="Search industries..."
+                              value={industriesSearchTerm}
+                              onChange={(e) =>
+                                setIndustriesSearchTerm(e.target.value)
+                              }
+                              className="h-8 text-sm border-gray-200"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="max-h-48 overflow-y-auto">
+                            {filteredIndustries.length > 0 ? (
+                              filteredIndustries.map((industry) => (
+                                <div
+                                  key={industry}
+                                  className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                                    selectedIndustries.includes(industry)
+                                      ? "bg-blue-50 text-blue-700"
+                                      : "text-gray-700"
+                                  }`}
+                                  onClick={() => {
+                                    handleToggleIndustry(industry);
+                                    setShowIndustriesDropdown(false);
+                                    setIndustriesSearchTerm("");
+                                  }}
+                                >
+                                  {industry}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                No industries found
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -452,23 +503,43 @@ export default function SmartjectsHubPage() {
                         <ChevronDown className="w-4 h-4 text-gray-500" />
                       </div>
                       {showAudienceDropdown && (
-                        <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-y-auto">
-                          {meta.audience?.map((tech) => (
-                            <div
-                              key={tech}
-                              className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                                selectedAudience.includes(tech)
-                                  ? "bg-blue-50 text-blue-700"
-                                  : "text-gray-700"
-                              }`}
-                              onClick={() => {
-                                handleToggleTechnology(tech);
-                                setShowAudienceDropdown(false);
-                              }}
-                            >
-                              {tech}
-                            </div>
-                          ))}
+                        <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-hidden">
+                          <div className="p-2 border-b border-gray-100">
+                            <Input
+                              placeholder="Search audience..."
+                              value={audienceSearchTerm}
+                              onChange={(e) =>
+                                setAudienceSearchTerm(e.target.value)
+                              }
+                              className="h-8 text-sm border-gray-200"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="max-h-48 overflow-y-auto">
+                            {filteredAudience.length > 0 ? (
+                              filteredAudience.map((tech) => (
+                                <div
+                                  key={tech}
+                                  className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                                    selectedAudience.includes(tech)
+                                      ? "bg-blue-50 text-blue-700"
+                                      : "text-gray-700"
+                                  }`}
+                                  onClick={() => {
+                                    handleToggleTechnology(tech);
+                                    setShowAudienceDropdown(false);
+                                    setAudienceSearchTerm("");
+                                  }}
+                                >
+                                  {tech}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                No audience found
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -487,23 +558,43 @@ export default function SmartjectsHubPage() {
                         <ChevronDown className="w-4 h-4 text-gray-500" />
                       </div>
                       {showFunctionsDropdown && (
-                        <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-y-auto">
-                          {meta.businessFunctions?.map((func) => (
-                            <div
-                              key={func}
-                              className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                                selectedFunctions.includes(func)
-                                  ? "bg-blue-50 text-blue-700"
-                                  : "text-gray-700"
-                              }`}
-                              onClick={() => {
-                                handleToggleFunction(func);
-                                setShowFunctionsDropdown(false);
-                              }}
-                            >
-                              {func}
-                            </div>
-                          ))}
+                        <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-hidden">
+                          <div className="p-2 border-b border-gray-100">
+                            <Input
+                              placeholder="Search functions..."
+                              value={functionsSearchTerm}
+                              onChange={(e) =>
+                                setFunctionsSearchTerm(e.target.value)
+                              }
+                              className="h-8 text-sm border-gray-200"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="max-h-48 overflow-y-auto">
+                            {filteredFunctions.length > 0 ? (
+                              filteredFunctions.map((func) => (
+                                <div
+                                  key={func}
+                                  className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                                    selectedFunctions.includes(func)
+                                      ? "bg-blue-50 text-blue-700"
+                                      : "text-gray-700"
+                                  }`}
+                                  onClick={() => {
+                                    handleToggleFunction(func);
+                                    setShowFunctionsDropdown(false);
+                                    setFunctionsSearchTerm("");
+                                  }}
+                                >
+                                  {func}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                No functions found
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>

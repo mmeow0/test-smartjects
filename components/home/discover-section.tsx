@@ -29,6 +29,11 @@ export const DiscoverSection = () => {
   const [showFunctionsDropdown, setShowFunctionsDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
 
+  // Search states for filter dropdowns
+  const [industriesSearchTerm, setIndustriesSearchTerm] = useState("");
+  const [audienceSearchTerm, setAudienceSearchTerm] = useState("");
+  const [functionsSearchTerm, setFunctionsSearchTerm] = useState("");
+
   // Debounce search query for better performance
   const debouncedQuery = useDebounce(query, 300);
 
@@ -92,6 +97,10 @@ export const DiscoverSection = () => {
     setSelectedIndustries([]);
     setSelectedFunctions([]);
     setSelectedAudience([]);
+    // Clear search terms
+    setIndustriesSearchTerm("");
+    setAudienceSearchTerm("");
+    setFunctionsSearchTerm("");
     // Close all dropdowns
     setShowIndustriesDropdown(false);
     setShowAudienceDropdown(false);
@@ -106,6 +115,28 @@ export const DiscoverSection = () => {
     },
     [],
   );
+
+  // Filter functions for dropdown searches
+  const filteredIndustries = useMemo(() => {
+    if (!industriesSearchTerm) return meta.industries || [];
+    return (meta.industries || []).filter((industry) =>
+      industry.toLowerCase().includes(industriesSearchTerm.toLowerCase()),
+    );
+  }, [meta.industries, industriesSearchTerm]);
+
+  const filteredAudience = useMemo(() => {
+    if (!audienceSearchTerm) return meta.audience || [];
+    return (meta.audience || []).filter((audience) =>
+      audience.toLowerCase().includes(audienceSearchTerm.toLowerCase()),
+    );
+  }, [meta.audience, audienceSearchTerm]);
+
+  const filteredFunctions = useMemo(() => {
+    if (!functionsSearchTerm) return meta.businessFunctions || [];
+    return (meta.businessFunctions || []).filter((func) =>
+      func.toLowerCase().includes(functionsSearchTerm.toLowerCase()),
+    );
+  }, [meta.businessFunctions, functionsSearchTerm]);
 
   const handleVoted = useCallback(() => {
     refetch();
@@ -145,6 +176,15 @@ export const DiscoverSection = () => {
             onClearAllFilters={handleClearAllFilters}
             meta={meta}
             totalFiltersCount={totalFiltersCount}
+            industriesSearchTerm={industriesSearchTerm}
+            audienceSearchTerm={audienceSearchTerm}
+            functionsSearchTerm={functionsSearchTerm}
+            onIndustriesSearchChange={setIndustriesSearchTerm}
+            onAudienceSearchChange={setAudienceSearchTerm}
+            onFunctionsSearchChange={setFunctionsSearchTerm}
+            filteredIndustries={filteredIndustries}
+            filteredAudience={filteredAudience}
+            filteredFunctions={filteredFunctions}
           />
         </div>
 
