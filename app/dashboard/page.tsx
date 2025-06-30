@@ -379,7 +379,7 @@ export default function DashboardPage() {
         variant: "destructive",
       });
     }
-  }, [user?.id, toast]);
+  }, [user?.id]);
 
   const fetchContracts = useCallback(async () => {
     if (!user?.id) return;
@@ -395,7 +395,7 @@ export default function DashboardPage() {
       });
       console.error("Error fetching contracts:", error);
     }
-  }, [user?.id, toast]);
+  }, [user?.id]);
 
   // Load dashboard data
   useEffect(() => {

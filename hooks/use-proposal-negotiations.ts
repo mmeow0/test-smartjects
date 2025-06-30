@@ -366,7 +366,7 @@ export const useProposalNegotiations = (proposalId: string) => {
     } finally {
       setIsLoading(false);
     }
-  }, [proposalId, user?.id, authLoading, canAccess, toast]);
+  }, [proposalId, user?.id, authLoading, canAccess]);
 
   useEffect(() => {
     fetchNegotiations();

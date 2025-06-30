@@ -317,7 +317,7 @@ export default function IndividualNegotiatePage({
     };
 
     fetchIndividualNegotiationData();
-  }, [id, proposalId, otherUserId, authLoading, canAccess, user, toast]);
+  }, [id, proposalId, otherUserId, authLoading, canAccess, user]);
 
   // Load negotiation data when authenticated
   useEffect(() => {

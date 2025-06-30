@@ -89,7 +89,7 @@ export default function ProposalsPage() {
     };
 
     fetchProposals();
-  }, [authLoading, canAccess, user, toast]);
+  }, [authLoading, canAccess, user]);
 
   const filterProposals = useCallback(
     (proposals: ProposalType[]) => {

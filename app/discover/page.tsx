@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/auth-provider";
-import { useSmartjects } from "@/hooks/use-smartjects";
+import { useInfiniteSmartjects } from "@/hooks/use-infinite-smartjects";
+import { LoadMore } from "@/components/ui/load-more";
 import { Audience } from "@/components/icons/Audience";
 import { Functions } from "@/components/icons/Functions";
 import { Industries } from "@/components/icons/Industries";
@@ -195,14 +196,10 @@ SmartjectsGrid.displayName = "SmartjectsGrid";
 export default function SmartjectsHubPage() {
   const [query, setQuery] = useState("");
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
-  const [selectedAudience, setSelectedAudience] = useState<string[]>(
-    [],
-  );
+  const [selectedAudience, setSelectedAudience] = useState<string[]>([]);
   const [selectedFunctions, setSelectedFunctions] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
-  const [sortBy, setSortBy] = useState<
-    "recent" | "most-needed" | "most-provided" | "most-believed"
-  >("recent");
+
   const [showIndustriesDropdown, setShowIndustriesDropdown] = useState(false);
   const [showAudienceDropdown, setShowAudienceDropdown] = useState(false);
   const [showFunctionsDropdown, setShowFunctionsDropdown] = useState(false);
@@ -215,12 +212,28 @@ export default function SmartjectsHubPage() {
   const sortRef = useRef<HTMLDivElement>(null);
 
   const { user } = useAuth();
-  const { smartjects, isLoading, filters, setFilter, refetch } = useSmartjects(
-    user?.id,
-  );
-
+  const {
+    smartjects,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    filters,
+    setFilter,
+    refetch,
+    error,
+    sortBy,
+    setSortBy,
+    meta,
+  } = useInfiniteSmartjects(user?.id, 12);
+  
   // Debounce search query for better performance
   const debouncedQuery = useDebounce(query, 300);
+
+  // Update server-side filters when debounced query changes
+  useEffect(() => {
+    setFilter("query", debouncedQuery);
+  }, [debouncedQuery, setFilter]);
 
   // Memoized filter handlers to prevent unnecessary re-renders
   const handleToggleIndustry = useCallback(
@@ -301,80 +314,11 @@ export default function SmartjectsHubPage() {
   ] as const;
 
   // Memoized filtered smartjects with optimized filtering logic
-  const filteredSmartjects = useMemo(() => {
-    if (!smartjects?.length) return [];
+  // Client-side filtering is now handled by the server
+  const filteredSmartjects = smartjects;
 
-    const lowerQuery = debouncedQuery.toLowerCase();
-
-    return smartjects.filter((s) => {
-      // Early return for empty query and no filters
-      if (!lowerQuery && totalFiltersCount === 0) return true;
-
-      // Query matching
-      const matchesQuery =
-        !lowerQuery ||
-        s.title?.toLowerCase().includes(lowerQuery) ||
-        s.mission?.toLowerCase().includes(lowerQuery) ||
-        s.problematics?.toLowerCase().includes(lowerQuery) ||
-        s.scope?.toLowerCase().includes(lowerQuery);
-
-      if (!matchesQuery) return false;
-
-      // Filter matching with early returns
-      const matchesIndustries =
-        selectedIndustries.length === 0 ||
-        selectedIndustries.some((i) => s.industries?.includes(i));
-
-      if (!matchesIndustries) return false;
-
-      const matchesAudience =
-        selectedAudience.length === 0 ||
-        selectedAudience.some((t) => s.audience?.includes(t));
-
-      if (!matchesAudience) return false;
-
-      const matchesFunctions =
-        selectedFunctions.length === 0 ||
-        selectedFunctions.some((f) => s.businessFunctions?.includes(f));
-
-      return matchesFunctions;
-    });
-  }, [
-    smartjects,
-    debouncedQuery,
-    selectedIndustries,
-    selectedAudience,
-    selectedFunctions,
-    totalFiltersCount,
-  ]);
-
-  // Memoized sorted arrays for different tabs
-  const sortedSmartjects = useMemo(() => {
-    if (!filteredSmartjects?.length) {
-      return {
-        recent: [],
-        mostNeeded: [],
-        mostProvided: [],
-        mostBelieved: [],
-      };
-    }
-
-    return {
-      recent: [...filteredSmartjects].sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      ),
-      mostNeeded: [...filteredSmartjects].sort(
-        (a, b) => (b.votes?.need || 0) - (a.votes?.need || 0),
-      ),
-      mostProvided: [...filteredSmartjects].sort(
-        (a, b) => (b.votes?.provide || 0) - (a.votes?.provide || 0),
-      ),
-      mostBelieved: [...filteredSmartjects].sort(
-        (a, b) => (b.votes?.believe || 0) - (a.votes?.believe || 0),
-      ),
-    };
-  }, [filteredSmartjects]);
+  // Server-side sorting is now handled by the infinite scroll hook
+  // No need for client-side sorting
 
   // Memoized refetch callback
   const memoizedRefetch = useCallback(refetch, [refetch]);
@@ -474,7 +418,7 @@ export default function SmartjectsHubPage() {
                       </div>
                       {showIndustriesDropdown && (
                         <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-y-auto">
-                          {filters.industries?.map((industry) => (
+                          {meta.industries?.map((industry) => (
                             <div
                               key={industry}
                               className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
@@ -509,7 +453,7 @@ export default function SmartjectsHubPage() {
                       </div>
                       {showAudienceDropdown && (
                         <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-y-auto">
-                          {filters.audience?.map((tech) => (
+                          {meta.audience?.map((tech) => (
                             <div
                               key={tech}
                               className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
@@ -544,7 +488,7 @@ export default function SmartjectsHubPage() {
                       </div>
                       {showFunctionsDropdown && (
                         <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-y-auto">
-                          {filters.businessFunctions?.map((func) => (
+                          {meta.businessFunctions?.map((func) => (
                             <div
                               key={func}
                               className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
@@ -645,21 +589,21 @@ export default function SmartjectsHubPage() {
                       <FilterCategory
                         title="Industries"
                         icon={<Industries className="h-4 w-4 mr-2" />}
-                        options={filters.industries ?? []}
+                        options={meta.industries ?? []}
                         selected={selectedIndustries}
                         onToggle={handleToggleIndustry}
                       />
                       <FilterCategory
                         title="Audience"
                         icon={<Cpu className="h-4 w-4 mr-2 text-blue-500" />}
-                        options={filters.audience ?? []}
+                        options={meta.audience ?? []}
                         selected={selectedAudience}
                         onToggle={handleToggleTechnology}
                       />
                       <FilterCategory
                         title="Functions"
                         icon={<Functions className="h-4 w-4 mr-2" />}
-                        options={filters.businessFunctions ?? []}
+                        options={meta.businessFunctions ?? []}
                         selected={selectedFunctions}
                         onToggle={handleToggleFunction}
                       />
@@ -671,20 +615,23 @@ export default function SmartjectsHubPage() {
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           <SmartjectsGrid
-            smartjects={
-              sortBy === "recent"
-                ? sortedSmartjects.recent
-                : sortBy === "most-needed"
-                  ? sortedSmartjects.mostNeeded
-                  : sortBy === "most-provided"
-                    ? sortedSmartjects.mostProvided
-                    : sortedSmartjects.mostBelieved
-            }
+            smartjects={filteredSmartjects}
             isLoading={isLoading}
             onVoted={memoizedRefetch}
             emptyMessage={`No ${sortBy === "recent" ? "recent " : ""}smartjects found matching your criteria.`}
+          />
+
+          <LoadMore
+            isLoading={isLoading}
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            error={error}
+            onLoadMore={loadMore}
+            loadingText="Loading more smartjects..."
+            noMoreText="You've seen all available smartjects"
+            errorText="Failed to load more smartjects"
           />
         </div>
       </div>

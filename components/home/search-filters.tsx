@@ -29,10 +29,10 @@ interface SearchFiltersProps {
   onToggleFunctionsDropdown: () => void;
   onToggleSortDropdown: () => void;
   onClearAllFilters: () => void;
-  filters: {
-    industries?: string[];
-    audience?: string[];
-    businessFunctions?: string[];
+  meta: {
+    industries: string[];
+    audience: string[];
+    businessFunctions: string[];
   };
   totalFiltersCount: number;
 }
@@ -65,7 +65,7 @@ export const SearchFilters = memo(
     onToggleFunctionsDropdown,
     onToggleSortDropdown,
     onClearAllFilters,
-    filters,
+    meta,
     totalFiltersCount,
   }: SearchFiltersProps) => {
     const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -133,6 +133,7 @@ export const SearchFilters = memo(
     ]);
 
     return (
+       <div className="flex flex-col w-full gap-4 mb-4">
       <div className="flex flex-col lg:flex-row w-full gap-4 sm:gap-6 items-start lg:items-center bg-gray-50 rounded-2xl p-3">
         {/* Search Bar - Always Visible */}
         <div className="relative w-full">
@@ -224,7 +225,7 @@ export const SearchFilters = memo(
               </div>
               {showIndustriesDropdown && (
                 <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-56 max-h-60 overflow-y-auto">
-                  {filters.industries?.map((industry) => (
+                  {meta.industries?.map((industry) => (
                     <div
                       key={industry}
                       className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
@@ -267,7 +268,7 @@ export const SearchFilters = memo(
               </div>
               {showAudienceDropdown && (
                 <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-56 max-h-60 overflow-y-auto">
-                  {filters.audience?.map((tech) => (
+                  {meta.audience?.map((tech) => (
                     <div
                       key={tech}
                       className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
@@ -310,7 +311,7 @@ export const SearchFilters = memo(
               </div>
               {showFunctionsDropdown && (
                 <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-56 max-h-60 overflow-y-auto">
-                  {filters.businessFunctions?.map((func) => (
+                  {meta.businessFunctions?.map((func) => (
                     <div
                       key={func}
                       className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
@@ -406,7 +407,7 @@ export const SearchFilters = memo(
                 </div>
                 {showIndustriesDropdown && (
                   <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-y-auto">
-                    {filters.industries?.map((industry) => (
+                    {meta.industries?.map((industry) => (
                       <div
                         key={industry}
                         className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
@@ -451,7 +452,7 @@ export const SearchFilters = memo(
                 </div>
                 {showAudienceDropdown && (
                   <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-y-auto">
-                    {filters.audience?.map((tech) => (
+                    {meta.audience?.map((tech) => (
                       <div
                         key={tech}
                         className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
@@ -496,7 +497,7 @@ export const SearchFilters = memo(
                 </div>
                 {showFunctionsDropdown && (
                   <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-y-auto">
-                    {filters.businessFunctions?.map((func) => (
+                    {meta.businessFunctions?.map((func) => (
                       <div
                         key={func}
                         className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
@@ -539,6 +540,8 @@ export const SearchFilters = memo(
             )}
           </div>
         )}
+
+        </div>
 
         {/* Active Filters Tags - Show on both mobile and desktop */}
         {totalFiltersCount > 0 && (

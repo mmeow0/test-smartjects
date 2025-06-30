@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 import { useToast } from "@/hooks/use-toast";
-import { notificationService, type Notification } from "@/lib/services/notification.service";
+import {
+  notificationService,
+  type Notification,
+} from "@/lib/services/notification.service";
 
 interface UseNotificationsReturn {
   notifications: Notification[];
@@ -31,7 +34,7 @@ export const useNotifications = (): UseNotificationsReturn => {
     try {
       const [notificationsData, unreadCountData] = await Promise.all([
         notificationService.getNotifications(user.id),
-        notificationService.getUnreadCount(user.id)
+        notificationService.getUnreadCount(user.id),
       ]);
 
       setNotifications(notificationsData);
@@ -46,43 +49,46 @@ export const useNotifications = (): UseNotificationsReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, canAccess, toast]);
+  }, [user?.id, canAccess]);
 
   // Mark notification as read
-  const markAsRead = useCallback(async (notificationId: string) => {
-    if (!user?.id) return;
+  const markAsRead = useCallback(
+    async (notificationId: string) => {
+      if (!user?.id) return;
 
-    try {
-      const result = await notificationService.markAsRead(notificationId);
+      try {
+        const result = await notificationService.markAsRead(notificationId);
 
-      if (result.success) {
-        // Update local state
-        setNotifications(prev =>
-          prev.map(notif =>
-            notif.id === notificationId
-              ? { ...notif, readAt: new Date().toISOString() }
-              : notif
-          )
-        );
+        if (result.success) {
+          // Update local state
+          setNotifications((prev) =>
+            prev.map((notif) =>
+              notif.id === notificationId
+                ? { ...notif, readAt: new Date().toISOString() }
+                : notif
+            )
+          );
 
-        // Update unread count
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      } else {
+          // Update unread count
+          setUnreadCount((prev) => Math.max(0, prev - 1));
+        } else {
+          toast({
+            title: "Error",
+            description: result.error || "Failed to mark notification as read",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error marking notification as read:", error);
         toast({
           title: "Error",
-          description: result.error || "Failed to mark notification as read",
+          description: "Failed to mark notification as read",
           variant: "destructive",
         });
       }
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-      toast({
-        title: "Error",
-        description: "Failed to mark notification as read",
-        variant: "destructive",
-      });
-    }
-  }, [user?.id, toast]);
+    },
+    [user?.id]
+  );
 
   // Mark all notifications as read
   const markAllAsRead = useCallback(async () => {
@@ -93,10 +99,10 @@ export const useNotifications = (): UseNotificationsReturn => {
 
       if (result.success) {
         // Update local state
-        setNotifications(prev =>
-          prev.map(notif => ({
+        setNotifications((prev) =>
+          prev.map((notif) => ({
             ...notif,
-            readAt: notif.readAt || new Date().toISOString()
+            readAt: notif.readAt || new Date().toISOString(),
           }))
         );
 
@@ -121,45 +127,47 @@ export const useNotifications = (): UseNotificationsReturn => {
         variant: "destructive",
       });
     }
-  }, [user?.id, toast]);
+  }, [user?.id]);
 
   // Delete notification
   const deleteNotification = useCallback(async (notificationId: string) => {
-    if (!user?.id) return;
+      if (!user?.id) return;
 
-    try {
+      try {
       const result = await notificationService.deleteNotification(notificationId);
 
-      if (result.success) {
+        if (result.success) {
         // Update local state
         setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
 
         // Update unread count if the deleted notification was unread
         const deletedNotification = notifications.find(n => n.id === notificationId);
-        if (deletedNotification && !deletedNotification.readAt) {
+            if (deletedNotification && !deletedNotification.readAt) {
           setUnreadCount(prev => Math.max(0, prev - 1));
-        }
+            }
 
-        toast({
-          title: "Success",
-          description: "Notification deleted",
-        });
-      } else {
+          toast({
+            title: "Success",
+            description: "Notification deleted",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: result.error || "Failed to delete notification",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error deleting notification:", error);
         toast({
           title: "Error",
-          description: result.error || "Failed to delete notification",
+          description: "Failed to delete notification",
           variant: "destructive",
         });
       }
-    } catch (error) {
-      console.error("Error deleting notification:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete notification",
-        variant: "destructive",
-      });
-    }
-  }, [user?.id, notifications, toast]);
+    },
+    [user?.id]
+  );
 
   // Refresh notifications
   const refreshNotifications = useCallback(async () => {
@@ -179,10 +187,10 @@ export const useNotifications = (): UseNotificationsReturn => {
       user.id,
       (newNotification: Notification) => {
         // Add new notification to the beginning of the list
-        setNotifications(prev => [newNotification, ...prev]);
+        setNotifications((prev) => [newNotification, ...prev]);
 
         // Increment unread count
-        setUnreadCount(prev => prev + 1);
+        setUnreadCount((prev) => prev + 1);
 
         // Show toast for new notification
         toast({
@@ -195,7 +203,7 @@ export const useNotifications = (): UseNotificationsReturn => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [user?.id, canAccess, toast]);
+  }, [user?.id, canAccess]);
 
   return {
     notifications,

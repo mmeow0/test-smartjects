@@ -2,10 +2,9 @@ import { getSupabaseBrowserClient } from "../supabase";
 import type { SmartjectType } from "../types";
 
 export const smartjectService = {
-  // Get all smartjects
-
+  // Get user votes mapping
   async getUserVotes(
-    userId: string
+    userId: string,
   ): Promise<{ [smartjectId: string]: ("believe" | "need" | "provide")[] }> {
     const supabase = getSupabaseBrowserClient();
     const { data, error } = await supabase
@@ -21,16 +20,246 @@ export const smartjectService = {
     const result: {
       [smartjectId: string]: ("believe" | "need" | "provide")[];
     } = {};
-    data.forEach((vote: any) => {
-      if (!result[vote.smartject_id]) result[vote.smartject_id] = [];
-      result[vote.smartject_id].push(
-        vote.vote_type as "believe" | "need" | "provide"
-      );
-    });
+
+    if (data) {
+      data.forEach((vote: any) => {
+        if (!result[vote.smartject_id]) result[vote.smartject_id] = [];
+        if (
+          vote.vote_type === "believe" ||
+          vote.vote_type === "need" ||
+          vote.vote_type === "provide"
+        ) {
+          result[vote.smartject_id].push(vote.vote_type);
+        }
+      });
+    }
 
     return result;
   },
 
+  // Get smartjects with pagination and filtering
+  async getSmartjectsPaginated(
+    userId?: string,
+    page: number = 0,
+    pageSize: number = 12,
+    filters?: {
+      query?: string;
+      industries?: string[];
+      audience?: string[];
+      businessFunctions?: string[];
+    },
+    sortBy:
+      | "recent"
+      | "most-needed"
+      | "most-provided"
+      | "most-believed" = "recent",
+  ): Promise<SmartjectType[]> {
+    const supabase = getSupabaseBrowserClient();
+
+    const userVotesMap = userId ? await this.getUserVotes(userId) : {};
+
+    // Step 1: Get smartject IDs that match the filters from related tables
+    let filteredSmartjectIds: string[] | null = null;
+
+    // Check if we have any related table filters that need special handling
+    const hasRelatedFilters =
+      (filters?.industries && filters.industries.length > 0) ||
+      (filters?.audience && filters.audience.length > 0) ||
+      (filters?.businessFunctions && filters.businessFunctions.length > 0);
+
+    if (hasRelatedFilters) {
+      const smartjectIds = new Set<string>();
+
+      // Get IDs from industry filter
+      if (filters?.industries && filters.industries.length > 0) {
+        const { data: industryData, error: industryError } = await supabase
+          .from("smartject_industries")
+          .select("smartject_id, industries!inner(name)")
+          .in("industries.name", filters.industries);
+
+        if (industryError) {
+          console.error("Error fetching industry filtered IDs:", industryError);
+          return [];
+        }
+
+        if (industryData && industryData.length > 0) {
+          industryData.forEach((item: any) => smartjectIds.add(item.smartject_id));
+        } else {
+          return []; // No matches found
+        }
+      }
+
+      // Get IDs from audience filter
+      if (filters?.audience && filters.audience.length > 0) {
+        const { data: audienceData, error: audienceError } = await supabase
+          .from("smartject_audience")
+          .select("smartject_id, audience!inner(name)")
+          .in("audience.name", filters.audience);
+
+        if (audienceError) {
+          console.error("Error fetching audience filtered IDs:", audienceError);
+          return [];
+        }
+
+        if (audienceData && audienceData.length > 0) {
+          const audienceIds = new Set(audienceData.map((item: any) => item.smartject_id));
+          if (smartjectIds.size > 0) {
+            // Intersect with existing IDs
+            const intersection = new Set([...smartjectIds].filter(id => audienceIds.has(id)));
+            smartjectIds.clear();
+            intersection.forEach(id => smartjectIds.add(id));
+          } else {
+            audienceData.forEach((item: any) => smartjectIds.add(item.smartject_id));
+          }
+        } else {
+          return []; // No matches found
+        }
+      }
+
+      // Get IDs from business functions filter
+      if (filters?.businessFunctions && filters.businessFunctions.length > 0) {
+        const { data: functionsData, error: functionsError } = await supabase
+          .from("smartject_business_functions")
+          .select("smartject_id, business_functions!inner(name)")
+          .in("business_functions.name", filters.businessFunctions);
+
+        if (functionsError) {
+          console.error("Error fetching business functions filtered IDs:", functionsError);
+          return [];
+        }
+
+        if (functionsData && functionsData.length > 0) {
+          const functionIds = new Set(functionsData.map((item: any) => item.smartject_id));
+          if (smartjectIds.size > 0) {
+            // Intersect with existing IDs
+            const intersection = new Set([...smartjectIds].filter(id => functionIds.has(id)));
+            smartjectIds.clear();
+            intersection.forEach(id => smartjectIds.add(id));
+          } else {
+            functionsData.forEach((item: any) => smartjectIds.add(item.smartject_id));
+          }
+        } else {
+          return []; // No matches found
+        }
+      }
+
+      filteredSmartjectIds = Array.from(smartjectIds);
+
+      // If no smartjects match the filters, return empty array
+      if (filteredSmartjectIds.length === 0) {
+        return [];
+      }
+    }
+
+
+    // Step 2: Get full smartject data
+    let query = supabase.from("smartjects").select(
+      `
+      *,
+      smartject_industries (
+        industries (name)
+      ),
+      smartject_business_functions (
+        business_functions (name)
+      ),
+      smartject_audience (
+        audience (name)
+      ),
+      votes (vote_type),
+      comments(count)
+    `,
+    );
+
+    // If we have filtered IDs, only get those smartjects
+    if (filteredSmartjectIds) {
+      query = query.in("id", filteredSmartjectIds);
+    } else {
+      // Apply text search filter only if no related filters were applied
+      if (filters?.query && filters.query.trim()) {
+        const searchTerm = `%${filters.query.toLowerCase()}%`;
+        query = query.or(
+          `title.ilike.${searchTerm},mission.ilike.${searchTerm},problematics.ilike.${searchTerm},scope.ilike.${searchTerm}`,
+        );
+      }
+    }
+
+    let data: any[] = [];
+    let error: any = null;
+
+    // Apply sorting based on sortBy parameter
+    if (sortBy === "recent") {
+      // For recent sorting, use database ordering with pagination
+      const { data: dbData, error: dbError } = await query
+        .order("created_at", { ascending: false })
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+      data = dbData || [];
+      error = dbError;
+    } else {
+      // For vote-based sorting, fetch all matching records and sort in memory
+      const { data: allData, error: allError } = await query.order(
+        "created_at",
+        { ascending: false },
+      );
+
+      if (allError || !allData) {
+        data = [];
+        error = allError;
+      } else {
+        // Convert to SmartjectType format first for consistent sorting
+        const formattedData = allData.map((item: any) => {
+          const voteCount = {
+            believe: 0,
+            need: 0,
+            provide: 0,
+          };
+
+          if (Array.isArray(item.votes)) {
+            item.votes.forEach((vote: any) => {
+              if (vote.vote_type && voteCount.hasOwnProperty(vote.vote_type)) {
+                voteCount[vote.vote_type as keyof typeof voteCount]++;
+              }
+            });
+          }
+
+          return { ...item, voteCount };
+        });
+
+        // Sort based on vote type
+        let sortedData: any[];
+        switch (sortBy) {
+          case "most-needed":
+            sortedData = formattedData.sort(
+              (a, b) => b.voteCount.need - a.voteCount.need,
+            );
+            break;
+          case "most-provided":
+            sortedData = formattedData.sort(
+              (a, b) => b.voteCount.provide - a.voteCount.provide,
+            );
+            break;
+          case "most-believed":
+            sortedData = formattedData.sort(
+              (a, b) => b.voteCount.believe - a.voteCount.believe,
+            );
+            break;
+          default:
+            sortedData = formattedData;
+        }
+
+        // Apply pagination after sorting
+        data = sortedData.slice(page * pageSize, (page + 1) * pageSize);
+      }
+    }
+
+    if (error || !data) {
+      console.error("Error fetching smartjects:", error);
+      return [];
+    }
+
+    return this.formatSmartjects(data, userVotesMap, userId);
+  },
+
+  // Get all smartjects (legacy method)
   async getSmartjects(userId?: string): Promise<SmartjectType[]> {
     const supabase = getSupabaseBrowserClient();
 
@@ -41,18 +270,18 @@ export const smartjectService = {
       .select(
         `
       *,
-      smartject_industries!inner (
+      smartject_industries (
         industries (name)
       ),
-      smartject_business_functions!inner (
+      smartject_business_functions (
         business_functions (name)
       ),
-      smartject_audience!inner (
+      smartject_audience (
         audience (name)
       ),
       votes (vote_type),
       comments(count)
-    `
+    `,
       )
       .order("created_at", { ascending: false });
 
@@ -61,16 +290,29 @@ export const smartjectService = {
       return [];
     }
 
-    return data.map((item) => {
+    return this.formatSmartjects(data, userVotesMap, userId);
+  },
+
+  // Format smartjects data
+  formatSmartjects(
+    data: any[],
+    userVotesMap: { [smartjectId: string]: ("believe" | "need" | "provide")[] },
+    userId?: string,
+  ): SmartjectType[] {
+    return data.map((item: any) => {
       const voteCount = {
         believe: 0,
         need: 0,
         provide: 0,
       };
 
-      item.votes?.forEach((vote: any) => {
-        voteCount[vote.vote_type as keyof typeof voteCount]++;
-      });
+      if (Array.isArray(item.votes)) {
+        item.votes.forEach((vote: any) => {
+          if (vote.vote_type && voteCount.hasOwnProperty(vote.vote_type)) {
+            voteCount[vote.vote_type as keyof typeof voteCount]++;
+          }
+        });
+      }
 
       const userVotes = {
         believe: false,
@@ -78,27 +320,41 @@ export const smartjectService = {
         provide: false,
       };
 
-      if (userId && userVotesMap[item.id]) {
-        for (const voteType of userVotesMap[item.id]) {
-          userVotes[voteType as keyof typeof userVotes] = true;
+      if (userId && userVotesMap[item.id as string]) {
+        for (const voteType of userVotesMap[item.id as string]) {
+          if (
+            voteType === "believe" ||
+            voteType === "need" ||
+            voteType === "provide"
+          ) {
+            userVotes[voteType as keyof typeof userVotes] = true;
+          }
         }
       }
 
-      const industries =
-        item.smartject_industries?.map((i: any) => i.industries.name) || [];
-      const businessFunctions =
-        item.smartject_business_functions?.map(
-          (f: any) => f.business_functions.name
-        ) || [];
-      const audience =
-        item.smartject_audience?.map((a: any) => a.audience.name) || [];
+      const industries = Array.isArray(item.smartject_industries)
+        ? item.smartject_industries
+            .map((i: any) => i.industries?.name)
+            .filter(Boolean)
+        : [];
+      const businessFunctions = Array.isArray(item.smartject_business_functions)
+        ? item.smartject_business_functions
+            .map((f: any) => f.business_functions?.name)
+            .filter(Boolean)
+        : [];
+      const audience = Array.isArray(item.smartject_audience)
+        ? item.smartject_audience
+            .map((a: any) => a.audience?.name)
+            .filter(Boolean)
+        : [];
 
       return {
         id: item.id as string,
         title: item.title as string,
         votes: voteCount,
         userVotes,
-        comments: item.comments?.[0]?.count || 0,
+        comments:
+          (Array.isArray(item.comments) && item.comments[0]?.count) || 0,
         createdAt: item.created_at as string,
         mission: (item.mission || "") as string,
         problematics: (item.problematics || "") as string,
@@ -111,7 +367,7 @@ export const smartjectService = {
         businessFunctions,
         audience,
         relevantLinks: [] as { title: string; url: string }[],
-        researchPapers: [] as string[],
+        researchPapers: [] as { title: string; url: string }[],
         image: item.image_url as string | undefined,
       };
     });
@@ -120,7 +376,7 @@ export const smartjectService = {
   // Get a single smartject by ID
   async getSmartjectById(
     id: string,
-    userId?: string
+    userId?: string,
   ): Promise<SmartjectType | null> {
     const supabase = getSupabaseBrowserClient();
 
@@ -131,16 +387,16 @@ export const smartjectService = {
       .select(
         `
         *,
-        smartject_industries!inner (
+        smartject_industries (
           industries (name)
         ),
-        smartject_business_functions!inner (
+        smartject_business_functions (
           business_functions (name)
         ),
-        smartject_audience!inner (
+        smartject_audience (
           audience (name)
         )
-      `
+      `,
       )
       .eq("id", id)
       .single();
@@ -180,9 +436,15 @@ export const smartjectService = {
       provide: false,
     };
 
-    if (userId && userVotesMap[data.id]) {
-      for (const voteType of userVotesMap[data.id]) {
-        userVotes[voteType as keyof typeof userVotes] = true;
+    if (userId && userVotesMap[data.id as string]) {
+      for (const voteType of userVotesMap[data.id as string]) {
+        if (
+          voteType === "believe" ||
+          voteType === "need" ||
+          voteType === "provide"
+        ) {
+          userVotes[voteType as keyof typeof userVotes] = true;
+        }
       }
     }
 
@@ -195,24 +457,30 @@ export const smartjectService = {
     if (commentError) {
       console.error(
         `Error counting comments for smartject ${id}:`,
-        commentError
+        commentError,
       );
     }
+
     // Extract industries
-    const industries =
-      data.smartject_industries?.map(
-        (industry: any) => industry.industries.name
-      ) || [];
+    const industries = Array.isArray(data.smartject_industries)
+      ? data.smartject_industries
+          .map((industry: any) => industry.industries?.name)
+          .filter(Boolean)
+      : [];
 
     // Extract business functions
-    const businessFunctions =
-      data.smartject_business_functions?.map(
-        (func: any) => func.business_functions.name
-      ) || [];
+    const businessFunctions = Array.isArray(data.smartject_business_functions)
+      ? data.smartject_business_functions
+          .map((func: any) => func.business_functions?.name)
+          .filter(Boolean)
+      : [];
 
     // Extract audience
-    const audience =
-      data.smartject_audience?.map((aud: any) => aud.audience.name) || [];
+    const audience = Array.isArray(data.smartject_audience)
+      ? data.smartject_audience
+          .map((aud: any) => aud.audience?.name)
+          .filter(Boolean)
+      : [];
 
     return {
       id: data.id as string,
@@ -231,16 +499,20 @@ export const smartjectService = {
       industries,
       businessFunctions,
       audience,
-      researchPapers: (data.research_papers || []) as string[],
+      researchPapers: (data.research_papers || []) as {
+        title: string;
+        url: string;
+      }[],
       relevantLinks: [] as { title: string; url: string }[],
       image: data.image_url as string | undefined,
     };
   },
 
+  // Get user's voted smartjects
   async getUserSmartjects(userId: string): Promise<SmartjectType[]> {
     const supabase = getSupabaseBrowserClient();
 
-    // Получаем все голоса пользователя с привязкой к smartject_id и типу голоса
+    // Get all votes by user with smartject_id and vote type
     const { data: userVotes, error: voteError } = await supabase
       .from("votes")
       .select("smartject_id, vote_type")
@@ -251,21 +523,32 @@ export const smartjectService = {
       return [];
     }
 
-    // Строим мапу голосов по smartject_id
-    const userVotesMap: Record<string, string[]> = {};
+    // Build vote map by smartject_id
+    const userVotesMap: {
+      [smartjectId: string]: ("believe" | "need" | "provide")[];
+    } = {};
     const smartjectIds = new Set<string>();
 
     for (const vote of userVotes) {
-      smartjectIds.add(vote.smartject_id as string);
-      if (!userVotesMap[vote.smartject_id]) {
-        userVotesMap[vote.smartject_id] = [];
+      const smartjectId = vote.smartject_id as string;
+      const voteType = vote.vote_type as string;
+
+      smartjectIds.add(smartjectId);
+      if (!userVotesMap[smartjectId]) {
+        userVotesMap[smartjectId] = [];
       }
-      userVotesMap[vote.smartject_id].push(
-        vote.vote_type as "believe" | "need" | "provide"
-      );
+      if (
+        voteType === "believe" ||
+        voteType === "need" ||
+        voteType === "provide"
+      ) {
+        userVotesMap[smartjectId].push(
+          voteType as "believe" | "need" | "provide",
+        );
+      }
     }
 
-    // Получаем smartjects, по которым были голоса
+    // Fetch smartjects that were voted on
     const { data, error } = await supabase
       .from("smartjects")
       .select(
@@ -282,7 +565,7 @@ export const smartjectService = {
       ),
       votes (vote_type),
       comments(count)
-    `
+    `,
       )
       .in("id", Array.from(smartjectIds));
 
@@ -291,62 +574,10 @@ export const smartjectService = {
       return [];
     }
 
-    return data.map((item) => {
-      const voteCount = {
-        believe: 0,
-        need: 0,
-        provide: 0,
-      };
-
-      item.votes?.forEach((vote: any) => {
-        voteCount[vote.vote_type as keyof typeof voteCount]++;
-      });
-
-      const userVotes = {
-        believe: false,
-        need: false,
-        provide: false,
-      };
-
-      if (userVotesMap[item.id]) {
-        for (const voteType of userVotesMap[item.id]) {
-          userVotes[voteType as keyof typeof userVotes] = true;
-        }
-      }
-
-      const industries =
-        item.smartject_industries?.map((i: any) => i.industries.name) || [];
-      const businessFunctions =
-        item.smartject_business_functions?.map(
-          (f: any) => f.business_functions.name
-        ) || [];
-      const audience =
-        item.smartject_audience?.map((a: any) => a.audience.name) || [];
-
-      return {
-        id: item.id as string,
-        title: item.title as string,
-        votes: voteCount,
-        userVotes,
-        comments: item.comments?.[0]?.count || 0,
-        createdAt: item.created_at as string,
-        mission: (item.mission || "") as string,
-        problematics: (item.problematics || "") as string,
-        scope: (item.scope || "") as string,
-        howItWorks: (item.how_it_works || "") as string,
-        architecture: (item.architecture || "") as string,
-        innovation: (item.innovation || "") as string,
-        useCase: (item.use_case || "") as string,
-        industries,
-        businessFunctions,
-        audience,
-        relevantLinks: [] as { title: string; url: string }[],
-        researchPapers: [] as string[],
-        image: item.image_url as string | undefined,
-      };
-    });
+    return this.formatSmartjects(data, userVotesMap, userId);
   },
 
+  // Get available filter options
   async getAvailableFilters(): Promise<{
     industries: string[];
     audience: string[];

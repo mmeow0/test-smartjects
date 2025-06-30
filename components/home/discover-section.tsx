@@ -1,27 +1,29 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useAuth } from "@/components/auth-provider";
-import { useSmartjects } from "@/hooks/use-smartjects";
+import { useInfiniteSmartjects } from "@/hooks/use-infinite-smartjects";
 import { toggleItem } from "@/lib/utils/array";
 import { DiscoverHeader } from "./discover-header";
 import { SearchFilters } from "./search-filters";
-import { SmartjectsTabs } from "./smartjects-tabs";
-import type { SortOption, CategorizedSmartjects } from "./types";
-import type { SmartjectType } from "@/lib/types";
+import { SmartjectsGrid } from "./smartjects-grid";
 
 export const DiscoverSection = () => {
   const { user } = useAuth();
-  const { smartjects, isLoading, filters, setFilter, refetch } = useSmartjects(
-    user?.id,
-  );
+  const {
+    smartjects,
+    isLoading,
+    filters,
+    setFilter,
+    refetch,
+    sortBy,
+    setSortBy,
+    meta,
+  } = useInfiniteSmartjects(user?.id, 12);
 
   const [query, setQuery] = useState("");
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
-  const [selectedAudience, setSelectedAudience] = useState<string[]>(
-    [],
-  );
+  const [selectedAudience, setSelectedAudience] = useState<string[]>([]);
   const [selectedFunctions, setSelectedFunctions] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [showIndustriesDropdown, setShowIndustriesDropdown] = useState(false);
   const [showAudienceDropdown, setShowAudienceDropdown] = useState(false);
   const [showFunctionsDropdown, setShowFunctionsDropdown] = useState(false);
@@ -29,6 +31,11 @@ export const DiscoverSection = () => {
 
   // Debounce search query for better performance
   const debouncedQuery = useDebounce(query, 300);
+
+  // Update server-side filters when debounced query changes
+  useEffect(() => {
+    setFilter("query", debouncedQuery);
+  }, [debouncedQuery, setFilter]);
 
   // Memoized filter handlers to prevent unnecessary re-renders
   const handleToggleIndustry = useCallback(
@@ -104,91 +111,6 @@ export const DiscoverSection = () => {
     refetch();
   }, [refetch]);
 
-  const filteredSmartjects = useMemo(() => {
-    if (!smartjects?.length) return [];
-
-    const lowerQuery = debouncedQuery.toLowerCase();
-
-    return smartjects.filter((s: SmartjectType) => {
-      // Early return for empty query and no filters
-      if (!lowerQuery && totalFiltersCount === 0) return true;
-
-      // Query matching
-      const matchesQuery =
-        !lowerQuery ||
-        s.title?.toLowerCase().includes(lowerQuery) ||
-        s.mission?.toLowerCase().includes(lowerQuery) ||
-        s.problematics?.toLowerCase().includes(lowerQuery) ||
-        s.scope?.toLowerCase().includes(lowerQuery);
-
-      if (!matchesQuery) return false;
-
-      // Filter matching with early returns
-      const matchesIndustries =
-        selectedIndustries.length === 0 ||
-        selectedIndustries.some((i) => s.industries?.includes(i));
-
-      if (!matchesIndustries) return false;
-
-      const matchesAudience =
-        selectedAudience.length === 0 ||
-        selectedAudience.some((t) => s.audience?.includes(t));
-
-      if (!matchesAudience) return false;
-
-      const matchesFunctions =
-        selectedFunctions.length === 0 ||
-        selectedFunctions.some((f) => s.businessFunctions?.includes(f));
-
-      return matchesFunctions;
-    });
-  }, [
-    smartjects,
-    debouncedQuery,
-    selectedIndustries,
-    selectedAudience,
-    selectedFunctions,
-    totalFiltersCount,
-  ]);
-
-  const categorizedSmartjects: CategorizedSmartjects = useMemo(() => {
-    if (!filteredSmartjects.length) {
-      return {
-        recent: [],
-        mostNeeded: [],
-        mostProvided: [],
-        mostBelieved: [],
-      };
-    }
-
-    const sortAndLimit = (
-      arr: SmartjectType[],
-      sortFn: (a: SmartjectType, b: SmartjectType) => number,
-    ) => {
-      return [...arr].sort(sortFn).slice(0, 6);
-    };
-
-    return {
-      recent: sortAndLimit(
-        filteredSmartjects,
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      ),
-      mostNeeded: sortAndLimit(
-        smartjects, // Use all smartjects for global ranking
-        (a, b) => (b.votes?.need || 0) - (a.votes?.need || 0),
-      ),
-      mostProvided: sortAndLimit(
-        smartjects, // Use all smartjects for global ranking
-        (a, b) => (b.votes?.provide || 0) - (a.votes?.provide || 0),
-      ),
-      mostBelieved: sortAndLimit(
-        smartjects, // Use all smartjects for global ranking
-        (a, b) => (b.votes?.believe || 0) - (a.votes?.believe || 0),
-      ),
-    };
-  }, [filteredSmartjects, smartjects]);
-
   return (
     <div className="pt-16">
       <div className="container mx-auto px-4">
@@ -221,18 +143,19 @@ export const DiscoverSection = () => {
             }
             onToggleSortDropdown={() => setShowSortDropdown(!showSortDropdown)}
             onClearAllFilters={handleClearAllFilters}
-            filters={filters}
+            meta={meta}
             totalFiltersCount={totalFiltersCount}
           />
         </div>
 
-        <SmartjectsTabs
-          sortBy={sortBy}
-          onSortChange={setSortBy}
-          categorizedSmartjects={categorizedSmartjects}
-          isLoading={isLoading}
-          onVoted={handleVoted}
-        />
+        <div className="space-y-6">
+          <SmartjectsGrid
+            smartjects={smartjects}
+            isLoading={isLoading}
+            onVoted={handleVoted}
+            emptyMessage="No smartjects found matching your criteria."
+          />
+        </div>
       </div>
     </div>
   );
