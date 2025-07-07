@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/sheet";
 // import { ThemeToggle } from "@/components/theme-toggle"; // временно скрыто
 import { NotificationBadge } from "@/components/notification-badge";
+import { WalletModal } from "@/components/wallet";
 import { Logo } from "./icons/Logo";
 import { LogoWhite } from "./icons/LogoWhite";
 
@@ -143,6 +144,17 @@ export function TopNav({ isDarkNav: isHomePage = false }: TopNavProps) {
               >
                 <NotificationBadge />
               </div>
+            )}
+
+            {/* Wallet Modal (for authenticated users) */}
+            {isAuthenticated && (
+              <WalletModal
+                className={`ml-4 ${
+                  isHomePage
+                    ? "[&_button]:text-white [&_button]:border-white/20 [&_button:hover]:text-[#FFD900] [&_button:hover]:border-[#FFD900]"
+                    : "[&_button]:text-black [&_button]:border-gray-300 [&_button:hover]:text-[#FFD900] [&_button:hover]:border-[#FFD900]"
+                }`}
+              />
             )}
 
             {/* User Menu or Auth Buttons */}

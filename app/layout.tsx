@@ -1,43 +1,53 @@
-import type React from "react"
-import { Inter, Archivo, Dynalight } from "next/font/google"
-import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
-import { AuthProvider } from "@/components/auth-provider"
-import { ClientLayout } from "./client-layout"
+import type React from "react";
+import { Inter, Archivo, Dynalight } from "next/font/google";
+import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "@/components/auth-provider";
+import { ClientLayout } from "./client-layout";
+import { ThirdwebProvider } from "thirdweb/react";
 
-const inter = Inter({ subsets: ["latin"] })
-const archivo = Archivo({ 
+const inter = Inter({ subsets: ["latin"] });
+const archivo = Archivo({
   subsets: ["latin"],
-  variable: "--font-archivo"
-})
-const dynalight = Dynalight({ 
+  variable: "--font-archivo",
+});
+const dynalight = Dynalight({
   weight: "400",
   subsets: ["latin"],
-  variable: "--font-dynalight"
-})
+  variable: "--font-dynalight",
+});
 
 export const metadata = {
   title: "Smartjects - AI Research to Business Implementation",
   description: "Discover and implement AI innovations for your business",
-    generator: 'v0.dev'
-}
+  generator: "v0.dev",
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} ${archivo.variable} ${dynalight.variable}`}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <AuthProvider>
-            <ClientLayout>{children}</ClientLayout>
-            <Toaster />
-          </AuthProvider>
+      <body
+        className={`${inter.className} ${archivo.variable} ${dynalight.variable}`}
+      >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          forcedTheme="light"
+          disableTransitionOnChange
+        >
+          <ThirdwebProvider>
+            <AuthProvider>
+              <ClientLayout>{children}</ClientLayout>
+              <Toaster />
+            </AuthProvider>
+          </ThirdwebProvider>
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }
