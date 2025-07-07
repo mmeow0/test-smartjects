@@ -75,7 +75,6 @@ export default function ProposalDetailPage({
     hasExpressedInterest,
     isExpressingInterest,
     expressInterest,
-    removeInterest,
   } = useInterest({
     proposalId: id,
     isProposalOwner: proposal?.userId === user?.id,
@@ -341,7 +340,7 @@ export default function ProposalDetailPage({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <Card>
+          {proposal.timeline && <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Timeline</CardTitle>
             </CardHeader>
@@ -351,9 +350,9 @@ export default function ProposalDetailPage({
                 <span>{displayField(proposal.timeline)}</span>
               </div>
             </CardContent>
-          </Card>
+          </Card>}
 
-          <Card>
+         {  proposal.budget && <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Budget</CardTitle>
             </CardHeader>
@@ -364,7 +363,7 @@ export default function ProposalDetailPage({
               </div>
             </CardContent>
           </Card>
-
+}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Last Updated</CardTitle>
@@ -406,17 +405,17 @@ export default function ProposalDetailPage({
                   >
                     {isExpressingInterest
                       ? "Submitting..."
-                      : "Express Interest"}
+                      : "Accept proposal"}
                   </Button>
                 ) : (
                   <Button
                     variant="outline"
-                    onClick={removeInterest}
+                    onClick={() => {}}
                     disabled={isExpressingInterest}
                   >
                     {isExpressingInterest
                       ? "Removing..."
-                      : "Interest Submitted ✓"}
+                      : "Proposal was accepted ✓"}
                   </Button>
                 )}
                 {proposal.type !== "provide" && (
@@ -519,12 +518,12 @@ export default function ProposalDetailPage({
                   </div>
 
                   {/* Long Sections */}
-                  <DetailSection title="Description">
+                  { proposal.description && <DetailSection title="Description">
                     {displayField(
                       proposal.description,
                       proposal.isCooperationProposal,
                     )}
-                  </DetailSection>
+                  </DetailSection>}
                   {!proposal.isCooperationProposal && (
                     <DetailSection title="Project Scope">
                       {displayField(proposal.scope)}

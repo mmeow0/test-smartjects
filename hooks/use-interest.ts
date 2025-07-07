@@ -13,7 +13,6 @@ interface UseInterestReturn {
   hasExpressedInterest: boolean;
   isExpressingInterest: boolean;
   expressInterest: () => Promise<void>;
-  removeInterest: () => Promise<void>;
 
   // For proposal owners
   interestedUsers: InterestExpression[];
@@ -77,7 +76,7 @@ export const useInterest = ({ proposalId, isProposalOwner = false }: UseInterest
     }
   }, [proposalId, isProposalOwner, toast]);
 
-  // Express interest
+  // Accept proposal
   const expressInterest = useCallback(async () => {
     if (!user?.id || !proposalId || hasExpressedInterest) {
       return;
@@ -101,7 +100,7 @@ export const useInterest = ({ proposalId, isProposalOwner = false }: UseInterest
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to express interest",
+          description: result.error || "Failed to accept proposal",
           variant: "destructive",
         });
       }
@@ -117,45 +116,6 @@ export const useInterest = ({ proposalId, isProposalOwner = false }: UseInterest
     }
   }, [user?.id, proposalId, hasExpressedInterest, toast, isProposalOwner, fetchInterestedUsers]);
 
-  // Remove interest
-  const removeInterest = useCallback(async () => {
-    if (!user?.id || !proposalId || !hasExpressedInterest) {
-      return;
-    }
-
-    setIsExpressingInterest(true);
-    try {
-      const result = await interestService.removeInterest(proposalId, user.id);
-
-      if (result.success) {
-        setHasExpressedInterest(false);
-        toast({
-          title: "Interest Removed",
-          description: "Your interest in this proposal has been removed",
-        });
-
-        // If this is also the proposal owner view, refresh interested users
-        if (isProposalOwner) {
-          fetchInterestedUsers();
-        }
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to remove interest",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error removing interest:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setIsExpressingInterest(false);
-    }
-  }, [user?.id, proposalId, hasExpressedInterest, toast, isProposalOwner, fetchInterestedUsers]);
 
   // Initial data loading
   useEffect(() => {
@@ -173,7 +133,6 @@ export const useInterest = ({ proposalId, isProposalOwner = false }: UseInterest
     hasExpressedInterest,
     isExpressingInterest,
     expressInterest,
-    removeInterest,
 
     // For proposal owners
     interestedUsers,

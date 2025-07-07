@@ -124,7 +124,6 @@ export default function NegotiatePage({
     hasExpressedInterest,
     isExpressingInterest,
     expressInterest,
-    removeInterest,
   } = useInterest({
     proposalId: proposalId,
     isProposalOwner: proposal?.userId === user?.id,
@@ -859,25 +858,17 @@ export default function NegotiatePage({
                       className="w-full"
                     >
                       {isExpressingInterest
-                        ? "Expressing Interest..."
-                        : "Express Interest"}
+                        ? "Accepting proposal..."
+                        : "Accept proposal"}
                     </Button>
                   ) : (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <CheckCircle2 className="h-5 w-5 text-green-600" />
                         <span className="text-sm text-green-600 font-medium">
-                          Interest expressed
+                          Proposal was accept
                         </span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={removeInterest}
-                        disabled={isExpressingInterest}
-                      >
-                        {isExpressingInterest ? "Removing..." : "Remove"}
-                      </Button>
                     </div>
                   )}
                 </div>

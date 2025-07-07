@@ -323,20 +323,20 @@ export default function ProposalsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
+                   { proposal.budget && <div>
                       <p className="text-sm text-muted-foreground">Budget</p>
                       <p className="font-medium">
                         {proposal.budget
                           ? `$${proposal.budget.toLocaleString()}`
                           : displayField(proposal.budget)}
                       </p>
-                    </div>
-                    <div>
+                    </div>}
+                    {proposal.timeline && <div>
                       <p className="text-sm text-muted-foreground">Timeline</p>
                       <p className="font-medium">
                         {displayField(proposal.timeline)}
                       </p>
-                    </div>
+                    </div>}
                     <div>
                       <p className="text-sm text-muted-foreground">
                         Smartject ID
@@ -411,20 +411,20 @@ export default function ProposalsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
+                    { proposal.budget && <div>
                       <p className="text-sm text-muted-foreground">Budget</p>
                       <p className="font-medium">
                         {proposal.budget
                           ? `$${proposal.budget.toLocaleString()}`
                           : displayField(proposal.budget)}
                       </p>
-                    </div>
-                    <div>
+                    </div>}
+                  { proposal.timeline &&  <div>
                       <p className="text-sm text-muted-foreground">Timeline</p>
                       <p className="font-medium">
                         {displayField(proposal.timeline)}
                       </p>
-                    </div>
+                    </div>}
                     <div>
                       <p className="text-sm text-muted-foreground">
                         Smartject ID

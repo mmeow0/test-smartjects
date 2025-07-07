@@ -116,7 +116,6 @@ export default function IndividualNegotiatePage({
     hasExpressedInterest,
     isExpressingInterest,
     expressInterest,
-    removeInterest,
   } = useInterest({
     proposalId: proposalId,
     isProposalOwner: negotiation?.proposalAuthor?.id === user?.id,
@@ -731,25 +730,17 @@ export default function IndividualNegotiatePage({
                       className="w-full"
                     >
                       {isExpressingInterest
-                        ? "Expressing Interest..."
-                        : "Express Interest"}
+                        ? "Accepting proposal..."
+                        : "Accept proposal"}
                     </Button>
                   ) : (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <CheckCircle2 className="h-5 w-5 text-green-600" />
                         <span className="text-sm text-green-600 font-medium">
-                          Interest expressed
+                          Proposal was accepted
                         </span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={removeInterest}
-                        disabled={isExpressingInterest}
-                      >
-                        {isExpressingInterest ? "Removing..." : "Remove"}
-                      </Button>
                     </div>
                   )}
                 </div>
@@ -945,7 +936,7 @@ export default function IndividualNegotiatePage({
                 <ThumbsUp className="h-4 w-4 mr-2" />
                 {acceptingTerms
                   ? "Creating Contract..."
-                  : `Accept Terms with ${negotiation.otherUser?.name}`}
+                  : `Initiate smart contract with ${negotiation.otherUser?.name}`}
               </Button>
             </CardFooter>
           </Card>

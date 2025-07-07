@@ -222,8 +222,8 @@ class NotificationService {
       recipientUserId: proposalOwnerId,
       senderUserId: interestedUserId,
       type: "proposal_interest",
-      title: "New Interest in Your Proposal",
-      message: `${interestedUserName} has expressed interest in your proposal "${proposalTitle}"`,
+      title: "New Accept in Your Proposal",
+      message: `${interestedUserName} has accept proposal "${proposalTitle}"`,
       link: `/proposals/${proposalId}`,
       relatedProposalId: proposalId,
     });

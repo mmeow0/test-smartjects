@@ -90,7 +90,7 @@ export function SmartjectTabs({
                               className="flex-1 w-full opacity-50 cursor-not-allowed" 
                               disabled
                             >
-                              Need Proposals ({needProposals.length})
+                              I Need ({needProposals.length})
                             </TabsTrigger>
                           </div>
                   </TooltipTrigger>
@@ -119,7 +119,7 @@ export function SmartjectTabs({
                               className="flex-1 w-full opacity-50 cursor-not-allowed" 
                               disabled
                             >
-                              Provide Proposals ({provideProposals.length})
+                              I Provide ({provideProposals.length})
                             </TabsTrigger>
                           </div>
                   </TooltipTrigger>

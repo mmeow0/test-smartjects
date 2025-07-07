@@ -77,7 +77,7 @@ class InterestService {
 
       if (error) {
         console.error("Error expressing interest:", error);
-        return { success: false, error: "Failed to express interest" };
+        return { success: false, error: "Failed to accept proposal" };
       }
 
       // Create notification for proposal owner
