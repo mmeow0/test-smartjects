@@ -89,8 +89,7 @@ export function SmartjectCard({
     }
   };
 
-  const visibleAudience =
-    smartject.audience?.slice(0, MAX_INDUSTRIES) || [];
+  const visibleAudience = smartject.audience?.slice(0, MAX_INDUSTRIES) || [];
   const hiddenAudienceCount =
     (smartject.audience?.length || 0) - MAX_INDUSTRIES;
 
@@ -163,11 +162,19 @@ export function SmartjectCard({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-              <div className="w-4 h-4 bg-gradient-to-br from-orange-400 to-yellow-500 rounded-full" />
+          {smartject.image ? (
+            <img
+              src={smartject.image}
+              alt="Smartject Image"
+              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                <div className="w-4 h-4 bg-gradient-to-br from-orange-400 to-yellow-500 rounded-full" />
+              </div>
             </div>
-          </div>
+          )}
           <h3 className="font-semibold text-gray-900 line-clamp-2 leading-tight">
             {smartject.title}
           </h3>
