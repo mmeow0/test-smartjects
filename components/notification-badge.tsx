@@ -4,14 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Bell,
   MessageSquare,
@@ -98,8 +98,8 @@ export function NotificationBadge() {
   }
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger asChild>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
@@ -111,72 +111,83 @@ export function NotificationBadge() {
             </Badge>
           )}
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
-        <DropdownMenuLabel className="flex justify-between items-center">
-          <span>Notifications</span>
-          {unreadCount > 0 && (
+      </SheetTrigger>
+      <SheetContent className="w-full sm:w-96 sm:max-w-none p-0">
+        <div className="flex flex-col h-full">
+          <SheetHeader className="p-6 pb-4">
+            <SheetTitle>Notifications</SheetTitle>
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto p-0 text-xs w-fit"
+                onClick={markAllAsRead}
+              >
+                Mark all as read
+              </Button>
+            )}
+          </SheetHeader>
+          <Separator />
+          <div className="flex-1 overflow-y-auto">
+            {notifications.length > 0 ? (
+              <div className="space-y-1">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`flex items-start p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
+                      !notification.readAt ? "bg-muted/30" : ""
+                    }`}
+                    onClick={() => handleNotificationClick(notification)}
+                  >
+                    <div className="flex-shrink-0 mt-1 mr-3">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-medium text-sm truncate pr-2">
+                          {notification.title}
+                        </span>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          {getRelativeTime(notification.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1 line-clamp-2">
+                        {notification.message}
+                      </p>
+                      {notification.senderName && (
+                        <p className="text-xs text-muted-foreground mb-1">
+                          From: {notification.senderName}
+                        </p>
+                      )}
+                      {!notification.readAt && (
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-6 text-center text-muted-foreground">
+                No notifications
+              </div>
+            )}
+          </div>
+          <Separator />
+          <div className="p-4">
             <Button
               variant="ghost"
               size="sm"
-              className="h-auto p-0 text-xs"
-              onClick={markAllAsRead}
+              className="w-full"
+              onClick={() => {
+                setIsOpen(false);
+                router.push("/notifications");
+              }}
             >
-              Mark all as read
+              View all notifications
             </Button>
-          )}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {notifications.length > 0 ? (
-          notifications.map((notification) => (
-            <DropdownMenuItem
-              key={notification.id}
-              className={`flex items-start p-3 cursor-pointer space-x-3 ${!notification.readAt ? "bg-muted/30" : ""}`}
-              onClick={() => handleNotificationClick(notification)}
-            >
-              <div className="flex-shrink-0 mt-1">
-                {getNotificationIcon(notification.type)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start">
-                  <span className="font-medium text-sm truncate pr-2">
-                    {notification.title}
-                  </span>
-                  <span className="text-xs text-muted-foreground flex-shrink-0">
-                    {getRelativeTime(notification.createdAt)}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                  {notification.message}
-                </p>
-                {notification.senderName && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    From: {notification.senderName}
-                  </p>
-                )}
-                {!notification.readAt && (
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1"></div>
-                )}
-              </div>
-            </DropdownMenuItem>
-          ))
-        ) : (
-          <div className="p-4 text-center text-muted-foreground">
-            No notifications
           </div>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="justify-center" asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full"
-            onClick={() => router.push("/notifications")}
-          >
-            View all notifications
-          </Button>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -8,6 +8,7 @@ type Filters = {
   industries?: string[];
   audience?: string[];
   businessFunctions?: string[];
+  teams?: string[];
 };
 
 type SortOption = "recent" | "most-needed" | "most-provided" | "most-believed";
@@ -16,6 +17,7 @@ type AvailableFilters = {
   industries: string[];
   audience: string[];
   businessFunctions: string[];
+  teams: string[];
 };
 
 interface InfiniteSmartjectsState {
@@ -48,6 +50,7 @@ export function useInfiniteSmartjects(
     industries: [],
     audience: [],
     businessFunctions: [],
+    teams: [],
   });
 
   const [sortBy, setSortBy] = useState<SortOption>(initialSort);
@@ -56,6 +59,7 @@ export function useInfiniteSmartjects(
     industries: [],
     audience: [],
     businessFunctions: [],
+    teams: [],
   });
 
   // Use refs to prevent infinite loops
@@ -71,6 +75,7 @@ export function useInfiniteSmartjects(
       filters.industries?.join(","),
       filters.audience?.join(","),
       filters.businessFunctions?.join(","),
+      filters.teams?.join(","),
     ],
   );
 
@@ -211,6 +216,7 @@ export function useInfiniteSmartjects(
       industries: [],
       audience: [],
       businessFunctions: [],
+      teams: [],
     });
   }, []);
 

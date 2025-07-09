@@ -29,6 +29,7 @@ import { LoadMore } from "@/components/ui/load-more";
 import { Audience } from "@/components/icons/Audience";
 import { Functions } from "@/components/icons/Functions";
 import { Industries } from "@/components/icons/Industries";
+import { Team } from "@/components/icons/Team";
 
 // Debounce hook inline
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -117,7 +118,7 @@ const FilterBadge = memo(
     value,
     onRemove,
   }: {
-    type: "industry" | "technology" | "function";
+    type: "industry" | "technology" | "function" | "team";
     value: string;
     onRemove: (value: string) => void;
   }) => {
@@ -127,6 +128,7 @@ const FilterBadge = memo(
       industry: "bg-orange-100 text-orange-800 hover:bg-orange-200",
       technology: "bg-green-100 text-green-800 hover:bg-green-200",
       function: "bg-blue-100 text-blue-800 hover:bg-blue-200",
+      team: "bg-purple-100 text-purple-800 hover:bg-purple-200",
     };
 
     const bgColor = colorConfig[type];
@@ -198,22 +200,26 @@ export default function SmartjectsHubPage() {
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [selectedAudience, setSelectedAudience] = useState<string[]>([]);
   const [selectedFunctions, setSelectedFunctions] = useState<string[]>([]);
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
 
   const [showIndustriesDropdown, setShowIndustriesDropdown] = useState(false);
   const [showAudienceDropdown, setShowAudienceDropdown] = useState(false);
   const [showFunctionsDropdown, setShowFunctionsDropdown] = useState(false);
+  const [showTeamsDropdown, setShowTeamsDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
 
   // Search states for filter dropdowns
   const [industriesSearchTerm, setIndustriesSearchTerm] = useState("");
   const [audienceSearchTerm, setAudienceSearchTerm] = useState("");
   const [functionsSearchTerm, setFunctionsSearchTerm] = useState("");
+  const [teamsSearchTerm, setTeamsSearchTerm] = useState("");
 
   // Refs for dropdown close handling
   const industriesRef = useRef<HTMLDivElement>(null);
   const audienceRef = useRef<HTMLDivElement>(null);
   const functionsRef = useRef<HTMLDivElement>(null);
+  const teamsRef = useRef<HTMLDivElement>(null);
   const sortRef = useRef<HTMLDivElement>(null);
 
   const { user } = useAuth();
@@ -254,7 +260,7 @@ export default function SmartjectsHubPage() {
     [filters.industries, setFilter],
   );
 
-  const handleToggleTechnology = useCallback(
+  const handleToggleAudience = useCallback(
     (tech: string) => {
       setSelectedAudience((prev) => {
         const updated = toggleItem(prev, tech);
@@ -278,16 +284,30 @@ export default function SmartjectsHubPage() {
     [filters.businessFunctions, setFilter],
   );
 
+  const handleToggleTeams = useCallback(
+    (team: string) => {
+      setSelectedTeams((prev) => {
+        const updated = toggleItem(prev, team);
+        const filterUpdated = toggleItem(filters.teams || [], team);
+        setFilter("teams", filterUpdated);
+        return updated;
+      });
+    },
+    [filters.teams, setFilter],
+  );
+
   // Memoized total filters count
   const totalFiltersCount = useMemo(
     () =>
       selectedIndustries.length +
       selectedAudience.length +
-      selectedFunctions.length,
+      selectedFunctions.length +
+      selectedTeams.length,
     [
       selectedIndustries.length,
       selectedAudience.length,
       selectedFunctions.length,
+      selectedTeams.length,
     ],
   );
 
@@ -296,14 +316,17 @@ export default function SmartjectsHubPage() {
     setSelectedIndustries([]);
     setSelectedFunctions([]);
     setSelectedAudience([]);
+    setSelectedTeams([]);
     // Clear search terms
     setIndustriesSearchTerm("");
     setAudienceSearchTerm("");
     setFunctionsSearchTerm("");
+    setTeamsSearchTerm("");
     // Close all dropdowns
     setShowIndustriesDropdown(false);
     setShowAudienceDropdown(false);
     setShowFunctionsDropdown(false);
+    setShowTeamsDropdown(false);
     setShowSortDropdown(false);
     // Clear server-side filters
     clearFilters();
@@ -339,6 +362,13 @@ export default function SmartjectsHubPage() {
     );
   }, [meta.businessFunctions, functionsSearchTerm]);
 
+  const filteredTeams = useMemo(() => {
+    if (!teamsSearchTerm) return meta.teams || [];
+    return (meta.teams || []).filter((team) =>
+      team.toLowerCase().includes(teamsSearchTerm.toLowerCase()),
+    );
+  }, [meta.teams, teamsSearchTerm]);
+
   // Sort options
   const sortOptions = [
     { value: "recent", label: "Recent" },
@@ -361,7 +391,8 @@ export default function SmartjectsHubPage() {
     if (
       filters.businessFunctions?.length ||
       filters.industries?.length ||
-      filters.audience?.length
+      filters.audience?.length ||
+      filters.teams?.length
     ) {
       console.log("availableFilters updated", filters);
     }
@@ -369,6 +400,7 @@ export default function SmartjectsHubPage() {
     filters.businessFunctions?.length,
     filters.industries?.length,
     filters.audience?.length,
+    filters.teams?.length,
   ]);
 
   // Close dropdowns when clicking outside
@@ -391,6 +423,12 @@ export default function SmartjectsHubPage() {
         !functionsRef.current.contains(event.target as Node)
       ) {
         setShowFunctionsDropdown(false);
+      }
+      if (
+        teamsRef.current &&
+        !teamsRef.current.contains(event.target as Node)
+      ) {
+        setShowTeamsDropdown(false);
       }
       if (sortRef.current && !sortRef.current.contains(event.target as Node)) {
         setShowSortDropdown(false);
@@ -529,7 +567,7 @@ export default function SmartjectsHubPage() {
                                       : "text-gray-700"
                                   }`}
                                   onClick={() => {
-                                    handleToggleTechnology(tech);
+                                    handleToggleAudience(tech);
                                     setShowAudienceDropdown(false);
                                     setAudienceSearchTerm("");
                                   }}
@@ -601,6 +639,59 @@ export default function SmartjectsHubPage() {
                         </div>
                       )}
                     </div>
+
+                    <div className="relative" ref={teamsRef}>
+                      <div
+                        className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
+                        onClick={() => setShowTeamsDropdown(!showTeamsDropdown)}
+                      >
+                        <Team className="w-4 h-4" />
+                        <span className="text-sm font-medium text-gray-700">
+                          Teams
+                        </span>
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                      </div>
+                      {showTeamsDropdown && (
+                        <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-hidden">
+                          <div className="p-2 border-b border-gray-100">
+                            <Input
+                              placeholder="Search teams..."
+                              value={teamsSearchTerm}
+                              onChange={(e) =>
+                                setTeamsSearchTerm(e.target.value)
+                              }
+                              className="h-8 text-sm border-gray-200"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="max-h-48 overflow-y-auto">
+                            {filteredTeams.length > 0 ? (
+                              filteredTeams.map((team) => (
+                                <div
+                                  key={team}
+                                  className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                                    selectedTeams.includes(team)
+                                      ? "bg-blue-50 text-blue-700"
+                                      : "text-gray-700"
+                                  }`}
+                                  onClick={() => {
+                                    handleToggleTeams(team);
+                                    setShowTeamsDropdown(false);
+                                    setTeamsSearchTerm("");
+                                  }}
+                                >
+                                  {team}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                No teams found
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="relative" ref={sortRef}>
@@ -653,7 +744,7 @@ export default function SmartjectsHubPage() {
                       key={tech}
                       type="technology"
                       value={tech}
-                      onRemove={handleToggleTechnology}
+                      onRemove={handleToggleAudience}
                     />
                   ))}
                   {selectedFunctions.map((func) => (
@@ -662,6 +753,14 @@ export default function SmartjectsHubPage() {
                       type="function"
                       value={func}
                       onRemove={handleToggleFunction}
+                    />
+                  ))}
+                  {selectedTeams.map((team) => (
+                    <FilterBadge
+                      key={team}
+                      type="team"
+                      value={team}
+                      onRemove={handleToggleTeams}
                     />
                   ))}
                   <Button
@@ -692,7 +791,7 @@ export default function SmartjectsHubPage() {
                         icon={<Cpu className="h-4 w-4 mr-2 text-blue-500" />}
                         options={meta.audience ?? []}
                         selected={selectedAudience}
-                        onToggle={handleToggleTechnology}
+                        onToggle={handleToggleAudience}
                       />
                       <FilterCategory
                         title="Functions"
@@ -700,6 +799,13 @@ export default function SmartjectsHubPage() {
                         options={meta.businessFunctions ?? []}
                         selected={selectedFunctions}
                         onToggle={handleToggleFunction}
+                      />
+                      <FilterCategory
+                        title="Team"
+                        icon={<Team className="h-4 w-4 mr-2" />}
+                        options={meta.teams ?? []}
+                        selected={selectedTeams}
+                        onToggle={handleToggleTeams}
                       />
                     </div>
                   </CollapsibleContent>

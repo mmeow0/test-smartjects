@@ -47,6 +47,7 @@ export const smartjectService = {
       industries?: string[];
       audience?: string[];
       businessFunctions?: string[];
+      teams?: string[];
     },
     sortBy:
       | "recent"
@@ -65,7 +66,8 @@ export const smartjectService = {
     const hasRelatedFilters =
       (filters?.industries && filters.industries.length > 0) ||
       (filters?.audience && filters.audience.length > 0) ||
-      (filters?.businessFunctions && filters.businessFunctions.length > 0);
+      (filters?.businessFunctions && filters.businessFunctions.length > 0) ||
+      (filters?.teams && filters.teams.length > 0);
 
     if (hasRelatedFilters) {
       const smartjectIds = new Set<string>();
@@ -83,7 +85,9 @@ export const smartjectService = {
         }
 
         if (industryData && industryData.length > 0) {
-          industryData.forEach((item: any) => smartjectIds.add(item.smartject_id));
+          industryData.forEach((item: any) =>
+            smartjectIds.add(item.smartject_id),
+          );
         } else {
           return []; // No matches found
         }
@@ -102,14 +106,20 @@ export const smartjectService = {
         }
 
         if (audienceData && audienceData.length > 0) {
-          const audienceIds = new Set(audienceData.map((item: any) => item.smartject_id));
+          const audienceIds = new Set(
+            audienceData.map((item: any) => item.smartject_id),
+          );
           if (smartjectIds.size > 0) {
             // Intersect with existing IDs
-            const intersection = new Set([...smartjectIds].filter(id => audienceIds.has(id)));
+            const intersection = new Set(
+              [...smartjectIds].filter((id) => audienceIds.has(id)),
+            );
             smartjectIds.clear();
-            intersection.forEach(id => smartjectIds.add(id));
+            intersection.forEach((id) => smartjectIds.add(id));
           } else {
-            audienceData.forEach((item: any) => smartjectIds.add(item.smartject_id));
+            audienceData.forEach((item: any) =>
+              smartjectIds.add(item.smartject_id),
+            );
           }
         } else {
           return []; // No matches found
@@ -124,19 +134,63 @@ export const smartjectService = {
           .in("business_functions.name", filters.businessFunctions);
 
         if (functionsError) {
-          console.error("Error fetching business functions filtered IDs:", functionsError);
+          console.error(
+            "Error fetching business functions filtered IDs:",
+            functionsError,
+          );
           return [];
         }
 
         if (functionsData && functionsData.length > 0) {
-          const functionIds = new Set(functionsData.map((item: any) => item.smartject_id));
+          const functionIds = new Set(
+            functionsData.map((item: any) => item.smartject_id),
+          );
           if (smartjectIds.size > 0) {
             // Intersect with existing IDs
-            const intersection = new Set([...smartjectIds].filter(id => functionIds.has(id)));
+            const intersection = new Set(
+              [...smartjectIds].filter((id) => functionIds.has(id)),
+            );
             smartjectIds.clear();
-            intersection.forEach(id => smartjectIds.add(id));
+            intersection.forEach((id) => smartjectIds.add(id));
           } else {
-            functionsData.forEach((item: any) => smartjectIds.add(item.smartject_id));
+            functionsData.forEach((item: any) =>
+              smartjectIds.add(item.smartject_id),
+            );
+          }
+        } else {
+          return []; // No matches found
+        }
+      }
+
+      // Get IDs from teams filter
+      if (filters?.teams && filters.teams.length > 0) {
+        const { data: teamsData, error: teamsError } = await supabase
+          .from("smartjects_with_team_names")
+          .select("*")
+          .in("team_name", filters.teams);
+
+          console.log(teamsData);
+          
+        if (teamsError) {
+          console.error("Error fetching teams filtered IDs:", teamsError);
+          return [];
+        }
+
+        if (teamsData && teamsData.length > 0) {
+          const teamIds = new Set(
+            teamsData.map((item: any) => item.smartject_id),
+          );
+          if (smartjectIds.size > 0) {
+            // Intersect with existing IDs
+            const intersection = new Set(
+              [...smartjectIds].filter((id) => teamIds.has(id)),
+            );
+            smartjectIds.clear();
+            intersection.forEach((id) => smartjectIds.add(id));
+          } else {
+            teamsData.forEach((item: any) =>
+              smartjectIds.add(item.smartject_id),
+            );
           }
         } else {
           return []; // No matches found
@@ -151,7 +205,6 @@ export const smartjectService = {
       }
     }
 
-
     // Step 2: Get full smartject data
     let query = supabase.from("smartjects").select(
       `
@@ -164,6 +217,9 @@ export const smartjectService = {
       ),
       smartject_audience (
         audience (name)
+      ),
+      smartject_teams (
+        teams (name)
       ),
       votes (vote_type),
       comments(count)
@@ -279,6 +335,9 @@ export const smartjectService = {
       smartject_audience (
         audience (name)
       ),
+      smartject_teams (
+        teams (name)
+      ),
       votes (vote_type),
       comments(count)
     `,
@@ -347,6 +406,9 @@ export const smartjectService = {
             .map((a: any) => a.audience?.name)
             .filter(Boolean)
         : [];
+      const teams = Array.isArray(item.smartject_teams)
+        ? item.smartject_teams.map((t: any) => t.teams?.name).filter(Boolean)
+        : [];
 
       return {
         id: item.id as string,
@@ -366,6 +428,7 @@ export const smartjectService = {
         industries,
         businessFunctions,
         audience,
+        teams,
         relevantLinks: [] as { title: string; url: string }[],
         researchPapers: [] as { title: string; url: string }[],
         image: item.image_url as string | undefined,
@@ -395,6 +458,9 @@ export const smartjectService = {
         ),
         smartject_audience (
           audience (name)
+        ),
+        smartject_teams (
+          teams (name)
         )
       `,
       )
@@ -563,6 +629,9 @@ export const smartjectService = {
       smartject_audience (
         audience (name)
       ),
+      smartject_teams (
+        teams (name)
+      ),
       votes (vote_type),
       comments(count)
     `,
@@ -582,14 +651,17 @@ export const smartjectService = {
     industries: string[];
     audience: string[];
     businessFunctions: string[];
+    teams: string[];
   }> {
     const supabase = getSupabaseBrowserClient();
 
-    const [industriesRes, audienceRes, functionsRes] = await Promise.all([
-      supabase.from("industries").select("name"),
-      supabase.from("audience").select("name"),
-      supabase.from("business_functions").select("name"),
-    ]);
+    const [industriesRes, audienceRes, functionsRes, teamsRes] =
+      await Promise.all([
+        supabase.from("industries").select("name"),
+        supabase.from("audience").select("name"),
+        supabase.from("business_functions").select("name"),
+        supabase.from("teams").select("name"),
+      ]);
 
     const industries =
       industriesRes.error || !industriesRes.data
@@ -606,10 +678,16 @@ export const smartjectService = {
         ? []
         : functionsRes.data.map((f: any) => f.name);
 
+    const teams =
+      teamsRes.error || !teamsRes.data
+        ? []
+        : teamsRes.data.map((t: any) => t.name);
+
     return {
       industries,
       audience,
       businessFunctions,
+      teams,
     };
   },
 };

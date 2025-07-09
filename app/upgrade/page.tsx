@@ -169,9 +169,9 @@ export default function UpgradePage() {
           </CardFooter>
         </Card>
 
-        <Card className="border-primary">
+        <Card className="border-yellow-400">
           <CardHeader>
-            <div className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium w-fit mb-2">
+            <div className="bg-yellow-300 text-black px-3 py-1 rounded-full text-sm font-medium w-fit mb-2">
               Recommended
             </div>
             <CardTitle>Pro Plan</CardTitle>
