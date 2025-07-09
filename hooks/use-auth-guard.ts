@@ -18,12 +18,14 @@ interface UseAuthGuardReturn {
   canAccess: boolean;
 }
 
-export function useAuthGuard(options: UseAuthGuardOptions = {}): UseAuthGuardReturn {
+export function useAuthGuard(
+  options: UseAuthGuardOptions = {},
+): UseAuthGuardReturn {
   const {
     requireAuth = true,
     requirePaidAccount = false,
     redirectTo,
-    onUnauthorized
+    onUnauthorized,
   } = options;
 
   const router = useRouter();
@@ -55,6 +57,11 @@ export function useAuthGuard(options: UseAuthGuardOptions = {}): UseAuthGuardRet
 
     // Check paid account requirement
     if (requirePaidAccount && user?.accountType !== "paid") {
+      // Don't redirect if user is already on the upgrade page to avoid infinite loop
+      if (pathname === "/upgrade") {
+        return;
+      }
+
       if (onUnauthorized) {
         onUnauthorized();
       } else if (redirectTo) {
@@ -74,10 +81,10 @@ export function useAuthGuard(options: UseAuthGuardOptions = {}): UseAuthGuardRet
     redirectTo,
     onUnauthorized,
     router,
-    pathname
+    pathname,
   ]);
 
-  const canAccess = 
+  const canAccess =
     (!requireAuth || isAuthenticated) &&
     (!requirePaidAccount || user?.accountType === "paid");
 
@@ -87,7 +94,7 @@ export function useAuthGuard(options: UseAuthGuardOptions = {}): UseAuthGuardRet
     isLoading,
     isAuthenticated,
     user,
-    canAccess: canAccess && !isLoading
+    canAccess: canAccess && !isLoading,
   };
 }
 

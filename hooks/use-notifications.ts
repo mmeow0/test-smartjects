@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
+import { useRequireAuth } from "@/hooks/use-auth-guard";
 import { useToast } from "@/hooks/use-toast";
 import {
   notificationService,
@@ -17,7 +17,7 @@ interface UseNotificationsReturn {
 }
 
 export const useNotifications = (): UseNotificationsReturn => {
-  const { user, canAccess } = useRequirePaidAccount();
+  const { user, canAccess } = useRequireAuth();
   const { toast } = useToast();
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -65,8 +65,8 @@ export const useNotifications = (): UseNotificationsReturn => {
             prev.map((notif) =>
               notif.id === notificationId
                 ? { ...notif, readAt: new Date().toISOString() }
-                : notif
-            )
+                : notif,
+            ),
           );
 
           // Update unread count
@@ -87,7 +87,7 @@ export const useNotifications = (): UseNotificationsReturn => {
         });
       }
     },
-    [user?.id]
+    [user?.id],
   );
 
   // Mark all notifications as read
@@ -103,7 +103,7 @@ export const useNotifications = (): UseNotificationsReturn => {
           prev.map((notif) => ({
             ...notif,
             readAt: notif.readAt || new Date().toISOString(),
-          }))
+          })),
         );
 
         setUnreadCount(0);
@@ -130,21 +130,27 @@ export const useNotifications = (): UseNotificationsReturn => {
   }, [user?.id]);
 
   // Delete notification
-  const deleteNotification = useCallback(async (notificationId: string) => {
+  const deleteNotification = useCallback(
+    async (notificationId: string) => {
       if (!user?.id) return;
 
       try {
-      const result = await notificationService.deleteNotification(notificationId);
+        const result =
+          await notificationService.deleteNotification(notificationId);
 
         if (result.success) {
-        // Update local state
-        setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+          // Update local state
+          setNotifications((prev) =>
+            prev.filter((notif) => notif.id !== notificationId),
+          );
 
-        // Update unread count if the deleted notification was unread
-        const deletedNotification = notifications.find(n => n.id === notificationId);
-            if (deletedNotification && !deletedNotification.readAt) {
-          setUnreadCount(prev => Math.max(0, prev - 1));
-            }
+          // Update unread count if the deleted notification was unread
+          const deletedNotification = notifications.find(
+            (n) => n.id === notificationId,
+          );
+          if (deletedNotification && !deletedNotification.readAt) {
+            setUnreadCount((prev) => Math.max(0, prev - 1));
+          }
 
           toast({
             title: "Success",
@@ -166,7 +172,7 @@ export const useNotifications = (): UseNotificationsReturn => {
         });
       }
     },
-    [user?.id]
+    [user?.id],
   );
 
   // Refresh notifications
@@ -197,7 +203,7 @@ export const useNotifications = (): UseNotificationsReturn => {
           title: newNotification.title,
           description: newNotification.message,
         });
-      }
+      },
     );
 
     return () => {

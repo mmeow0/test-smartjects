@@ -30,7 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
 import { userSettingsService } from "@/lib/services/user-settings.service";
 import type { UserSettingsType } from "@/lib/types";
-import { WalletConnection } from "@/components/wallet";
+// import { WalletConnection } from "@/components/wallet";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -357,7 +357,7 @@ export default function SettingsPage() {
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             {/* <TabsTrigger value="appearance">Appearance</TabsTrigger> */}
             <TabsTrigger value="privacy">Privacy</TabsTrigger>
-            <TabsTrigger value="wallet">Wallet</TabsTrigger>
+            {/* <TabsTrigger value="wallet">Wallet</TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="account">
@@ -653,10 +653,10 @@ export default function SettingsPage() {
               </CardFooter>
             </Card>
           </TabsContent>
-
+{/* 
           <TabsContent value="wallet">
             <WalletConnection />
-          </TabsContent>
+          </TabsContent> */}
         </Tabs>
       </div>
     </div>

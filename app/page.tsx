@@ -1,7 +1,6 @@
 "use client";
 
 import { HeroSection } from "@/components/hero-section";
-import { CompanyLogos } from "@/components/company-logos";
 import { StayUpdatedSection } from "@/components/stay-updated-section";
 import { FooterNav } from "@/components/footer-nav";
 import { PolicyLinks } from "@/components/policy-links";
@@ -23,11 +22,6 @@ export default function Home() {
         {/* How It Works Section */}
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <HowItWorksSection />
-        </section>
-
-        {/* Company Logos Section */}
-        <section className="">
-          <CompanyLogos />
         </section>
 
         {/* Comparison Section */}
