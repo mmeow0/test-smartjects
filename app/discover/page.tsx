@@ -28,8 +28,8 @@ import { useInfiniteSmartjects } from "@/hooks/use-infinite-smartjects";
 import { LoadMore } from "@/components/ui/load-more";
 import { Audience } from "@/components/icons/Audience";
 import { Functions } from "@/components/icons/Functions";
-import { Industries } from "@/components/icons/Industries";
 import { Team } from "@/components/icons/Team";
+import { Industries } from "@/components/icons/Industries";
 
 // Debounce hook inline
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -201,7 +201,7 @@ export default function SmartjectsHubPage() {
   const [selectedAudience, setSelectedAudience] = useState<string[]>([]);
   const [selectedFunctions, setSelectedFunctions] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
-  const [isFilterOpen, setIsFilterOpen] = useState(true);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const [showIndustriesDropdown, setShowIndustriesDropdown] = useState(false);
   const [showAudienceDropdown, setShowAudienceDropdown] = useState(false);
@@ -209,18 +209,35 @@ export default function SmartjectsHubPage() {
   const [showTeamsDropdown, setShowTeamsDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
 
+  // Mobile dropdown states
+  const [showMobileIndustriesDropdown, setShowMobileIndustriesDropdown] =
+    useState(false);
+  const [showMobileAudienceDropdown, setShowMobileAudienceDropdown] =
+    useState(false);
+  const [showMobileFunctionsDropdown, setShowMobileFunctionsDropdown] =
+    useState(false);
+  const [showMobileTeamsDropdown, setShowMobileTeamsDropdown] = useState(false);
+  const [showMobileSortDropdown, setShowMobileSortDropdown] = useState(false);
+
   // Search states for filter dropdowns
   const [industriesSearchTerm, setIndustriesSearchTerm] = useState("");
   const [audienceSearchTerm, setAudienceSearchTerm] = useState("");
   const [functionsSearchTerm, setFunctionsSearchTerm] = useState("");
   const [teamsSearchTerm, setTeamsSearchTerm] = useState("");
 
-  // Refs for dropdown close handling
+  // Refs for dropdown close handling - Desktop
   const industriesRef = useRef<HTMLDivElement>(null);
   const audienceRef = useRef<HTMLDivElement>(null);
   const functionsRef = useRef<HTMLDivElement>(null);
   const teamsRef = useRef<HTMLDivElement>(null);
   const sortRef = useRef<HTMLDivElement>(null);
+
+  // Refs for dropdown close handling - Mobile
+  const mobileIndustriesRef = useRef<HTMLDivElement>(null);
+  const mobileAudienceRef = useRef<HTMLDivElement>(null);
+  const mobileFunctionsRef = useRef<HTMLDivElement>(null);
+  const mobileTeamsRef = useRef<HTMLDivElement>(null);
+  const mobileSortRef = useRef<HTMLDivElement>(null);
 
   const { user } = useAuth();
   const {
@@ -328,6 +345,12 @@ export default function SmartjectsHubPage() {
     setShowFunctionsDropdown(false);
     setShowTeamsDropdown(false);
     setShowSortDropdown(false);
+    // Close mobile dropdowns
+    setShowMobileIndustriesDropdown(false);
+    setShowMobileAudienceDropdown(false);
+    setShowMobileFunctionsDropdown(false);
+    setShowMobileTeamsDropdown(false);
+    setShowMobileSortDropdown(false);
     // Clear server-side filters
     clearFilters();
   }, [clearFilters]);
@@ -406,40 +429,111 @@ export default function SmartjectsHubPage() {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Desktop refs
       if (
+        showIndustriesDropdown &&
         industriesRef.current &&
         !industriesRef.current.contains(event.target as Node)
       ) {
         setShowIndustriesDropdown(false);
       }
       if (
+        showAudienceDropdown &&
         audienceRef.current &&
         !audienceRef.current.contains(event.target as Node)
       ) {
         setShowAudienceDropdown(false);
       }
       if (
+        showFunctionsDropdown &&
         functionsRef.current &&
         !functionsRef.current.contains(event.target as Node)
       ) {
         setShowFunctionsDropdown(false);
       }
       if (
+        showTeamsDropdown &&
         teamsRef.current &&
         !teamsRef.current.contains(event.target as Node)
       ) {
         setShowTeamsDropdown(false);
       }
-      if (sortRef.current && !sortRef.current.contains(event.target as Node)) {
+      if (
+        showSortDropdown &&
+        sortRef.current &&
+        !sortRef.current.contains(event.target as Node)
+      ) {
         setShowSortDropdown(false);
+      }
+
+      // Mobile refs
+      if (
+        showMobileIndustriesDropdown &&
+        mobileIndustriesRef.current &&
+        !mobileIndustriesRef.current.contains(event.target as Node)
+      ) {
+        setShowMobileIndustriesDropdown(false);
+      }
+      if (
+        showMobileAudienceDropdown &&
+        mobileAudienceRef.current &&
+        !mobileAudienceRef.current.contains(event.target as Node)
+      ) {
+        setShowMobileAudienceDropdown(false);
+      }
+      if (
+        showMobileFunctionsDropdown &&
+        mobileFunctionsRef.current &&
+        !mobileFunctionsRef.current.contains(event.target as Node)
+      ) {
+        setShowMobileFunctionsDropdown(false);
+      }
+      if (
+        showMobileTeamsDropdown &&
+        mobileTeamsRef.current &&
+        !mobileTeamsRef.current.contains(event.target as Node)
+      ) {
+        setShowMobileTeamsDropdown(false);
+      }
+      if (
+        showMobileSortDropdown &&
+        mobileSortRef.current &&
+        !mobileSortRef.current.contains(event.target as Node)
+      ) {
+        setShowMobileSortDropdown(false);
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+    const hasOpenDropdowns =
+      showIndustriesDropdown ||
+      showAudienceDropdown ||
+      showFunctionsDropdown ||
+      showTeamsDropdown ||
+      showSortDropdown ||
+      showMobileIndustriesDropdown ||
+      showMobileAudienceDropdown ||
+      showMobileFunctionsDropdown ||
+      showMobileTeamsDropdown ||
+      showMobileSortDropdown;
+
+    if (hasOpenDropdowns) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [
+    showIndustriesDropdown,
+    showAudienceDropdown,
+    showFunctionsDropdown,
+    showTeamsDropdown,
+    showSortDropdown,
+    showMobileIndustriesDropdown,
+    showMobileAudienceDropdown,
+    showMobileFunctionsDropdown,
+    showMobileTeamsDropdown,
+    showMobileSortDropdown,
+  ]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -462,6 +556,7 @@ export default function SmartjectsHubPage() {
             </div>
 
             <div className="flex flex-col w-full items-start gap-3 relative flex-[0_0_auto] mb-12">
+              {/* Search Bar and Mobile Toggle */}
               <div className="flex items-center gap-3 self-stretch w-full relative flex-[0_0_auto]">
                 <div className="flex h-16 items-start gap-3 p-3 relative flex-1 grow bg-gray-200 rounded-2xl">
                   <div className="flex items-center gap-3 relative flex-1 grow">
@@ -475,226 +570,256 @@ export default function SmartjectsHubPage() {
                       />
                     </div>
 
-                    <div className="relative" ref={industriesRef}>
-                      <div
-                        className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
-                        onClick={() =>
-                          setShowIndustriesDropdown(!showIndustriesDropdown)
-                        }
+                    {/* Mobile Filter Toggle Button */}
+                    <div className="flex items-center gap-2 lg:hidden">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsFilterOpen(!isFilterOpen)}
+                        className="flex items-center gap-2 h-10 px-3 rounded-xl bg-white border-gray-200 hover:bg-gray-50"
                       >
-                        <Industries className="w-4 h-4" />
-                        <span className="text-sm font-medium text-gray-700">
-                          Industries
+                        <Filter className="h-4 w-4" />
+                        <span className="text-sm font-medium">
+                          Filters
+                          {totalFiltersCount > 0 && (
+                            <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                              {totalFiltersCount}
+                            </span>
+                          )}
                         </span>
-                        <ChevronDown className="w-4 h-4 text-gray-500" />
-                      </div>
-                      {showIndustriesDropdown && (
-                        <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-hidden">
-                          <div className="p-2 border-b border-gray-100">
-                            <Input
-                              placeholder="Search industries..."
-                              value={industriesSearchTerm}
-                              onChange={(e) =>
-                                setIndustriesSearchTerm(e.target.value)
-                              }
-                              className="h-8 text-sm border-gray-200"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="max-h-48 overflow-y-auto">
-                            {filteredIndustries.length > 0 ? (
-                              filteredIndustries.map((industry) => (
-                                <div
-                                  key={industry}
-                                  className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                                    selectedIndustries.includes(industry)
-                                      ? "bg-blue-50 text-blue-700"
-                                      : "text-gray-700"
-                                  }`}
-                                  onClick={() => {
-                                    handleToggleIndustry(industry);
-                                    setShowIndustriesDropdown(false);
-                                    setIndustriesSearchTerm("");
-                                  }}
-                                >
-                                  {industry}
-                                </div>
-                              ))
-                            ) : (
-                              <div className="px-3 py-2 text-sm text-gray-500">
-                                No industries found
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${
+                            isFilterOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      </Button>
                     </div>
 
-                    <div className="relative" ref={audienceRef}>
-                      <div
-                        className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
-                        onClick={() =>
-                          setShowAudienceDropdown(!showAudienceDropdown)
-                        }
-                      >
-                        <Audience className="w-4 h-4" />
-                        <span className="text-sm font-medium text-gray-700">
-                          Audience
-                        </span>
-                        <ChevronDown className="w-4 h-4 text-gray-500" />
-                      </div>
-                      {showAudienceDropdown && (
-                        <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-hidden">
-                          <div className="p-2 border-b border-gray-100">
-                            <Input
-                              placeholder="Search audience..."
-                              value={audienceSearchTerm}
-                              onChange={(e) =>
-                                setAudienceSearchTerm(e.target.value)
-                              }
-                              className="h-8 text-sm border-gray-200"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="max-h-48 overflow-y-auto">
-                            {filteredAudience.length > 0 ? (
-                              filteredAudience.map((tech) => (
-                                <div
-                                  key={tech}
-                                  className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                                    selectedAudience.includes(tech)
-                                      ? "bg-blue-50 text-blue-700"
-                                      : "text-gray-700"
-                                  }`}
-                                  onClick={() => {
-                                    handleToggleAudience(tech);
-                                    setShowAudienceDropdown(false);
-                                    setAudienceSearchTerm("");
-                                  }}
-                                >
-                                  {tech}
-                                </div>
-                              ))
-                            ) : (
-                              <div className="px-3 py-2 text-sm text-gray-500">
-                                No audience found
-                              </div>
-                            )}
-                          </div>
+                    {/* Desktop Filters - Always visible on large screens */}
+                    <div className="hidden lg:flex items-center gap-3">
+                      <div className="relative" ref={industriesRef}>
+                        <div
+                          className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
+                          onClick={() =>
+                            setShowIndustriesDropdown(!showIndustriesDropdown)
+                          }
+                        >
+                          <Industries className="w-4 h-4" />
+                          <span className="text-sm font-medium text-gray-700">
+                            Industries
+                          </span>
+                          <ChevronDown className="w-4 h-4 text-gray-500" />
                         </div>
-                      )}
-                    </div>
+                        {showIndustriesDropdown && (
+                          <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-hidden">
+                            <div className="p-2 border-b border-gray-100">
+                              <Input
+                                placeholder="Search industries..."
+                                value={industriesSearchTerm}
+                                onChange={(e) =>
+                                  setIndustriesSearchTerm(e.target.value)
+                                }
+                                className="h-8 text-sm border-gray-200"
+                                autoFocus
+                              />
+                            </div>
+                            <div className="max-h-48 overflow-y-auto">
+                              {filteredIndustries.length > 0 ? (
+                                filteredIndustries.map((industry) => (
+                                  <div
+                                    key={industry}
+                                    className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                                      selectedIndustries.includes(industry)
+                                        ? "bg-blue-50 text-blue-700"
+                                        : "text-gray-700"
+                                    }`}
+                                    onClick={() => {
+                                      handleToggleIndustry(industry);
+                                      setShowIndustriesDropdown(false);
+                                      setIndustriesSearchTerm("");
+                                    }}
+                                  >
+                                    {industry}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="px-3 py-2 text-sm text-gray-500">
+                                  No industries found
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
 
-                    <div className="relative" ref={functionsRef}>
-                      <div
-                        className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
-                        onClick={() =>
-                          setShowFunctionsDropdown(!showFunctionsDropdown)
-                        }
-                      >
-                        <Functions className="w-4 h-4" />
-                        <span className="text-sm font-medium text-gray-700">
-                          Functions
-                        </span>
-                        <ChevronDown className="w-4 h-4 text-gray-500" />
-                      </div>
-                      {showFunctionsDropdown && (
-                        <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-hidden">
-                          <div className="p-2 border-b border-gray-100">
-                            <Input
-                              placeholder="Search functions..."
-                              value={functionsSearchTerm}
-                              onChange={(e) =>
-                                setFunctionsSearchTerm(e.target.value)
-                              }
-                              className="h-8 text-sm border-gray-200"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="max-h-48 overflow-y-auto">
-                            {filteredFunctions.length > 0 ? (
-                              filteredFunctions.map((func) => (
-                                <div
-                                  key={func}
-                                  className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                                    selectedFunctions.includes(func)
-                                      ? "bg-blue-50 text-blue-700"
-                                      : "text-gray-700"
-                                  }`}
-                                  onClick={() => {
-                                    handleToggleFunction(func);
-                                    setShowFunctionsDropdown(false);
-                                    setFunctionsSearchTerm("");
-                                  }}
-                                >
-                                  {func}
-                                </div>
-                              ))
-                            ) : (
-                              <div className="px-3 py-2 text-sm text-gray-500">
-                                No functions found
-                              </div>
-                            )}
-                          </div>
+                      <div className="relative" ref={audienceRef}>
+                        <div
+                          className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
+                          onClick={() =>
+                            setShowAudienceDropdown(!showAudienceDropdown)
+                          }
+                        >
+                          <Audience className="w-4 h-4" />
+                          <span className="text-sm font-medium text-gray-700">
+                            Audience
+                          </span>
+                          <ChevronDown className="w-4 h-4 text-gray-500" />
                         </div>
-                      )}
-                    </div>
+                        {showAudienceDropdown && (
+                          <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-hidden">
+                            <div className="p-2 border-b border-gray-100">
+                              <Input
+                                placeholder="Search audience..."
+                                value={audienceSearchTerm}
+                                onChange={(e) =>
+                                  setAudienceSearchTerm(e.target.value)
+                                }
+                                className="h-8 text-sm border-gray-200"
+                                autoFocus
+                              />
+                            </div>
+                            <div className="max-h-48 overflow-y-auto">
+                              {filteredAudience.length > 0 ? (
+                                filteredAudience.map((tech) => (
+                                  <div
+                                    key={tech}
+                                    className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                                      selectedAudience.includes(tech)
+                                        ? "bg-blue-50 text-blue-700"
+                                        : "text-gray-700"
+                                    }`}
+                                    onClick={() => {
+                                      handleToggleAudience(tech);
+                                      setShowAudienceDropdown(false);
+                                      setAudienceSearchTerm("");
+                                    }}
+                                  >
+                                    {tech}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="px-3 py-2 text-sm text-gray-500">
+                                  No audience found
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
 
-                    <div className="relative" ref={teamsRef}>
-                      <div
-                        className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
-                        onClick={() => setShowTeamsDropdown(!showTeamsDropdown)}
-                      >
-                        <Team className="w-4 h-4" />
-                        <span className="text-sm font-medium text-gray-700">
-                          Teams
-                        </span>
-                        <ChevronDown className="w-4 h-4 text-gray-500" />
-                      </div>
-                      {showTeamsDropdown && (
-                        <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-hidden">
-                          <div className="p-2 border-b border-gray-100">
-                            <Input
-                              placeholder="Search teams..."
-                              value={teamsSearchTerm}
-                              onChange={(e) =>
-                                setTeamsSearchTerm(e.target.value)
-                              }
-                              className="h-8 text-sm border-gray-200"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="max-h-48 overflow-y-auto">
-                            {filteredTeams.length > 0 ? (
-                              filteredTeams.map((team) => (
-                                <div
-                                  key={team}
-                                  className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                                    selectedTeams.includes(team)
-                                      ? "bg-blue-50 text-blue-700"
-                                      : "text-gray-700"
-                                  }`}
-                                  onClick={() => {
-                                    handleToggleTeams(team);
-                                    setShowTeamsDropdown(false);
-                                    setTeamsSearchTerm("");
-                                  }}
-                                >
-                                  {team}
-                                </div>
-                              ))
-                            ) : (
-                              <div className="px-3 py-2 text-sm text-gray-500">
-                                No teams found
-                              </div>
-                            )}
-                          </div>
+                      <div className="relative" ref={functionsRef}>
+                        <div
+                          className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
+                          onClick={() =>
+                            setShowFunctionsDropdown(!showFunctionsDropdown)
+                          }
+                        >
+                          <Functions className="w-4 h-4" />
+                          <span className="text-sm font-medium text-gray-700">
+                            Functions
+                          </span>
+                          <ChevronDown className="w-4 h-4 text-gray-500" />
                         </div>
-                      )}
+                        {showFunctionsDropdown && (
+                          <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-hidden">
+                            <div className="p-2 border-b border-gray-100">
+                              <Input
+                                placeholder="Search functions..."
+                                value={functionsSearchTerm}
+                                onChange={(e) =>
+                                  setFunctionsSearchTerm(e.target.value)
+                                }
+                                className="h-8 text-sm border-gray-200"
+                                autoFocus
+                              />
+                            </div>
+                            <div className="max-h-48 overflow-y-auto">
+                              {filteredFunctions.length > 0 ? (
+                                filteredFunctions.map((func) => (
+                                  <div
+                                    key={func}
+                                    className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                                      selectedFunctions.includes(func)
+                                        ? "bg-blue-50 text-blue-700"
+                                        : "text-gray-700"
+                                    }`}
+                                    onClick={() => {
+                                      handleToggleFunction(func);
+                                      setShowFunctionsDropdown(false);
+                                      setFunctionsSearchTerm("");
+                                    }}
+                                  >
+                                    {func}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="px-3 py-2 text-sm text-gray-500">
+                                  No functions found
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="relative" ref={teamsRef}>
+                        <div
+                          className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
+                          onClick={() =>
+                            setShowTeamsDropdown(!showTeamsDropdown)
+                          }
+                        >
+                          <Team className="w-4 h-4" />
+                          <span className="text-sm font-medium text-gray-700">
+                            Teams
+                          </span>
+                          <ChevronDown className="w-4 h-4 text-gray-500" />
+                        </div>
+                        {showTeamsDropdown && (
+                          <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-hidden">
+                            <div className="p-2 border-b border-gray-100">
+                              <Input
+                                placeholder="Search teams..."
+                                value={teamsSearchTerm}
+                                onChange={(e) =>
+                                  setTeamsSearchTerm(e.target.value)
+                                }
+                                className="h-8 text-sm border-gray-200"
+                                autoFocus
+                              />
+                            </div>
+                            <div className="max-h-48 overflow-y-auto">
+                              {filteredTeams.length > 0 ? (
+                                filteredTeams.map((team) => (
+                                  <div
+                                    key={team}
+                                    className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                                      selectedTeams.includes(team)
+                                        ? "bg-blue-50 text-blue-700"
+                                        : "text-gray-700"
+                                    }`}
+                                    onClick={() => {
+                                      handleToggleTeams(team);
+                                      setShowTeamsDropdown(false);
+                                      setTeamsSearchTerm("");
+                                    }}
+                                  >
+                                    {team}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="px-3 py-2 text-sm text-gray-500">
+                                  No teams found
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="relative" ref={sortRef}>
+                  {/* Desktop Sort */}
+                  <div className="hidden lg:flex relative" ref={sortRef}>
                     <div
                       className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
                       onClick={() => setShowSortDropdown(!showSortDropdown)}
@@ -727,6 +852,363 @@ export default function SmartjectsHubPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Mobile Filters - Collapsible */}
+              {isFilterOpen && (
+                <div className="lg:hidden w-full space-y-3 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-semibold text-gray-900">
+                      Filters
+                    </h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsFilterOpen(false)}
+                      className="p-1 h-8 w-8"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {/* Mobile Industries Filter */}
+                    <div className="relative" ref={mobileIndustriesRef}>
+                      <div
+                        className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
+                        onClick={() =>
+                          setShowMobileIndustriesDropdown(
+                            !showMobileIndustriesDropdown,
+                          )
+                        }
+                      >
+                        <div className="flex items-center gap-2">
+                          <Industries className="w-4 h-4" />
+                          <span className="text-sm font-medium text-gray-700">
+                            Industries
+                          </span>
+                          {selectedIndustries.length > 0 && (
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                              {selectedIndustries.length}
+                            </span>
+                          )}
+                        </div>
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                      </div>
+                      {showMobileIndustriesDropdown && (
+                        <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-hidden">
+                          <div className="p-2 border-b border-gray-100">
+                            <Input
+                              placeholder="Search industries..."
+                              value={industriesSearchTerm}
+                              onChange={(e) =>
+                                setIndustriesSearchTerm(e.target.value)
+                              }
+                              className="h-8 text-sm border-gray-200"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="max-h-36 overflow-y-auto">
+                            {filteredIndustries.length > 0 ? (
+                              filteredIndustries.map((industry) => (
+                                <div
+                                  key={industry}
+                                  className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
+                                    selectedIndustries.includes(industry)
+                                      ? "bg-blue-50 text-blue-700 font-medium"
+                                      : "text-gray-700"
+                                  }`}
+                                  onClick={() => {
+                                    handleToggleIndustry(industry);
+                                    setShowMobileIndustriesDropdown(false);
+                                    setIndustriesSearchTerm("");
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span>{industry}</span>
+                                    {selectedIndustries.includes(industry) && (
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                                    )}
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="px-4 py-3 text-sm text-gray-500">
+                                No industries found
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Mobile Audience Filter */}
+                    <div className="relative" ref={mobileAudienceRef}>
+                      <div
+                        className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
+                        onClick={() =>
+                          setShowMobileAudienceDropdown(
+                            !showMobileAudienceDropdown,
+                          )
+                        }
+                      >
+                        <div className="flex items-center gap-2">
+                          <Audience className="w-4 h-4" />
+                          <span className="text-sm font-medium text-gray-700">
+                            Audience
+                          </span>
+                          {selectedAudience.length > 0 && (
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                              {selectedAudience.length}
+                            </span>
+                          )}
+                        </div>
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                      </div>
+                      {showMobileAudienceDropdown && (
+                        <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-hidden">
+                          <div className="p-2 border-b border-gray-100">
+                            <Input
+                              placeholder="Search audience..."
+                              value={audienceSearchTerm}
+                              onChange={(e) =>
+                                setAudienceSearchTerm(e.target.value)
+                              }
+                              className="h-8 text-sm border-gray-200"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="max-h-36 overflow-y-auto">
+                            {filteredAudience.length > 0 ? (
+                              filteredAudience.map((tech) => (
+                                <div
+                                  key={tech}
+                                  className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
+                                    selectedAudience.includes(tech)
+                                      ? "bg-blue-50 text-blue-700 font-medium"
+                                      : "text-gray-700"
+                                  }`}
+                                  onClick={() => {
+                                    handleToggleAudience(tech);
+                                    setShowMobileAudienceDropdown(false);
+                                    setAudienceSearchTerm("");
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span>{tech}</span>
+                                    {selectedAudience.includes(tech) && (
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                                    )}
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="px-4 py-3 text-sm text-gray-500">
+                                No audience found
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Mobile Functions Filter */}
+                    <div className="relative" ref={mobileFunctionsRef}>
+                      <div
+                        className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
+                        onClick={() =>
+                          setShowMobileFunctionsDropdown(
+                            !showMobileFunctionsDropdown,
+                          )
+                        }
+                      >
+                        <div className="flex items-center gap-2">
+                          <Functions className="w-4 h-4" />
+                          <span className="text-sm font-medium text-gray-700">
+                            Functions
+                          </span>
+                          {selectedFunctions.length > 0 && (
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                              {selectedFunctions.length}
+                            </span>
+                          )}
+                        </div>
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                      </div>
+                      {showMobileFunctionsDropdown && (
+                        <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-hidden">
+                          <div className="p-2 border-b border-gray-100">
+                            <Input
+                              placeholder="Search functions..."
+                              value={functionsSearchTerm}
+                              onChange={(e) =>
+                                setFunctionsSearchTerm(e.target.value)
+                              }
+                              className="h-8 text-sm border-gray-200"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="max-h-36 overflow-y-auto">
+                            {filteredFunctions.length > 0 ? (
+                              filteredFunctions.map((func) => (
+                                <div
+                                  key={func}
+                                  className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
+                                    selectedFunctions.includes(func)
+                                      ? "bg-blue-50 text-blue-700 font-medium"
+                                      : "text-gray-700"
+                                  }`}
+                                  onClick={() => {
+                                    handleToggleFunction(func);
+                                    setShowMobileFunctionsDropdown(false);
+                                    setFunctionsSearchTerm("");
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span>{func}</span>
+                                    {selectedFunctions.includes(func) && (
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                                    )}
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="px-4 py-3 text-sm text-gray-500">
+                                No functions found
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Mobile Teams Filter */}
+                    <div className="relative" ref={mobileTeamsRef}>
+                      <div
+                        className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
+                        onClick={() =>
+                          setShowMobileTeamsDropdown(!showMobileTeamsDropdown)
+                        }
+                      >
+                        <div className="flex items-center gap-2">
+                          <Team className="w-4 h-4" />
+                          <span className="text-sm font-medium text-gray-700">
+                            Teams
+                          </span>
+                          {selectedTeams.length > 0 && (
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                              {selectedTeams.length}
+                            </span>
+                          )}
+                        </div>
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                      </div>
+                      {showMobileTeamsDropdown && (
+                        <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-hidden">
+                          <div className="p-2 border-b border-gray-100">
+                            <Input
+                              placeholder="Search teams..."
+                              value={teamsSearchTerm}
+                              onChange={(e) =>
+                                setTeamsSearchTerm(e.target.value)
+                              }
+                              className="h-8 text-sm border-gray-200"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="max-h-36 overflow-y-auto">
+                            {filteredTeams.length > 0 ? (
+                              filteredTeams.map((team) => (
+                                <div
+                                  key={team}
+                                  className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
+                                    selectedTeams.includes(team)
+                                      ? "bg-blue-50 text-blue-700 font-medium"
+                                      : "text-gray-700"
+                                  }`}
+                                  onClick={() => {
+                                    handleToggleTeams(team);
+                                    setShowMobileTeamsDropdown(false);
+                                    setTeamsSearchTerm("");
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span>{team}</span>
+                                    {selectedTeams.includes(team) && (
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                                    )}
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="px-4 py-3 text-sm text-gray-500">
+                                No teams found
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Mobile Sort */}
+                    <div className="relative" ref={mobileSortRef}>
+                      <div
+                        className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
+                        onClick={() =>
+                          setShowMobileSortDropdown(!showMobileSortDropdown)
+                        }
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-700">
+                            Sort:{" "}
+                            {
+                              sortOptions.find((opt) => opt.value === sortBy)
+                                ?.label
+                            }
+                          </span>
+                        </div>
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                      </div>
+                      {showMobileSortDropdown && (
+                        <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-hidden">
+                          {sortOptions.map((option) => (
+                            <div
+                              key={option.value}
+                              className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
+                                sortBy === option.value
+                                  ? "bg-blue-50 text-blue-700 font-medium"
+                                  : "text-gray-700"
+                              }`}
+                              onClick={() => {
+                                setSortBy(option.value);
+                                setShowMobileSortDropdown(false);
+                              }}
+                            >
+                              {option.label}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Clear All Filters */}
+                  {totalFiltersCount > 0 && (
+                    <div className="pt-2 border-t border-gray-200">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          handleClearAllFilters();
+                          setIsFilterOpen(false);
+                        }}
+                        className="w-full text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                      >
+                        Clear all filters
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Active Filters Tags */}
               {totalFiltersCount > 0 && (

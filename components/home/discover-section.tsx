@@ -25,15 +25,18 @@ export const DiscoverSection = () => {
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [selectedAudience, setSelectedAudience] = useState<string[]>([]);
   const [selectedFunctions, setSelectedFunctions] = useState<string[]>([]);
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [showIndustriesDropdown, setShowIndustriesDropdown] = useState(false);
   const [showAudienceDropdown, setShowAudienceDropdown] = useState(false);
   const [showFunctionsDropdown, setShowFunctionsDropdown] = useState(false);
+  const [showTeamsDropdown, setShowTeamsDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
 
   // Search states for filter dropdowns
   const [industriesSearchTerm, setIndustriesSearchTerm] = useState("");
   const [audienceSearchTerm, setAudienceSearchTerm] = useState("");
   const [functionsSearchTerm, setFunctionsSearchTerm] = useState("");
+  const [teamsSearchTerm, setTeamsSearchTerm] = useState("");
 
   // Debounce search query for better performance
   const debouncedQuery = useDebounce(query, 300);
@@ -80,16 +83,30 @@ export const DiscoverSection = () => {
     [filters.businessFunctions, setFilter],
   );
 
+  const handleToggleTeams = useCallback(
+    (team: string) => {
+      setSelectedTeams((prev) => {
+        const updated = toggleItem(prev, team);
+        const filterUpdated = toggleItem(filters.teams || [], team);
+        setFilter("teams", filterUpdated);
+        return updated;
+      });
+    },
+    [filters.teams, setFilter],
+  );
+
   // Memoized total filters count
   const totalFiltersCount = useMemo(
     () =>
       selectedIndustries.length +
       selectedAudience.length +
-      selectedFunctions.length,
+      selectedFunctions.length +
+      selectedTeams.length,
     [
       selectedIndustries.length,
       selectedAudience.length,
       selectedFunctions.length,
+      selectedTeams.length,
     ],
   );
 
@@ -98,14 +115,17 @@ export const DiscoverSection = () => {
     setSelectedIndustries([]);
     setSelectedFunctions([]);
     setSelectedAudience([]);
+    setSelectedTeams([]);
     // Clear search terms
     setIndustriesSearchTerm("");
     setAudienceSearchTerm("");
     setFunctionsSearchTerm("");
+    setTeamsSearchTerm("");
     // Close all dropdowns
     setShowIndustriesDropdown(false);
     setShowAudienceDropdown(false);
     setShowFunctionsDropdown(false);
+    setShowTeamsDropdown(false);
     setShowSortDropdown(false);
     // Clear server-side filters
     clearFilters();
@@ -141,6 +161,13 @@ export const DiscoverSection = () => {
     );
   }, [meta.businessFunctions, functionsSearchTerm]);
 
+  const filteredTeams = useMemo(() => {
+    if (!teamsSearchTerm) return meta.teams || [];
+    return (meta.teams || []).filter((team) =>
+      team.toLowerCase().includes(teamsSearchTerm.toLowerCase()),
+    );
+  }, [meta.teams, teamsSearchTerm]);
+
   const handleVoted = useCallback(() => {
     refetch();
   }, [refetch]);
@@ -157,14 +184,17 @@ export const DiscoverSection = () => {
             selectedIndustries={selectedIndustries}
             selectedAudience={selectedAudience}
             selectedFunctions={selectedFunctions}
+            selectedTeams={selectedTeams}
             onToggleIndustry={handleToggleIndustry}
             onToggleTechnology={handleToggleTechnology}
             onToggleFunction={handleToggleFunction}
+            onToggleTeams={handleToggleTeams}
             sortBy={sortBy}
             onSortChange={setSortBy}
             showIndustriesDropdown={showIndustriesDropdown}
             showAudienceDropdown={showAudienceDropdown}
             showFunctionsDropdown={showFunctionsDropdown}
+            showTeamsDropdown={showTeamsDropdown}
             showSortDropdown={showSortDropdown}
             onToggleIndustriesDropdown={() =>
               setShowIndustriesDropdown(!showIndustriesDropdown)
@@ -175,6 +205,9 @@ export const DiscoverSection = () => {
             onToggleFunctionsDropdown={() =>
               setShowFunctionsDropdown(!showFunctionsDropdown)
             }
+            onToggleTeamsDropdown={() =>
+              setShowTeamsDropdown(!showTeamsDropdown)
+            }
             onToggleSortDropdown={() => setShowSortDropdown(!showSortDropdown)}
             onClearAllFilters={handleClearAllFilters}
             meta={meta}
@@ -182,12 +215,15 @@ export const DiscoverSection = () => {
             industriesSearchTerm={industriesSearchTerm}
             audienceSearchTerm={audienceSearchTerm}
             functionsSearchTerm={functionsSearchTerm}
+            teamsSearchTerm={teamsSearchTerm}
             onIndustriesSearchChange={setIndustriesSearchTerm}
             onAudienceSearchChange={setAudienceSearchTerm}
             onFunctionsSearchChange={setFunctionsSearchTerm}
+            onTeamsSearchChange={setTeamsSearchTerm}
             filteredIndustries={filteredIndustries}
             filteredAudience={filteredAudience}
             filteredFunctions={filteredFunctions}
+            filteredTeams={filteredTeams}
           />
         </div>
 

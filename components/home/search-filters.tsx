@@ -5,6 +5,7 @@ import { ChevronDown, Search, Filter, X } from "lucide-react";
 import { Audience } from "@/components/icons/Audience";
 import { Functions } from "@/components/icons/Functions";
 import { Industries } from "@/components/icons/Industries";
+import { Team } from "@/components/icons/Team";
 import { FilterBadge } from "./filter-badge";
 
 interface SearchFiltersProps {
@@ -13,9 +14,11 @@ interface SearchFiltersProps {
   selectedIndustries: string[];
   selectedAudience: string[];
   selectedFunctions: string[];
+  selectedTeams: string[];
   onToggleIndustry: (industry: string) => void;
   onToggleTechnology: (tech: string) => void;
   onToggleFunction: (func: string) => void;
+  onToggleTeams: (team: string) => void;
   sortBy: "recent" | "most-needed" | "most-provided" | "most-believed";
   onSortChange: (
     sort: "recent" | "most-needed" | "most-provided" | "most-believed",
@@ -23,27 +26,33 @@ interface SearchFiltersProps {
   showIndustriesDropdown: boolean;
   showAudienceDropdown: boolean;
   showFunctionsDropdown: boolean;
+  showTeamsDropdown: boolean;
   showSortDropdown: boolean;
   onToggleIndustriesDropdown: () => void;
   onToggleAudienceDropdown: () => void;
   onToggleFunctionsDropdown: () => void;
+  onToggleTeamsDropdown: () => void;
   onToggleSortDropdown: () => void;
   onClearAllFilters: () => void;
   meta: {
     industries: string[];
     audience: string[];
     businessFunctions: string[];
+    teams: string[];
   };
   totalFiltersCount: number;
   industriesSearchTerm: string;
   audienceSearchTerm: string;
   functionsSearchTerm: string;
+  teamsSearchTerm: string;
   onIndustriesSearchChange: (term: string) => void;
   onAudienceSearchChange: (term: string) => void;
   onFunctionsSearchChange: (term: string) => void;
+  onTeamsSearchChange: (term: string) => void;
   filteredIndustries: string[];
   filteredAudience: string[];
   filteredFunctions: string[];
+  filteredTeams: string[];
 }
 
 const sortOptions = [
@@ -60,18 +69,22 @@ export const SearchFilters = memo(
     selectedIndustries,
     selectedAudience,
     selectedFunctions,
+    selectedTeams,
     onToggleIndustry,
     onToggleTechnology,
     onToggleFunction,
+    onToggleTeams,
     sortBy,
     onSortChange,
     showIndustriesDropdown,
     showAudienceDropdown,
     showFunctionsDropdown,
+    showTeamsDropdown,
     showSortDropdown,
     onToggleIndustriesDropdown,
     onToggleAudienceDropdown,
     onToggleFunctionsDropdown,
+    onToggleTeamsDropdown,
     onToggleSortDropdown,
     onClearAllFilters,
     meta,
@@ -79,19 +92,24 @@ export const SearchFilters = memo(
     industriesSearchTerm,
     audienceSearchTerm,
     functionsSearchTerm,
+    teamsSearchTerm,
     onIndustriesSearchChange,
     onAudienceSearchChange,
     onFunctionsSearchChange,
+    onTeamsSearchChange,
     filteredIndustries,
     filteredAudience,
     filteredFunctions,
+    filteredTeams,
   }: SearchFiltersProps) => {
     const [showMobileFilters, setShowMobileFilters] = useState(false);
+    const [showMobileSortDropdown, setShowMobileSortDropdown] = useState(false);
 
     // Refs for dropdown close handling
     const industriesRef = useRef<HTMLDivElement>(null);
     const audienceRef = useRef<HTMLDivElement>(null);
     const functionsRef = useRef<HTMLDivElement>(null);
+    const teamsRef = useRef<HTMLDivElement>(null);
     const sortRef = useRef<HTMLDivElement>(null);
 
     // Close dropdowns when clicking outside
@@ -119,11 +137,26 @@ export const SearchFilters = memo(
           onToggleFunctionsDropdown();
         }
         if (
+          showTeamsDropdown &&
+          teamsRef.current &&
+          !teamsRef.current.contains(event.target as Node)
+        ) {
+          onToggleTeamsDropdown();
+        }
+        if (
           showSortDropdown &&
           sortRef.current &&
           !sortRef.current.contains(event.target as Node)
         ) {
           onToggleSortDropdown();
+        }
+        if (
+          showMobileSortDropdown &&
+          event.target &&
+          event.target instanceof Element &&
+          !event.target.closest("[data-mobile-sort-dropdown]")
+        ) {
+          setShowMobileSortDropdown(false);
         }
       };
 
@@ -131,7 +164,9 @@ export const SearchFilters = memo(
         showIndustriesDropdown ||
         showAudienceDropdown ||
         showFunctionsDropdown ||
-        showSortDropdown;
+        showTeamsDropdown ||
+        showSortDropdown ||
+        showMobileSortDropdown;
 
       if (hasOpenDropdowns) {
         document.addEventListener("mousedown", handleClickOutside);
@@ -143,10 +178,13 @@ export const SearchFilters = memo(
       showIndustriesDropdown,
       showAudienceDropdown,
       showFunctionsDropdown,
+      showTeamsDropdown,
       showSortDropdown,
+      showMobileSortDropdown,
       onToggleIndustriesDropdown,
       onToggleAudienceDropdown,
       onToggleFunctionsDropdown,
+      onToggleTeamsDropdown,
       onToggleSortDropdown,
     ]);
 
@@ -188,17 +226,19 @@ export const SearchFilters = memo(
             </Button>
 
             {/* Sort Dropdown - Always visible on mobile */}
-            <div className="relative" ref={sortRef}>
+            <div className="relative" data-mobile-sort-dropdown>
               <div
                 className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-3 h-12 cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={onToggleSortDropdown}
+                onClick={() =>
+                  setShowMobileSortDropdown(!showMobileSortDropdown)
+                }
               >
                 <span className="text-sm font-medium text-gray-700">
                   {sortOptions.find((opt) => opt.value === sortBy)?.label}
                 </span>
                 <ChevronDown className="w-4 h-4 text-gray-500" />
               </div>
-              {showSortDropdown && (
+              {showMobileSortDropdown && (
                 <div className="absolute top-14 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-44 overflow-hidden">
                   {sortOptions.map((option) => (
                     <div
@@ -210,7 +250,7 @@ export const SearchFilters = memo(
                       }`}
                       onClick={() => {
                         onSortChange(option.value);
-                        onToggleSortDropdown();
+                        setShowMobileSortDropdown(false);
                       }}
                     >
                       {option.label}
@@ -410,6 +450,67 @@ export const SearchFilters = memo(
                   </div>
                 )}
               </div>
+
+              {/* Teams Filter */}
+              <div className="relative" ref={teamsRef}>
+                <div
+                  className="flex items-center gap-2 bg-white rounded-xl px-4 py-2.5 h-11 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors min-w-0"
+                  onClick={onToggleTeamsDropdown}
+                >
+                  <Team className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm font-medium text-gray-700 truncate">
+                    Teams
+                    {selectedTeams.length > 0 && (
+                      <span className="ml-1 text-blue-600">
+                        ({selectedTeams.length})
+                      </span>
+                    )}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                </div>
+                {showTeamsDropdown && (
+                  <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-56 max-h-60 overflow-hidden">
+                    <div className="p-2 border-b border-gray-100">
+                      <Input
+                        placeholder="Search teams..."
+                        value={teamsSearchTerm}
+                        onChange={(e) => onTeamsSearchChange(e.target.value)}
+                        className="h-8 text-sm border-gray-200"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="max-h-48 overflow-y-auto">
+                      {filteredTeams.length > 0 ? (
+                        filteredTeams.map((team) => (
+                          <div
+                            key={team}
+                            className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
+                              selectedTeams.includes(team)
+                                ? "bg-blue-50 text-blue-700 font-medium"
+                                : "text-gray-700"
+                            }`}
+                            onClick={() => {
+                              onToggleTeams(team);
+                              onTeamsSearchChange("");
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="truncate">{team}</span>
+                              {selectedTeams.includes(team) && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-500">
+                          No teams found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Desktop Sort */}
@@ -448,7 +549,7 @@ export const SearchFilters = memo(
 
           {/* Mobile Filters - Collapsible */}
           {showMobileFilters && (
-            <div className="lg:hidden space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+            <div className="lg:hidden space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-200 w-full">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-semibold text-gray-900">
                   Filters
@@ -658,6 +759,69 @@ export const SearchFilters = memo(
                     </div>
                   )}
                 </div>
+
+                {/* Mobile Teams Filter */}
+                <div className="relative" ref={teamsRef}>
+                  <div
+                    className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
+                    onClick={onToggleTeamsDropdown}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Team className="w-4 h-4" />
+                      <span className="text-sm font-medium text-gray-700">
+                        Teams
+                      </span>
+                      {selectedTeams.length > 0 && (
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                          {selectedTeams.length}
+                        </span>
+                      )}
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  </div>
+                  {showTeamsDropdown && (
+                    <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-hidden">
+                      <div className="p-2 border-b border-gray-100">
+                        <Input
+                          placeholder="Search teams..."
+                          value={teamsSearchTerm}
+                          onChange={(e) => onTeamsSearchChange(e.target.value)}
+                          className="h-8 text-sm border-gray-200"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-36 overflow-y-auto">
+                        {filteredTeams.length > 0 ? (
+                          filteredTeams.map((team) => (
+                            <div
+                              key={team}
+                              className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
+                                selectedTeams.includes(team)
+                                  ? "bg-blue-50 text-blue-700 font-medium"
+                                  : "text-gray-700"
+                              }`}
+                              onClick={() => {
+                                onToggleTeams(team);
+                                onTeamsSearchChange("");
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span>{team}</span>
+                                {selectedTeams.includes(team) && (
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-sm text-gray-500">
+                            No teams found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Clear All Filters */}
@@ -669,6 +833,7 @@ export const SearchFilters = memo(
                     onClick={() => {
                       onClearAllFilters();
                       setShowMobileFilters(false);
+                      setShowMobileSortDropdown(false);
                     }}
                     className="w-full text-gray-600 hover:text-gray-800 hover:bg-gray-100"
                   >
@@ -705,6 +870,14 @@ export const SearchFilters = memo(
                 type="function"
                 value={func}
                 onRemove={onToggleFunction}
+              />
+            ))}
+            {selectedTeams.map((team) => (
+              <FilterBadge
+                key={team}
+                type="team"
+                value={team}
+                onRemove={onToggleTeams}
               />
             ))}
             <Button
