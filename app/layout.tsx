@@ -19,8 +19,8 @@ const dynalight = Dynalight({
 });
 
 export const metadata = {
-  title: "Smartjects - AI Research to Business Implementation",
-  description: "Discover and implement AI innovations for your business",
+  title: "Smartjects",
+  description: "Discover and implement innovations for your business",
   generator: "v0.dev",
   icons: {
     icon: "/favicon.ico",

@@ -50,7 +50,7 @@ export const ComparisonSection = memo(() => (
             <div className="bg-[#ffffff0d] rounded-2xl p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-[50px] lg:h-[50px] flex items-center justify-center bg-[#ff6b00] rounded-xl lg:rounded-2xl flex-shrink-0">
-                  <span className="text-black font-thin text-3xl sm:text-4xl lg:text-6xl">
+                  <span className="text-black font-thin text-3xl sm:text-4xl lg:text-6xl  pb-1">
                     -
                   </span>
                 </div>
@@ -99,7 +99,7 @@ export const ComparisonSection = memo(() => (
             <div className="bg-white rounded-2xl p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-[50px] lg:h-[50px] flex items-center justify-center bg-[#ffd800] rounded-xl lg:rounded-2xl flex-shrink-0">
-                  <span className="text-black font-thin text-2xl sm:text-3xl lg:text-4xl">
+                  <span className="text-black font-thin text-2xl sm:text-3xl lg:text-4xl pb-1">
                     +
                   </span>
                 </div>
@@ -175,7 +175,7 @@ export const ComparisonSection = memo(() => (
             <div className="bg-[#ffffff0d] rounded-2xl p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-[50px] lg:h-[50px] flex items-center justify-center bg-[#ff6b00] rounded-xl lg:rounded-2xl flex-shrink-0">
-                  <span className="text-black font-thin text-3xl sm:text-4xl lg:text-6xl">
+                  <span className="text-black font-thin text-3xl sm:text-4xl lg:text-6xl pb-1">
                     -
                   </span>
                 </div>
@@ -225,7 +225,7 @@ export const ComparisonSection = memo(() => (
             <div className="bg-white rounded-2xl p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-[50px] lg:h-[50px] flex items-center justify-center bg-[#ffd800] rounded-xl lg:rounded-2xl flex-shrink-0">
-                  <span className="text-black font-thin text-2xl sm:text-3xl lg:text-4xl">
+                  <span className="text-black font-thin text-2xl sm:text-3xl lg:text-4xl pb-1">
                     +
                   </span>
                 </div>
