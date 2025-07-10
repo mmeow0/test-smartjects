@@ -1317,7 +1317,7 @@ export function CreateProposalModal({
       <MobileDialog open={isOpen} onOpenChange={onClose}>
         <MobileDialogContent
           className="sm:max-w-4xl p-4 sm:p-6"
-          overlayClassName="bg-black/10"
+          overlayClassName="bg-black/30"
         >
           <TooltipProvider>
             <MobileDialogHeader>
