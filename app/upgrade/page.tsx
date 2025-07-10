@@ -177,10 +177,10 @@ export default function UpgradePage() {
             <CardTitle>Pro Plan</CardTitle>
             <CardDescription>For professionals and businesses</CardDescription>
             <div className="mt-4">
-              <span className="text-4xl font-bold">${selectedPlan === "monthly" ? "299" : "240"}</span>
+              <span className="text-4xl font-bold">${selectedPlan === "monthly" ? "90" : "72"}</span>
               <span className="text-muted-foreground">/month</span>
               {selectedPlan === "annual" && (
-                <div className="text-sm text-muted-foreground">Billed annually (${240 * 12}/year)</div>
+                <div className="text-sm text-muted-foreground">Billed annually (${72 * 12}/year)</div>
               )}
             </div>
           </CardHeader>
