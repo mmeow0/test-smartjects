@@ -35,11 +35,11 @@ export const ComparisonSection = memo(() => (
             </div>
             <div className="text-center lg:text-left">
               <p className="text-white text-sm sm:text-base lg:text-lg leading-6 lg:leading-7 max-w-2xl mx-auto lg:mx-0">
-                Traditional corporate project implementation process is not
-                geared toward innovations. Gathering requirements, writing
-                technical specifications, tendering, and procurement do not take
-                into account the rapid emergence of new technologies, so project
-                results are often mediocre and uncompetitive.
+                Traditional implementation projects are not focused on
+                innovation. Long processes like gathering requirements, writing
+                specs, and running tenders can’t keep up with fast-moving
+                technologies - so results often end up outdated, average, and
+                uncompetitive.
               </p>
             </div>
           </div>
@@ -68,7 +68,7 @@ export const ComparisonSection = memo(() => (
                     </h4>
                     <p className="text-white text-xs sm:text-sm leading-4 sm:leading-5">
                       Often start from internal assumptions or top-down
-                      mandates, leading to weak business cases.
+                      mandates, leading to weak competitive market position.
                     </p>
                   </div>
 
@@ -77,15 +77,15 @@ export const ComparisonSection = memo(() => (
                       Weak Business Cases
                     </h4>
                     <p className="text-white text-xs sm:text-sm leading-4 sm:leading-5">
-                      Validation happens late—if at all—after pilot stages or
-                      through costly market studies.
+                      Market validation comes too late - only after pilots or
+                      expensive market research.
                     </p>
                   </div>
                 </div>
 
                 <div className="bg-[#ffffff0d] rounded-xl sm:rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 lg:space-y-[25px]">
                   <h4 className="font-semibold text-slate-50 text-sm sm:text-base lg:text-lg leading-5 sm:leading-6">
-                    Late or No Validation
+                    Always late
                   </h4>
                   <p className="text-white text-xs sm:text-sm leading-4 sm:leading-5">
                     Require long lead times, RFP processes, and vendor
@@ -112,21 +112,21 @@ export const ComparisonSection = memo(() => (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="bg-white rounded-xl sm:rounded-2xl border border-[#eaeaea] p-4 sm:p-6 space-y-3 sm:space-y-4 lg:space-y-[25px]">
                     <h4 className="font-semibold text-black text-sm sm:text-base lg:text-lg leading-5 sm:leading-6">
-                      Research-driven origin
+                      Immediate relevance through research-driven origin
                     </h4>
                     <p className="text-slate-900 text-xs sm:text-sm leading-4 sm:leading-5">
-                      Begin with scientific research, ensuring ideas are
+                      Begin with scientific research, ensuring ideas are
                       grounded in recent innovations and cutting-edge findings.
                     </p>
                   </div>
 
                   <div className="bg-white rounded-xl sm:rounded-2xl border border-[#eaeaea] p-4 sm:p-6 space-y-3 sm:space-y-4 lg:space-y-[25px]">
                     <h4 className="font-semibold text-black text-sm sm:text-base lg:text-lg leading-5 sm:leading-6">
-                      Built-in validation
+                      Market validation is built-In
                     </h4>
                     <p className="text-slate-900 text-xs sm:text-sm leading-4 sm:leading-5">
                       Use live voting mechanisms to community-validate
-                      relevance, demand, and supply before investment.
+                      relevance, demand, and supply before implementation.
                     </p>
                   </div>
                 </div>

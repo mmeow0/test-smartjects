@@ -36,7 +36,7 @@ export function HeroSection() {
 
                 <span className="inline-flex items-end gap-2">
                   <span className="font-archivo font-normal text-3xl sm:text-4xl md:text-5xl">
-                    delivery:
+                    delivery:&nbsp;&nbsp;
                   </span>
                   <span className="font-dynalight text-4xl sm:text-5xl md:text-6xl text-white leading-none">
                     from research
@@ -52,10 +52,9 @@ export function HeroSection() {
             {/* Description */}
             <div className="max-w-md mx-auto">
               <p className="font-archivo font-normal text-white text-lg sm:text-xl leading-relaxed text-center">
-                smartjects platform transforms research insights into defined
-                potential implementation projects and provides interactive
-                environment where users can vote, comment, and enter into smart
-                contracts for projects execution
+                smartjects platform transforms research insights into business
+                projects and provides interactive environment where companies
+                discover innovations and execute smart contracts
               </p>
             </div>
 
@@ -82,35 +81,32 @@ export function HeroSection() {
           <div className="hidden lg:flex lg:col-span-8 lg:col-start-8 lg:row-span-2 lg:row-start-1 items-start justify-end pt-16">
             <div className="max-w-xl xl:max-w-2xl">
               <p className="font-archivo font-normal text-white text-xl lg:text-2xl xl:text-[25px] leading-relaxed xl:leading-[35px] text-right">
-                smartjects platform transforms research insights into defined
-                potential implementation projects and provides interactive
-                environment where users can vote, comment, and enter into smart
-                contracts for projects execution
+                smartjects platform transforms research insights into business
+                projects and provides interactive environment where companies
+                discover innovations and execute smart contracts
               </p>
             </div>
           </div>
 
           {/* Main Content - Bottom Left */}
-          <div className="hidden lg:flex lg:col-span-7 lg:col-start-1 lg:row-span-2 lg:row-start-2 flex-col justify-center space-y-12 pt-16">
+          <div className="hidden lg:flex lg:col-span-7 lg:col-start-1 lg:row-span-2 lg:row-start-2 flex-col justify-center space-y-12 pt-28">
             {/* Headline */}
             <div className="space-y-4">
               <h1 className="text-white leading-tight">
-                <span className="block font-archivo font-normal text-5xl xl:text-6xl">
-                  Innovations direct
+                <span className="block font-archivo font-normal text-5xl xl:text-6xl whitespace-nowrap">
+                  Innovations direct delivery:&nbsp;&nbsp;
                 </span>
 
-                <span className="inline-flex items-end gap-2">
-                  <span className="font-archivo font-normal text-5xl xl:text-6xl">
-                    delivery:&nbsp;&nbsp;
+                <div className=" pl-4">
+                  <span className="whitespace-nowrap inline-flex items-end gap-4">
+                    <span className="font-dynalight text-7xl xl:text-[90px] text-white leading-none whitespace-nowrap">
+                      from research
+                    </span>
+                    <span className="font-archivo font-normal text-5xl xl:text-6xl text-white whitespace-nowrap pb-3">
+                      to business
+                    </span>
                   </span>
-                  <span className="font-dynalight text-7xl xl:text-[90px] text-white leading-none whitespace-nowrap">
-                    from research
-                  </span>
-                </span>
-
-                <span className="block font-archivo font-normal text-5xl xl:text-6xl mt-2">
-                  to business
-                </span>
+                </div>
               </h1>
             </div>
 

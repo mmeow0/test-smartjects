@@ -25,8 +25,7 @@ export const HowItWorksSection = memo(() => (
             Discover
           </h3>
           <p className="font-normal text-[#020817] text-sm sm:text-base leading-normal max-w-xs sm:max-w-sm lg:max-w-[309px]">
-            Browse research data transformed into potential implementation
-            projects for business
+            Browse innovations transformed into potential implementation projects for business
           </p>
         </div>
       </div>
@@ -39,8 +38,7 @@ export const HowItWorksSection = memo(() => (
             Connect
           </h3>
           <p className="font-normal text-[#020817] text-sm sm:text-base leading-normal max-w-xs sm:max-w-sm lg:max-w-[371px]">
-            Participate in discussions, vote on smartjects, find partners, and
-            help shape the future of innovations in business
+            Participate in discussions, vote on smartjects, find partners, and help shape the future of innovations in business
           </p>
         </div>
       </div>
