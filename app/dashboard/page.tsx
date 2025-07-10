@@ -30,7 +30,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
-
 interface UserConversation {
   id: string;
   otherParty: {
@@ -54,140 +53,215 @@ interface UserConversation {
   status: "active" | "pending" | "completed" | "contract_created" | "cancelled";
 }
 
-
 // Memoized conversation card component
-const ConversationCard = memo(({ 
-  conversation, 
-  onNavigate 
-}: { 
-  conversation: UserConversation; 
-  onNavigate: (matchId: string, proposalId: string, otherPartyId: string) => void; 
-}) => {
-  const handleContinueConversation = useCallback(() => {
-    const mostRecent = conversation.activeNegotiations[0];
-    onNavigate(mostRecent.matchId, mostRecent.proposalId, conversation.otherParty.id);
-  }, [conversation, onNavigate]);
+const ConversationCard = memo(
+  ({
+    conversation,
+    onNavigate,
+  }: {
+    conversation: UserConversation;
+    onNavigate: (
+      matchId: string,
+      proposalId: string,
+      otherPartyId: string,
+    ) => void;
+  }) => {
+    const handleContinueConversation = useCallback(() => {
+      const mostRecent = conversation.activeNegotiations[0];
+      onNavigate(
+        mostRecent.matchId,
+        mostRecent.proposalId,
+        conversation.otherParty.id,
+      );
+    }, [conversation, onNavigate]);
 
-  const formatDate = useCallback((dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    const formatDate = useCallback((dateString: string) => {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInHours = Math.floor(
+        (now.getTime() - date.getTime()) / (1000 * 60 * 60),
+      );
 
-    if (diffInHours < 1) return "Just now";
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
-    return date.toLocaleDateString();
-  }, []);
+      if (diffInHours < 1) return "Just now";
+      if (diffInHours < 24) return `${diffInHours}h ago`;
+      if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
+      return date.toLocaleDateString();
+    }, []);
 
-  const getStatusBadge = useCallback((status: string) => {
-    switch (status) {
-      case "new":
-        return <Badge variant="secondary" className="text-xs">New</Badge>;
-      case "negotiating":
-        return <Badge variant="default" className="text-xs">Negotiating</Badge>;
-      case "terms_agreed":
-        return <Badge variant="outline" className="text-xs text-blue-600 border-blue-600">Terms Agreed</Badge>;
-      case "contract_created":
-        return <Badge variant="outline" className="text-xs text-green-600 border-green-600">Contract Created</Badge>;
-      case "cancelled":
-        return <Badge variant="outline" className="text-xs text-red-600 border-red-600">Cancelled</Badge>;
-      default:
-        return <Badge variant="outline" className="text-xs">{status}</Badge>;
-    }
-  }, []);
+    const getStatusBadge = useCallback((status: string) => {
+      switch (status) {
+        case "new":
+          return (
+            <Badge variant="secondary" className="text-xs">
+              New
+            </Badge>
+          );
+        case "negotiating":
+          return (
+            <Badge variant="default" className="text-xs">
+              Negotiating
+            </Badge>
+          );
+        case "terms_agreed":
+          return (
+            <Badge
+              variant="outline"
+              className="text-xs text-blue-600 border-blue-600"
+            >
+              Terms Agreed
+            </Badge>
+          );
+        case "contract_created":
+          return (
+            <Badge
+              variant="outline"
+              className="text-xs text-green-600 border-green-600"
+            >
+              Contract Created
+            </Badge>
+          );
+        case "cancelled":
+          return (
+            <Badge
+              variant="outline"
+              className="text-xs text-red-600 border-red-600"
+            >
+              Cancelled
+            </Badge>
+          );
+        default:
+          return (
+            <Badge variant="outline" className="text-xs">
+              {status}
+            </Badge>
+          );
+      }
+    }, []);
 
-  const displayField = useCallback((value: string | undefined | null) => {
-    if (!value || value.trim() === "") {
-      return <span className="text-muted-foreground italic">not specified</span>;
-    }
-    return value;
-  }, []);
+    const displayField = useCallback((value: string | undefined | null) => {
+      if (!value || value.trim() === "") {
+        return (
+          <span className="text-muted-foreground italic">not specified</span>
+        );
+      }
+      return value;
+    }, []);
 
-  return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Avatar className="h-12 w-12">
-              <AvatarFallback className="text-lg">
-                {conversation.otherParty.name.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle className="text-xl">{conversation.otherParty.name}</CardTitle>
-              <CardDescription className="flex items-center gap-2">
-                <Handshake className="h-4 w-4" />
-                {conversation.activeNegotiations.length} active negotiation
-                {conversation.activeNegotiations.length !== 1 ? "s" : ""}
-              </CardDescription>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            {getStatusBadge(conversation.status)}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div className="flex items-center space-x-2">
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Total Messages</p>
-              <p className="font-medium">{conversation.totalMessages}</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div>
-              <p className="text-sm text-muted-foreground">Last Activity</p>
-              <p className="font-medium">{formatDate(conversation.lastActivity)}</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Handshake className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Negotiations</p>
-              <p className="font-medium">{conversation.activeNegotiations.length}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <h4 className="text-sm font-medium text-muted-foreground mb-2">Active Projects:</h4>
-          <div className="space-y-2">
-            {conversation.activeNegotiations.map((negotiation) => (
-              <div key={negotiation.proposalId} className="bg-muted/30 rounded-md p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h5 className="font-medium">{negotiation.smartjectTitle}</h5>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                     { negotiation.budget && <span>💰 {negotiation.budget ? `$${negotiation.budget}` : displayField(negotiation.budget)}</span>}
-                     { negotiation.timeline && <span>⏰ {displayField(negotiation.timeline)}</span>}
-                      <span>💬 {negotiation.messageCount} messages</span>
-                      {negotiation.status && getStatusBadge(negotiation.status)}
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onNavigate(negotiation.matchId, negotiation.proposalId, conversation.otherParty.id)}
-                  >
-                    Open
-                  </Button>
-                </div>
+    return (
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Avatar className="h-12 w-12">
+                <AvatarFallback className="text-lg">
+                  {conversation.otherParty.name.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <CardTitle className="text-xl">
+                  {conversation.otherParty.name}
+                </CardTitle>
+                <CardDescription className="flex items-center gap-2">
+                  <Handshake className="h-4 w-4" />
+                  {conversation.activeNegotiations.length} active negotiation
+                  {conversation.activeNegotiations.length !== 1 ? "s" : ""}
+                </CardDescription>
               </div>
-            ))}
+            </div>
+            <div className="flex items-center space-x-2">
+              {getStatusBadge(conversation.status)}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center justify-between">
-          <Button onClick={handleContinueConversation} className="ml-4">
-            Continue Conversation
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-});
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Total Messages</p>
+                <p className="font-medium">{conversation.totalMessages}</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div>
+                <p className="text-sm text-muted-foreground">Last Activity</p>
+                <p className="font-medium">
+                  {formatDate(conversation.lastActivity)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Handshake className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Negotiations</p>
+                <p className="font-medium">
+                  {conversation.activeNegotiations.length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <h4 className="text-sm font-medium text-muted-foreground mb-2">
+              Active Projects:
+            </h4>
+            <div className="space-y-2">
+              {conversation.activeNegotiations.map((negotiation) => (
+                <div
+                  key={negotiation.proposalId}
+                  className="bg-muted/30 rounded-md p-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h5 className="font-medium">
+                        {negotiation.smartjectTitle}
+                      </h5>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                        {negotiation.budget && (
+                          <span>
+                            💰{" "}
+                            {negotiation.budget
+                              ? `$${negotiation.budget}`
+                              : displayField(negotiation.budget)}
+                          </span>
+                        )}
+                        {negotiation.timeline && (
+                          <span>⏰ {displayField(negotiation.timeline)}</span>
+                        )}
+                        <span>💬 {negotiation.messageCount} messages</span>
+                        {negotiation.status &&
+                          getStatusBadge(negotiation.status)}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        onNavigate(
+                          negotiation.matchId,
+                          negotiation.proposalId,
+                          conversation.otherParty.id,
+                        )
+                      }
+                    >
+                      Open
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <Button onClick={handleContinueConversation} className="ml-4">
+              Continue Conversation
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  },
+);
 
 ConversationCard.displayName = "ConversationCard";
 // Lazy load heavy components
@@ -355,10 +429,12 @@ const ProposalCard = memo(
           </div>
         </CardHeader>
         <CardContent>
-          { proposal.budget && <div className="flex items-center">
-            <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
-            <span className="font-medium">{displayBudget}</span>
-          </div>}
+          {proposal.budget && (
+            <div className="flex items-center">
+              <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
+              <span className="font-medium">{displayBudget}</span>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
@@ -453,12 +529,14 @@ const ContractCard = memo(
                 Due: {formatMilestoneDate(contract.nextMilestoneDate)}
               </p>
             </div>
-           { contract.budget && <div>
-              <p className="text-sm text-muted-foreground flex items-center">
-                <DollarSign className="h-4 w-4 mr-1" /> Budget
-              </p>
-              <p className="font-medium">{displayBudget}</p>
-            </div>}
+            {contract.budget && (
+              <div>
+                <p className="text-sm text-muted-foreground flex items-center">
+                  <DollarSign className="h-4 w-4 mr-1" /> Budget
+                </p>
+                <p className="font-medium">{displayBudget}</p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -480,7 +558,9 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("believe");
   const tabsRef = useRef<HTMLDivElement>(null);
 
-  const [negotiations, setActiveNegotiations] = useState<UserConversation[]>([]);
+  const [negotiations, setActiveNegotiations] = useState<UserConversation[]>(
+    [],
+  );
 
   // Memoized navigation handlers
   const handleProposalNavigate = useCallback(
@@ -497,9 +577,14 @@ export default function DashboardPage() {
     [router],
   );
 
-    const handleConversationNavigate = useCallback((matchId: string, proposalId: string, otherPartyId: string) => {
-    router.push(`/matches/${matchId}/negotiate/${proposalId}/${otherPartyId}`);
-  }, [router]);
+  const handleConversationNavigate = useCallback(
+    (matchId: string, proposalId: string, otherPartyId: string) => {
+      router.push(
+        `/matches/${matchId}/negotiate/${proposalId}/${otherPartyId}`,
+      );
+    },
+    [router],
+  );
 
   const handleViewAllNavigation = useCallback(
     (path: string) => {
@@ -527,7 +612,7 @@ export default function DashboardPage() {
     [proposals, activeContracts],
   );
 
-    const getUserNegotiations = useCallback(async () => {
+  const getUserNegotiations = useCallback(async () => {
     const userId = user?.id;
     if (!userId) return;
 
@@ -535,10 +620,11 @@ export default function DashboardPage() {
 
     try {
       // Optimized single query to get owned proposals
-      const { data: ownedProposals, error: ownedProposalsError } = await supabase
-        .from("proposals")
-        .select("id, user_id, smartject_id, title, budget, timeline")
-        .eq("user_id", userId);
+      const { data: ownedProposals, error: ownedProposalsError } =
+        await supabase
+          .from("proposals")
+          .select("id, user_id, smartject_id, title, budget, timeline")
+          .eq("user_id", userId);
 
       if (ownedProposalsError) {
         console.error("Error fetching owned proposals:", ownedProposalsError);
@@ -548,7 +634,7 @@ export default function DashboardPage() {
       if (!ownedProposals?.length) return;
 
       // Get all messages for these proposals in one query
-      const proposalIds = ownedProposals.map(p => p.id);
+      const proposalIds = ownedProposals.map((p) => p.id);
       const { data: allMessages, error: messagesError } = await supabase
         .from("negotiation_messages")
         .select("proposal_id, sender_id, created_at")
@@ -579,25 +665,37 @@ export default function DashboardPage() {
 
       // Batch fetch user and smartject data
       const [usersResult, smartjectsResult] = await Promise.all([
-        userIds.size > 0 ? supabase
-          .from("users")
-          .select("id, name, avatar_url")
-          .in("id", Array.from(userIds)) : { data: [] },
-        smartjectIds.size > 0 ? supabase
-          .from("smartjects")
-          .select("id, title")
-          .in("id", Array.from(smartjectIds)) : { data: [] }
+        userIds.size > 0
+          ? supabase
+              .from("users")
+              .select("id, name, avatar_url")
+              .in("id", Array.from(userIds))
+          : { data: [] },
+        smartjectIds.size > 0
+          ? supabase
+              .from("smartjects")
+              .select("id, title")
+              .in("id", Array.from(smartjectIds))
+          : { data: [] },
       ]);
 
-      const usersMap = new Map((usersResult.data as any[] || []).map((u: any) => [u.id, u]));
-      const smartjectsMap = new Map((smartjectsResult.data as any[] || []).map((s: any) => [s.id, s]));
+      const usersMap = new Map(
+        ((usersResult.data as any[]) || []).map((u: any) => [u.id, u]),
+      );
+      const smartjectsMap = new Map(
+        ((smartjectsResult.data as any[]) || []).map((s: any) => [s.id, s]),
+      );
 
       // Process conversations
       for (const proposal of ownedProposals) {
-        const proposalMessages = allMessages.filter((msg: any) => msg.proposal_id === proposal.id);
+        const proposalMessages = allMessages.filter(
+          (msg: any) => msg.proposal_id === proposal.id,
+        );
         if (!proposalMessages.length) continue;
 
-        const otherPartyMessage = proposalMessages.find((msg: any) => msg.sender_id !== userId);
+        const otherPartyMessage = proposalMessages.find(
+          (msg: any) => msg.sender_id !== userId,
+        );
         if (!otherPartyMessage) continue;
 
         const otherPartyId = otherPartyMessage.sender_id;
@@ -611,7 +709,7 @@ export default function DashboardPage() {
         const neederId = String(otherPartyId);
 
         let matchId: string | null = null;
-        
+
         const { data: existingMatch } = await supabase
           .from("matches")
           .select("id, status")
@@ -640,9 +738,10 @@ export default function DashboardPage() {
         if (!matchId) continue;
 
         const conversationKey = `${(proposal as any).id}-${otherPartyId}`;
-        const lastActivity = proposalMessages
-          .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
-          .created_at as string;
+        const lastActivity = proposalMessages.sort(
+          (a: any, b: any) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        )[0].created_at as string;
 
         if (!conversationMap.has(conversationKey)) {
           conversationMap.set(conversationKey, {
@@ -676,17 +775,23 @@ export default function DashboardPage() {
       }
 
       const activeConversations = Array.from(conversationMap.values())
-        .filter(conv => conv.activeNegotiations.some(neg => 
-          neg.status !== "contract_created" && neg.status !== "cancelled"
-        ))
-        .sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime());
+        .filter((conv) =>
+          conv.activeNegotiations.some(
+            (neg) =>
+              neg.status !== "contract_created" && neg.status !== "cancelled",
+          ),
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.lastActivity).getTime() -
+            new Date(a.lastActivity).getTime(),
+        );
 
       setActiveNegotiations(activeConversations);
     } catch (error) {
       console.error("Error in getUserNegotiations:", error);
     }
   }, [user?.id]);
-
 
   // Memoized data fetching functions
   const fetchProposals = useCallback(async () => {
@@ -728,7 +833,11 @@ export default function DashboardPage() {
     setLoading(false);
 
     // Run all data fetching in parallel
-    Promise.all([fetchContracts(), fetchProposals(), getUserNegotiations()]).catch(console.error);
+    Promise.all([
+      fetchContracts(),
+      fetchProposals(),
+      getUserNegotiations(),
+    ]).catch(console.error);
   }, [authLoading, canAccess, fetchContracts, fetchProposals]);
 
   // Memoized refetch callback
@@ -752,7 +861,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 bg-gray-50">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold">My Dashboard</h1>
@@ -802,46 +911,94 @@ export default function DashboardPage() {
 
       {user?.accountType === "paid" && (
         <>
-          {/* Proposals Section */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">My Proposals</h2>
-              <Button
-                variant="outline"
-                onClick={() => handleViewAllNavigation("/proposals")}
-                className="flex items-center"
-              >
-                View All <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+          {/* Main Content Grid - Proposals and Contracts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            {/* Left Column - My Proposals */}
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold">My Proposals</h2>
+                <div className="flex gap-4">
+                  <Button
+                    onClick={() => handleViewAllNavigation("/proposals/create")}
+                    className="flex items-center"
+                  >
+                    Create new proposal
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleViewAllNavigation("/proposals")}
+                    className="flex items-center"
+                  >
+                    View All <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {displayedData.activeProposals.map((proposal) => (
+                  <ProposalCard
+                    key={proposal.id}
+                    proposal={proposal}
+                    onNavigate={handleProposalNavigate}
+                  />
+                ))}
+                {displayedData.activeProposals.length === 0 && (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-8">
+                      <p className="text-muted-foreground mb-4">
+                        You haven't created any proposals yet.
+                      </p>
+                      <Button
+                        onClick={() =>
+                          handleViewAllNavigation("/proposals/create")
+                        }
+                      >
+                        Create Your First Proposal
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {displayedData.activeProposals.map((proposal) => (
-                <ProposalCard
-                  key={proposal.id}
-                  proposal={proposal}
-                  onNavigate={handleProposalNavigate}
-                />
-              ))}
-              {displayedData.activeProposals.length === 0 && (
-                <Card className="col-span-2">
-                  <CardContent className="flex flex-col items-center justify-center py-8">
-                    <p className="text-muted-foreground mb-4">
-                      You haven't created any proposals yet.
-                    </p>
-                    <Button
-                      onClick={() =>
-                        handleViewAllNavigation("/proposals/create")
-                      }
-                    >
-                      Create Your First Proposal
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
+
+            {/* Right Column - Active Contracts */}
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold">Active Contracts</h2>
+                <Button
+                  variant="outline"
+                  onClick={() => handleViewAllNavigation("/contracts")}
+                  className="flex items-center"
+                >
+                  View All <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+              <div className="space-y-4">
+                {displayedData.contracts.map((contract) => (
+                  <ContractCard
+                    key={contract.id}
+                    contract={contract}
+                    onNavigate={handleContractNavigate}
+                  />
+                ))}
+                {displayedData.contracts.length === 0 && (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-8">
+                      <p className="text-muted-foreground mb-4">
+                        You don't have any active contracts yet.
+                      </p>
+                      <Button
+                        onClick={() => handleViewAllNavigation("/matches")}
+                      >
+                        View Your Matches
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             </div>
           </div>
 
-    {/* Conversations Section */}
+          {/* Conversations Section */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Recent Conversations</h2>
@@ -867,43 +1024,10 @@ export default function DashboardPage() {
                     <p className="text-muted-foreground mb-4">
                       You don't have any matches yet.
                     </p>
-                    <Button onClick={() => handleViewAllNavigation("/discover")}>
+                    <Button
+                      onClick={() => handleViewAllNavigation("/discover")}
+                    >
                       Browse Smartjects
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
-
-          {/* Contracts Section */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">Active Contracts</h2>
-              <Button
-                variant="outline"
-                onClick={() => handleViewAllNavigation("/contracts")}
-                className="flex items-center"
-              >
-                View All <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {displayedData.contracts.map((contract) => (
-                <ContractCard
-                  key={contract.id}
-                  contract={contract}
-                  onNavigate={handleContractNavigate}
-                />
-              ))}
-              {displayedData.contracts.length === 0 && (
-                <Card className="col-span-2">
-                  <CardContent className="flex flex-col items-center justify-center py-8">
-                    <p className="text-muted-foreground mb-4">
-                      You don't have any active contracts yet.
-                    </p>
-                    <Button onClick={() => handleViewAllNavigation("/matches")}>
-                      View Your Matches
                     </Button>
                   </CardContent>
                 </Card>

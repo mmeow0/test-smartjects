@@ -14,7 +14,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
   return (
     <div className="flex flex-col min-h-screen">
       <TopNav isDarkNav={isDarkNav} />
-      <main className={`${!isDarkNav ? 'flex-1 px-4' : ''}`}>
+      <main className={`${!isDarkNav ? 'flex-1 px-4 bg-gray-50' : ''}`}>
         {children}
       </main>
     </div>

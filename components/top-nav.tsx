@@ -56,7 +56,7 @@ export function TopNav({ isDarkNav: isHomePage = false }: TopNavProps) {
       className={`${
         isHomePage
           ? "absolute top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/10"
-          : "sticky top-0 z-50 bg-white border-b border-gray-200"
+          : "sticky top-0 z-50 bg-gray-50 border-b border-gray-200"
       }`}
     >
       <div className="max-w-[1340px] mx-auto px-4 sm:px-6 lg:px-8">

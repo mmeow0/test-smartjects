@@ -200,7 +200,7 @@ export default function CreateProposalPage() {
             setSmartject(data);
             setFormData((prev) => ({
               ...prev,
-              title: `Proposal for: ${data.title}`,
+              title: `${data.title}`,
               smartjectId: data.id,
             }));
           }
