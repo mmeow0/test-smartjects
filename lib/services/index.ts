@@ -8,6 +8,7 @@ import { userService } from "./user.service";
 import { negotiationService } from "./negotiation.service";
 import { fileService } from "./file.service";
 import { ndaService } from "./nda.service";
+import { avatarService } from "./avatar.service";
 
 // Export individual services
 export { smartjectService };
@@ -19,6 +20,7 @@ export { userService };
 export { negotiationService };
 export { fileService };
 export { ndaService };
+export { avatarService };
 
 // Re-export all services as a single object for easier access
 export const services = {
@@ -31,6 +33,7 @@ export const services = {
   negotiationService,
   fileService,
   ndaService,
+  avatarService,
 };
 
 // Default export

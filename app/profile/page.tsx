@@ -37,6 +37,7 @@ import { SmartjectCard } from "@/components/smartject-card";
 import { useUserSmartjects } from "@/hooks/use-user-smartjects";
 import { Skeleton } from "@/components/ui/skeleton";
 import { userService } from "@/lib/services/user.service";
+import AvatarUpload from "@/components/ui/avatar-upload";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -52,6 +53,7 @@ export default function ProfilePage() {
     website: "",
     joinDate: "",
   });
+  const [currentAvatar, setCurrentAvatar] = useState<string | null>(null);
 
   const { smartjects, isLoading, refetch } = useUserSmartjects(user?.id);
 
@@ -76,6 +78,7 @@ export default function ProfilePage() {
             })
           : "",
       });
+      setCurrentAvatar(user?.avatar || null);
     }
   }, [authLoading, canAccess, user, profileData.name]);
 
@@ -144,8 +147,15 @@ export default function ProfilePage() {
             })
           : "",
       });
+      setCurrentAvatar(user.avatar || null);
     }
     setIsEditing(false);
+  };
+
+  const handleAvatarChange = (avatarUrl: string | null) => {
+    setCurrentAvatar(avatarUrl);
+    // Trigger user refresh to update the avatar in the auth context
+    refreshUser();
   };
 
   // Mock data for user activity
@@ -173,12 +183,25 @@ export default function ProfilePage() {
                 </Button>
               )}
 
+                {isEditing && (
+                  <AvatarUpload
+                    userId={user?.id || ""}
+                    currentAvatar={currentAvatar || undefined}
+                    userName={profileData.name}
+                    onAvatarChange={handleAvatarChange}
+                    size="md"
+                  />
+                )}
               <div className="flex items-start gap-4">
-                {/* Меньший аватар */}
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={user?.avatar || "/placeholder.svg"} />
-                  <AvatarFallback>{profileData.name.charAt(0)}</AvatarFallback>
-                </Avatar>
+                {/* Avatar section */}
+                {!isEditing && (
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={currentAvatar || "/placeholder.svg"} />
+                    <AvatarFallback>
+                      {profileData.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
 
                 {/* Контент справа от аватара */}
                 <div className="flex flex-col justify-center">
