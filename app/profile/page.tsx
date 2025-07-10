@@ -57,7 +57,7 @@ export default function ProfilePage() {
     if (authLoading || !canAccess) {
       return;
     }
-    
+
     if (user && !profileData.name) {
       // Only set profile data if it hasn't been set yet
       setProfileData({
@@ -66,7 +66,12 @@ export default function ProfilePage() {
         location: user?.location || "",
         company: user?.company || "",
         website: user?.website || "",
-        joinDate: user?.joinDate ? new Date(user.joinDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : "",
+        joinDate: user?.joinDate
+          ? new Date(user.joinDate).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+            })
+          : "",
       });
     }
   }, [authLoading, canAccess, user, profileData.name]);
@@ -99,7 +104,8 @@ export default function ProfilePage() {
         await refreshUser();
         toast({
           title: "Profile updated",
-          description: "Your profile information has been updated successfully.",
+          description:
+            "Your profile information has been updated successfully.",
         });
         setIsEditing(false);
       } else {
@@ -128,7 +134,12 @@ export default function ProfilePage() {
         location: user.location || "",
         company: user.company || "",
         website: user.website || "",
-        joinDate: user.joinDate ? new Date(user.joinDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : "",
+        joinDate: user.joinDate
+          ? new Date(user.joinDate).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+            })
+          : "",
       });
     }
     setIsEditing(false);
@@ -259,7 +270,11 @@ export default function ProfilePage() {
                 <>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Bio</p>
-                    <p className={profileData.bio ? "" : "text-muted-foreground italic"}>
+                    <p
+                      className={
+                        profileData.bio ? "" : "text-muted-foreground italic"
+                      }
+                    >
                       {profileData.bio || "No bio added yet"}
                     </p>
                   </div>
@@ -270,20 +285,40 @@ export default function ProfilePage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className={profileData.location ? "" : "text-muted-foreground italic"}>
+                      <span
+                        className={
+                          profileData.location
+                            ? ""
+                            : "text-muted-foreground italic"
+                        }
+                      >
                         {profileData.location || "No location specified"}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Briefcase className="h-4 w-4 text-muted-foreground" />
-                      <span className={profileData.company ? "" : "text-muted-foreground italic"}>
+                      <span
+                        className={
+                          profileData.company
+                            ? ""
+                            : "text-muted-foreground italic"
+                        }
+                      >
                         {profileData.company || "No company specified"}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className={profileData.joinDate ? "" : "text-muted-foreground italic"}>
-                        {profileData.joinDate ? `Joined ${profileData.joinDate}` : "Join date not available"}
+                      <span
+                        className={
+                          profileData.joinDate
+                            ? ""
+                            : "text-muted-foreground italic"
+                        }
+                      >
+                        {profileData.joinDate
+                          ? `Joined ${profileData.joinDate}`
+                          : "Join date not available"}
                       </span>
                     </div>
                   </div>
@@ -319,27 +354,27 @@ export default function ProfilePage() {
         </div>
 
         {/* Right column - Activity */}
-        <div className="md:w-2/3">
+        <div className="w-full">
           <Card>
-            <CardHeader>
-              <CardTitle>Activity</CardTitle>
-              <CardDescription>
-                Your recent activity on the platform
-              </CardDescription>
-            </CardHeader>
             <CardContent>
-              <Tabs defaultValue="believe">
-                <TabsList className="mb-6">
-                  <TabsTrigger value="believe">I Believe</TabsTrigger>
-                  <TabsTrigger value="need">I Need</TabsTrigger>
-                  <TabsTrigger value="provide">I Provide</TabsTrigger>
+              <Tabs defaultValue="believe" className="mt-8 w-full">
+                <TabsList className="mb-6 flex w-full">
+                  <TabsTrigger value="believe" className="flex-1 text-center">
+                    I Believe
+                  </TabsTrigger>
+                  <TabsTrigger value="need" className="flex-1 text-center">
+                    I Need
+                  </TabsTrigger>
+                  <TabsTrigger value="provide" className="flex-1 text-center">
+                    I Provide
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="believe" className="space-y-4">
                   {isLoading ? (
                     <SkeletonGrid />
                   ) : believedSmartjects.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-6">
                       {believedSmartjects.map((smartject) => (
                         <SmartjectCard
                           key={smartject.id}
@@ -363,7 +398,7 @@ export default function ProfilePage() {
                     <SkeletonGrid />
                   ) : user?.accountType === "paid" ? (
                     needSmartjects.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-6">
                         {needSmartjects.map((smartject) => (
                           <SmartjectCard
                             key={smartject.id}
@@ -394,7 +429,7 @@ export default function ProfilePage() {
                     <SkeletonGrid />
                   ) : user?.accountType === "paid" ? (
                     provideSmartjects.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-6">
                         {provideSmartjects.map((smartject) => (
                           <SmartjectCard
                             key={smartject.id}

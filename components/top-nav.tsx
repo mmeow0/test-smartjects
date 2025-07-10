@@ -82,10 +82,10 @@ export function TopNav({ isDarkNav: isHomePage = false }: TopNavProps) {
                 className={`flex items-center gap-1 text-sm font-medium transition-colors ${
                   isHomePage
                     ? `hover:text-[#FFD900] ${
-                        pathname === item.href ? "text-white" : "text-gray-300"
+                        pathname === item.href ? "text-white" : "text-gray-500"
                       }`
                     : `hover:text-[#FFD900] ${
-                        pathname === item.href ? "text-black" : "text-gray-600"
+                        pathname === item.href ? "text-black" : "text-gray-500"
                       }`
                 }`}
               >
@@ -102,17 +102,13 @@ export function TopNav({ isDarkNav: isHomePage = false }: TopNavProps) {
                     key={item.href}
                     href={item.href}
                     className={`flex items-center gap-1 text-sm font-medium transition-colors ${
-                      isHomePage
-                        ? `hover:text-[#FFD900] ${
-                            pathname === item.href
-                              ? "text-white"
-                              : "text-gray-300"
-                          }`
-                        : `hover:text-[#FFD900] ${
-                            pathname === item.href
-                              ? "text-black"
-                              : "text-gray-600"
-                          }`
+                     isHomePage
+                    ? `hover:text-[#FFD900] ${
+                        pathname === item.href ? "text-white" : "text-gray-500"
+                      }`
+                    : `hover:text-[#FFD900] ${
+                        pathname === item.href ? "text-black" : "text-gray-500"
+                      }`
                     }`}
                   >
                     {item.label}
