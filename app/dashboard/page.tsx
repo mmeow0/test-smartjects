@@ -29,6 +29,7 @@ import { contractService, proposalService } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { CreateProposalModal } from "@/components/create-proposal-modal";
 
 interface UserConversation {
   id: string;
@@ -556,6 +557,7 @@ export default function DashboardPage() {
   const [proposals, setProposals] = useState<any[]>([]);
   const [activeContracts, setActiveContracts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("believe");
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
 
   const [negotiations, setActiveNegotiations] = useState<UserConversation[]>(
@@ -880,7 +882,7 @@ export default function DashboardPage() {
                 <h2 className="text-2xl font-bold">My Proposals</h2>
                 <div className="flex gap-4">
                   <Button
-                    onClick={() => handleViewAllNavigation("/proposals/create")}
+                    onClick={() => setCreateModalOpen(true)}
                     className="flex items-center"
                   >
                     Create new proposal
@@ -908,11 +910,7 @@ export default function DashboardPage() {
                       <p className="text-muted-foreground mb-4">
                         You haven't created any proposals yet.
                       </p>
-                      <Button
-                        onClick={() =>
-                          handleViewAllNavigation("/proposals/create")
-                        }
-                      >
+                      <Button onClick={() => setCreateModalOpen(true)}>
                         Create Your First Proposal
                       </Button>
                     </CardContent>
@@ -1122,6 +1120,18 @@ export default function DashboardPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <CreateProposalModal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onSuccess={() => {
+          setCreateModalOpen(false);
+          // Refetch proposals after successful creation
+          if (user?.id) {
+            proposalService.getProposalsByUserId(user.id).then(setProposals);
+          }
+        }}
+      />
     </div>
   );
 }

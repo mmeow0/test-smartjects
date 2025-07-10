@@ -35,7 +35,7 @@ interface SmartjectCardProps {
   isAuthenticated: boolean;
   isVoting: boolean;
   onVote: (type: "believe" | "need" | "provide") => void;
-  onCreateProposal: () => void;
+  onCreateProposal: (type?: "need" | "provide") => void;
   onShare: () => void;
 }
 

@@ -52,6 +52,7 @@ import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 import { proposalService } from "@/lib/services";
 import { ProposalType } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { CreateProposalModal } from "@/components/create-proposal-modal";
 
 export default function ProposalsPage() {
   const router = useRouter();
@@ -62,34 +63,33 @@ export default function ProposalsPage() {
   const [proposals, setProposals] = useState<ProposalType[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [proposalToDelete, setProposalToDelete] = useState<ProposalType | null>(
-    null
+    null,
   );
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const { toast } = useToast();
   // Load proposals when authenticated
+  const fetchProposals = useCallback(async () => {
+    if (authLoading || !canAccess || !user?.id) {
+      return;
+    }
+
+    try {
+      const allProposals = await proposalService.getProposalsByUserId(user.id);
+
+      setProposals(allProposals);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load proposals",
+        variant: "destructive",
+      });
+      console.error("Error fetching proposals:", error);
+    }
+  }, [authLoading, canAccess, user, toast]);
+
   useEffect(() => {
-    const fetchProposals = async () => {
-      if (authLoading || !canAccess || !user?.id) {
-        return;
-      }
-
-      try {
-        const allProposals = await proposalService.getProposalsByUserId(
-          user.id
-        );
-
-        setProposals(allProposals);
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to load proposals",
-          variant: "destructive",
-        });
-        console.error("Error fetching proposals:", error);
-      }
-    };
-
     fetchProposals();
-  }, [authLoading, canAccess, user]);
+  }, [fetchProposals]);
 
   const filterProposals = useCallback(
     (proposals: ProposalType[]) => {
@@ -117,7 +117,7 @@ export default function ProposalsPage() {
           );
         });
     },
-    [searchTerm, statusFilter]
+    [searchTerm, statusFilter],
   );
 
   const handleDeleteClick = (proposal: ProposalType, e: React.MouseEvent) => {
@@ -132,12 +132,12 @@ export default function ProposalsPage() {
     try {
       const success = await proposalService.deleteProposal(
         proposalToDelete.id,
-        user.id
+        user.id,
       );
 
       if (success) {
         setProposals((prevProposals) =>
-          prevProposals.filter((p) => p.id !== proposalToDelete.id)
+          prevProposals.filter((p) => p.id !== proposalToDelete.id),
         );
         toast({
           title: "Success",
@@ -178,10 +178,10 @@ export default function ProposalsPage() {
   };
 
   const needProposals = proposals.filter(
-    (proposal) => proposal.type === "need"
+    (proposal) => proposal.type === "need",
   );
   const provideProposals = proposals.filter(
-    (proposal) => proposal.type === "provide"
+    (proposal) => proposal.type === "provide",
   );
   const filteredNeedProposals = filterProposals(needProposals);
   const filteredProvideProposals = filterProposals(provideProposals);
@@ -231,7 +231,7 @@ export default function ProposalsPage() {
         </div>
         <Button
           className="mt-4 md:mt-0"
-          onClick={() => router.push("/proposals/create")}
+          onClick={() => setCreateModalOpen(true)}
         >
           <Plus className="mr-2 h-4 w-4" />
           Create New Proposal
@@ -323,20 +323,26 @@ export default function ProposalsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                   { proposal.budget && <div>
-                      <p className="text-sm text-muted-foreground">Budget</p>
-                      <p className="font-medium">
-                        {proposal.budget
-                          ? `$${proposal.budget.toLocaleString()}`
-                          : displayField(proposal.budget)}
-                      </p>
-                    </div>}
-                    {proposal.timeline && <div>
-                      <p className="text-sm text-muted-foreground">Timeline</p>
-                      <p className="font-medium">
-                        {displayField(proposal.timeline)}
-                      </p>
-                    </div>}
+                    {proposal.budget && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Budget</p>
+                        <p className="font-medium">
+                          {proposal.budget
+                            ? `$${proposal.budget.toLocaleString()}`
+                            : displayField(proposal.budget)}
+                        </p>
+                      </div>
+                    )}
+                    {proposal.timeline && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Timeline
+                        </p>
+                        <p className="font-medium">
+                          {displayField(proposal.timeline)}
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm text-muted-foreground">
                         Smartject ID
@@ -411,20 +417,26 @@ export default function ProposalsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    { proposal.budget && <div>
-                      <p className="text-sm text-muted-foreground">Budget</p>
-                      <p className="font-medium">
-                        {proposal.budget
-                          ? `$${proposal.budget.toLocaleString()}`
-                          : displayField(proposal.budget)}
-                      </p>
-                    </div>}
-                  { proposal.timeline &&  <div>
-                      <p className="text-sm text-muted-foreground">Timeline</p>
-                      <p className="font-medium">
-                        {displayField(proposal.timeline)}
-                      </p>
-                    </div>}
+                    {proposal.budget && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Budget</p>
+                        <p className="font-medium">
+                          {proposal.budget
+                            ? `$${proposal.budget.toLocaleString()}`
+                            : displayField(proposal.budget)}
+                        </p>
+                      </div>
+                    )}
+                    {proposal.timeline && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Timeline
+                        </p>
+                        <p className="font-medium">
+                          {displayField(proposal.timeline)}
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm text-muted-foreground">
                         Smartject ID
@@ -474,6 +486,15 @@ export default function ProposalsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CreateProposalModal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onSuccess={() => {
+          fetchProposals();
+          setCreateModalOpen(false);
+        }}
+      />
     </div>
   );
 }

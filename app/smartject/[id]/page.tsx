@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useEffect, use } from "react";
+import { useEffect, use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MessageSquare, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { useSmartjectById } from "@/hooks/use-smartject-by-id";
 
 // Import our new components
 import { SmartjectCard, SmartjectTabs, CommentsSection } from "./components";
+import { CreateProposalModal } from "@/components/create-proposal-modal";
 
 export default function SmartjectDetailPage({
   params,
@@ -41,6 +42,11 @@ export default function SmartjectDetailPage({
     error,
     refetch,
   } = useSmartjectById(typeof id === "string" ? id : undefined);
+
+  const [createProposalModalOpen, setCreateProposalModalOpen] = useState(false);
+  const [proposalType, setProposalType] = useState<
+    "need" | "provide" | undefined
+  >();
 
   useEffect(() => {
     // Check if the URL has a hash fragment
@@ -106,7 +112,7 @@ export default function SmartjectDetailPage({
       const hasVoted = await voteService.hasUserVoted(
         user!.id,
         smartject.id,
-        type
+        type,
       );
 
       // Toggle vote
@@ -180,8 +186,9 @@ export default function SmartjectDetailPage({
     }
   };
 
-  const handleCreateProposal = () => {
-    router.push(`/proposals/create?smartjectId=${id}`);
+  const handleCreateProposal = (type?: "need" | "provide") => {
+    setProposalType(type);
+    setCreateProposalModalOpen(true);
   };
 
   const handleRespondToProposal = (proposalId: string) => {
@@ -229,9 +236,7 @@ export default function SmartjectDetailPage({
 
           {/* Comments Section - Below the card on left side */}
           <div>
-            <div className="text-xl font-semibold mb-4 pl-4">
-              Discussion
-            </div>
+            <div className="text-xl font-semibold mb-4 pl-4">Discussion</div>
 
             <div ref={commentsRef}>
               <CommentsSection
@@ -260,6 +265,17 @@ export default function SmartjectDetailPage({
           />
         </div>
       </div>
+
+      <CreateProposalModal
+        isOpen={createProposalModalOpen}
+        onClose={() => setCreateProposalModalOpen(false)}
+        smartjectId={id}
+        proposalType={proposalType}
+        onSuccess={() => {
+          refetch();
+          setCreateProposalModalOpen(false);
+        }}
+      />
     </div>
   );
 }

@@ -58,7 +58,7 @@ interface SmartjectTabsProps {
   isAuthenticated: boolean;
   onViewProposalDetails: (proposalId: string) => void;
   onNegotiate: (proposalId: string) => void;
-  onCreateProposal: () => void;
+  onCreateProposal: (type?: "need" | "provide") => void;
 }
 
 export function SmartjectTabs({
@@ -85,14 +85,14 @@ export function SmartjectTabs({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="flex-1">
-                            <TabsTrigger 
-                              value="need" 
-                              className="flex-1 w-full opacity-50 cursor-not-allowed" 
-                              disabled
-                            >
-                              I Need ({needProposals.length})
-                            </TabsTrigger>
-                          </div>
+                      <TabsTrigger
+                        value="need"
+                        className="flex-1 w-full opacity-50 cursor-not-allowed"
+                        disabled
+                      >
+                        I Need ({needProposals.length})
+                      </TabsTrigger>
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
@@ -101,10 +101,7 @@ export function SmartjectTabs({
                   </TooltipContent>
                 </Tooltip>
               ) : (
-                <TabsTrigger
-                  value="need"
-                  className="flex-1"
-                >
+                <TabsTrigger value="need" className="flex-1">
                   I Need ({needProposals.length})
                 </TabsTrigger>
               )}
@@ -113,15 +110,15 @@ export function SmartjectTabs({
               {!smartject.userVotes?.need ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                  <div className="flex-1">
-                            <TabsTrigger 
-                              value="provide" 
-                              className="flex-1 w-full opacity-50 cursor-not-allowed" 
-                              disabled
-                            >
-                              I Provide ({provideProposals.length})
-                            </TabsTrigger>
-                          </div>
+                    <div className="flex-1">
+                      <TabsTrigger
+                        value="provide"
+                        className="flex-1 w-full opacity-50 cursor-not-allowed"
+                        disabled
+                      >
+                        I Provide ({provideProposals.length})
+                      </TabsTrigger>
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
@@ -130,10 +127,7 @@ export function SmartjectTabs({
                   </TooltipContent>
                 </Tooltip>
               ) : (
-                <TabsTrigger
-                  value="provide"
-                  className="flex-1"
-                >
+                <TabsTrigger value="provide" className="flex-1">
                   I Provide ({provideProposals.length})
                 </TabsTrigger>
               )}
@@ -151,7 +145,7 @@ export function SmartjectTabs({
                   isAuthenticated={isAuthenticated}
                   onViewDetails={onViewProposalDetails}
                   onNegotiate={onNegotiate}
-                  onCreateProposal={onCreateProposal}
+                  onCreateProposal={() => onCreateProposal("need")}
                 />
               </TabsContent>
 
@@ -162,7 +156,7 @@ export function SmartjectTabs({
                   isAuthenticated={isAuthenticated}
                   onViewDetails={onViewProposalDetails}
                   onNegotiate={onNegotiate}
-                  onCreateProposal={onCreateProposal}
+                  onCreateProposal={() => onCreateProposal("provide")}
                 />
               </TabsContent>
             </div>
