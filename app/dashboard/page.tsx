@@ -409,7 +409,7 @@ const ProposalCard = memo(
 
     return (
       <Card
-        className="hover:bg-muted/50 transition-colors cursor-pointer"
+        className="hover:bg-muted/50 transition-colors cursor-pointer h-full"
         onClick={handleClick}
       >
         <CardHeader className="pb-2">
@@ -501,7 +501,7 @@ const ContractCard = memo(
 
     return (
       <Card
-        className="hover:bg-muted/50 transition-colors cursor-pointer"
+        className="hover:bg-muted/50 transition-colors cursor-pointer h-full"
         onClick={handleClick}
       >
         <CardHeader className="pb-2">
@@ -606,8 +606,8 @@ export default function DashboardPage() {
 
   const displayedData = useMemo(
     () => ({
-      activeProposals: proposals.slice(0, 2),
-      contracts: activeContracts.slice(0, 2),
+      activeProposals: proposals.slice(0, 6),
+      contracts: activeContracts.slice(0, 3),
     }),
     [proposals, activeContracts],
   );
@@ -863,12 +863,6 @@ export default function DashboardPage() {
   return (
     <div className="container mx-auto px-4 py-6 bg-gray-50">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">My Dashboard</h1>
-          <p className="text-muted-foreground">
-            Track your smartjects, proposals, and contracts
-          </p>
-        </div>
         {user?.accountType === "free" && (
           <Button className="mt-4 md:mt-0" asChild>
             <a href="/upgrade">Upgrade to Paid Account</a>
@@ -876,45 +870,12 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div
-          onClick={() => scrollToTabsAndSwitch("believe")}
-          className="cursor-pointer hover:scale-105 transition-transform"
-        >
-          <StatsCard
-            title="Believed Smartjects"
-            description="Smartjects you've shown interest in"
-            value={processedData.believed.length}
-          />
-        </div>
-        <div
-          onClick={() => scrollToTabsAndSwitch("need")}
-          className="cursor-pointer hover:scale-105 transition-transform"
-        >
-          <StatsCard
-            title="I Need"
-            description="Smartjects you're looking to implement"
-            value={processedData.need.length}
-          />
-        </div>
-        <div
-          onClick={() => scrollToTabsAndSwitch("provide")}
-          className="cursor-pointer hover:scale-105 transition-transform"
-        >
-          <StatsCard
-            title="I Provide"
-            description="Smartjects you can implement"
-            value={processedData.provide.length}
-          />
-        </div>
-      </div>
-
       {user?.accountType === "paid" && (
         <>
           {/* Main Content Grid - Proposals and Contracts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
             {/* Left Column - My Proposals */}
-            <div className="space-y-6">
+            <div className="lg:col-span-2 space-y-6 lg:border-r lg:border-gray-200 lg:pr-8">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold">My Proposals</h2>
                 <div className="flex gap-4">
@@ -933,7 +894,7 @@ export default function DashboardPage() {
                   </Button>
                 </div>
               </div>
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[400px]">
                 {displayedData.activeProposals.map((proposal) => (
                   <ProposalCard
                     key={proposal.id}
@@ -942,7 +903,7 @@ export default function DashboardPage() {
                   />
                 ))}
                 {displayedData.activeProposals.length === 0 && (
-                  <Card>
+                  <Card className="col-span-2">
                     <CardContent className="flex flex-col items-center justify-center py-8">
                       <p className="text-muted-foreground mb-4">
                         You haven't created any proposals yet.
@@ -961,7 +922,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Right Column - Active Contracts */}
-            <div className="space-y-6">
+            <div className="lg:col-span-1 space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold">Active Contracts</h2>
                 <Button
@@ -972,7 +933,7 @@ export default function DashboardPage() {
                   View All <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-4 min-h-[400px]">
                 {displayedData.contracts.map((contract) => (
                   <ContractCard
                     key={contract.id}
@@ -999,7 +960,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Conversations Section */}
-          <div className="mb-8">
+          <div className="border-t border-gray-200 pt-8 mb-8">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">Recent Conversations</h2>
               <Button
@@ -1037,12 +998,44 @@ export default function DashboardPage() {
         </>
       )}
 
+      <div className="border-t border-gray-200 pt-8 grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div
+          onClick={() => scrollToTabsAndSwitch("believe")}
+          className="cursor-pointer hover:scale-105 transition-transform"
+        >
+          <StatsCard
+            title="Believed Smartjects"
+            description="Smartjects you've shown interest in"
+            value={processedData.believed.length}
+          />
+        </div>
+        <div
+          onClick={() => scrollToTabsAndSwitch("need")}
+          className="cursor-pointer hover:scale-105 transition-transform"
+        >
+          <StatsCard
+            title="I Need"
+            description="Smartjects you're looking to implement"
+            value={processedData.need.length}
+          />
+        </div>
+        <div
+          onClick={() => scrollToTabsAndSwitch("provide")}
+          className="cursor-pointer hover:scale-105 transition-transform"
+        >
+          <StatsCard
+            title="I Provide"
+            description="Smartjects you can implement"
+            value={processedData.provide.length}
+          />
+        </div>
+      </div>
       <Tabs value={activeTab} onValueChange={setActiveTab} ref={tabsRef}>
-        <TabsList className="mb-6">
+        {/* <TabsList className="mb-6">
           <TabsTrigger value="believe">I Believe</TabsTrigger>
           <TabsTrigger value="need">I Need</TabsTrigger>
           <TabsTrigger value="provide">I Provide</TabsTrigger>
-        </TabsList>
+        </TabsList> */}
 
         <TabsContent value="believe" className="space-y-4">
           {isLoading ? (

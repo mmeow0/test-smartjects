@@ -512,7 +512,7 @@ export const contractService = {
             signerName,
             contractData.match_id,
             isProvider,
-            contractData.id
+            contractData.id,
           );
         } catch (notificationError) {
           console.error(
@@ -978,10 +978,25 @@ export const contractService = {
       // Проверяем данные proposal
       const { data: proposalCheck } = await supabase
         .from("proposals")
-        .select("user_id, id")
+        .select("user_id, id, smartject_id")
         .eq("id", proposalId)
         .single();
       console.log("🔍 Proposal data:", proposalCheck);
+
+      // Получаем название смартджекта
+      let smartjectTitle = `Contract for Proposal ${proposalId}`;
+      if (proposalCheck?.smartject_id) {
+        const { data: smartjectData } = await supabase
+          .from("smartjects")
+          .select("title")
+          .eq("id", proposalCheck.smartject_id)
+          .single();
+
+        if (smartjectData?.title) {
+          smartjectTitle = smartjectData.title;
+        }
+      }
+      console.log("🔍 Smartject title:", smartjectTitle);
 
       // Проверяем данные match
       const { data: matchCheck } = await supabase
@@ -1015,7 +1030,7 @@ export const contractService = {
         provider_id: finalProviderId,
         needer_id: finalNeederId,
         proposal_id: proposalId,
-        title: `Contract for Proposal ${proposalId}`,
+        title: smartjectTitle,
         budget: terms.budget,
         scope: terms.scope,
         start_date: startDate.toISOString(),
@@ -1031,7 +1046,7 @@ export const contractService = {
           provider_id: finalProviderId,
           needer_id: finalNeederId,
           proposal_id: proposalId,
-          title: `Contract for Proposal ${proposalId}`,
+          title: smartjectTitle,
           budget: terms.budget,
           scope: terms.scope,
           start_date: startDate.toISOString(),
@@ -1267,8 +1282,7 @@ export const contractService = {
 
       // Separate active and completed contracts
       const activeContracts = transformedContracts.filter(
-        (contract) =>
-          contract.status !== "completed",
+        (contract) => contract.status !== "completed",
       );
 
       const completedContracts = transformedContracts.filter(
