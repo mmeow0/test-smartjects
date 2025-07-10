@@ -12,6 +12,9 @@ import {
   Briefcase,
   Calendar,
   MapPin,
+  Signature,
+  Contact,
+  SquarePen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -158,75 +161,75 @@ export default function ProfilePage() {
         <div className="md:w-1/3">
           <Card>
             <CardHeader className="relative pb-0">
-              {!isEditing ? (
+              {!isEditing && (
                 <Button
                   variant="ghost"
                   size="icon"
                   className="absolute right-4 top-4"
                   onClick={() => setIsEditing(true)}
                 >
-                  <Pencil className="h-4 w-4" />
+                  <SquarePen className="h-4 w-4" />
                   <span className="sr-only">Edit profile</span>
                 </Button>
-              ) : (
-                <div className="absolute right-4 top-4 flex gap-2">
-                  <Button variant="ghost" size="icon" onClick={handleCancel}>
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Cancel</span>
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={handleSave}>
-                    <Check className="h-4 w-4" />
-                    <span className="sr-only">Save</span>
-                  </Button>
-                </div>
               )}
 
-              <div className="flex flex-col items-center">
-                <Avatar className="h-24 w-24 mb-4">
+              <div className="flex items-start gap-4">
+                {/* Меньший аватар */}
+                <Avatar className="h-16 w-16">
                   <AvatarImage src={user?.avatar || "/placeholder.svg"} />
                   <AvatarFallback>{profileData.name.charAt(0)}</AvatarFallback>
                 </Avatar>
-                {isEditing ? (
-                  <Input
-                    name="name"
-                    value={profileData.name}
-                    onChange={handleInputChange}
-                    className="text-center font-bold text-xl mb-1"
-                  />
-                ) : (
-                  <CardTitle className="text-center">
-                    {profileData.name}
-                  </CardTitle>
-                )}
-                <CardDescription className="text-center">
-                  <Badge variant="outline" className="capitalize">
-                    {user?.accountType} Account
-                  </Badge>
-                </CardDescription>
+
+                {/* Контент справа от аватара */}
+                <div className="flex flex-col justify-center">
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="name"
+                        className="text-sm font-medium block"
+                      >
+                        Name
+                      </label>
+                      <Input
+                        id="name"
+                        name="name"
+                        value={profileData.name}
+                        onChange={handleInputChange}
+                        className="text-base font-bold"
+                        placeholder="Enter your name"
+                      />
+                    </div>
+                  ) : (
+                    <CardTitle className="text-lg">
+                      {profileData.name}
+                    </CardTitle>
+                  )}
+                  <CardDescription>
+                    <p className="capitalize border-none text-gray-400 pl-1">
+                      {user?.accountType} Account
+                    </p>
+                  </CardDescription>
+                </div>
               </div>
             </CardHeader>
+
             <CardContent className="space-y-4 pt-6">
               {isEditing ? (
                 <div className="space-y-4">
                   <div>
-                    <label
-                      htmlFor="bio"
-                      className="text-sm font-medium mb-1 block"
-                    >
-                      Bio
-                    </label>
                     <Textarea
                       id="bio"
                       name="bio"
                       value={profileData.bio}
                       onChange={handleInputChange}
                       rows={4}
+                      placeholder="Tell us about yourself..."
                     />
                   </div>
                   <div>
                     <label
                       htmlFor="location"
-                      className="text-sm font-medium mb-1 block"
+                      className="text-sm font-medium mb-2 block"
                     >
                       Location
                     </label>
@@ -235,12 +238,13 @@ export default function ProfilePage() {
                       name="location"
                       value={profileData.location}
                       onChange={handleInputChange}
+                      placeholder="e.g. New York, USA"
                     />
                   </div>
                   <div>
                     <label
                       htmlFor="company"
-                      className="text-sm font-medium mb-1 block"
+                      className="text-sm font-medium mb-2 block"
                     >
                       Company
                     </label>
@@ -249,12 +253,13 @@ export default function ProfilePage() {
                       name="company"
                       value={profileData.company}
                       onChange={handleInputChange}
+                      placeholder="e.g. Your Company Name"
                     />
                   </div>
                   <div>
                     <label
                       htmlFor="website"
-                      className="text-sm font-medium mb-1 block"
+                      className="text-sm font-medium mb-2 block"
                     >
                       Website
                     </label>
@@ -263,13 +268,13 @@ export default function ProfilePage() {
                       name="website"
                       value={profileData.website}
                       onChange={handleInputChange}
+                      placeholder="https://yourwebsite.com"
                     />
                   </div>
                 </div>
               ) : (
                 <>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Bio</p>
                     <p
                       className={
                         profileData.bio ? "" : "text-muted-foreground italic"
@@ -283,6 +288,7 @@ export default function ProfilePage() {
                       <Mail className="h-4 w-4 text-muted-foreground" />
                       <span>{user?.email || "user@example.com"}</span>
                     </div>
+                    <div className="border-t border-gray-200" />
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
                       <span
@@ -295,6 +301,7 @@ export default function ProfilePage() {
                         {profileData.location || "No location specified"}
                       </span>
                     </div>
+                    <div className="border-t border-gray-200" />
                     <div className="flex items-center gap-2">
                       <Briefcase className="h-4 w-4 text-muted-foreground" />
                       <span
@@ -307,6 +314,20 @@ export default function ProfilePage() {
                         {profileData.company || "No company specified"}
                       </span>
                     </div>
+                    <div className="border-t border-gray-200" />
+                    <div className="flex items-center gap-2">
+                      <Contact className="h-4 w-4 text-muted-foreground" />
+                      <span
+                        className={
+                          profileData.website
+                            ? ""
+                            : "text-muted-foreground italic"
+                        }
+                      >
+                        {profileData.website || "No website specified"}
+                      </span>
+                    </div>
+                    <div className="border-t border-gray-200" />
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span
@@ -325,28 +346,25 @@ export default function ProfilePage() {
                 </>
               )}
             </CardContent>
-            <CardFooter className="flex justify-between">
-              <div className="flex gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold">
-                    {believedSmartjects.length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Believed</p>
+            <CardFooter className="flex flex-col justify-between gap-7">
+              {isEditing && (
+                <div className="flex gap-2 w-full">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full"
+                    onClick={handleCancel}
+                  >
+                    Cancel
+                  </Button>
+                  <Button size="lg" className="w-full" onClick={handleSave}>
+                    Save
+                  </Button>
                 </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{needSmartjects.length}</p>
-                  <p className="text-xs text-muted-foreground">Need</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">
-                    {provideSmartjects.length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Provide</p>
-                </div>
-              </div>
+              )}
               {user?.accountType === "free" && (
-                <Button variant="outline" size="sm" asChild>
-                  <a href="/upgrade">Upgrade</a>
+                <Button variant="outline" size="lg" className="w-full" asChild>
+                  <a href="/upgrade">Upgrade plan</a>
                 </Button>
               )}
             </CardFooter>
