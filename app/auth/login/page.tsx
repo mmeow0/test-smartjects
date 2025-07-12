@@ -147,7 +147,7 @@ export default function LoginPage() {
                     required
                     value={formData.email}
                     onChange={handleChange}
-                    className="mt-2 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                    className="mt-2 h-12 border-gray-300"
                   />
                 </div>
 
@@ -162,7 +162,7 @@ export default function LoginPage() {
                       required
                       value={formData.password}
                       onChange={handleChange}
-                      className="h-12 pr-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="h-12 pr-12 border-gray-300"
                     />
                     <button
                       type="button"
