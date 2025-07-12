@@ -24,6 +24,12 @@ export default function OAuthButtons({
   const { toast } = useToast();
   const supabase = getSupabaseBrowserClient();
 
+  const getRedirectUrl = () => {
+    // Use environment variable for production or fallback to current origin
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    return `${baseUrl}/auth/callback`;
+  };
+
   const handleOAuthLogin = async (provider: OAuthProvider) => {
     setIsLoading(true);
     onLoadingChange?.(true);
@@ -35,7 +41,7 @@ export default function OAuthButtons({
       const { error } = await supabase.auth.signInWithOAuth({
         provider: actualProvider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: getRedirectUrl(),
         },
       });
 
