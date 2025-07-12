@@ -19,6 +19,9 @@ type UserType = {
   company?: string;
   website?: string;
   joinDate?: string;
+  isOAuthUser?: boolean;
+  oauthProvider?: string;
+  oauthProviderId?: string;
 };
 
 type AuthContextType = {
@@ -46,23 +49,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserProfile = async (authUser: User) => {
     const { data, error } = await supabase
       .from("users")
-      .select("id, name, email, account_type, avatar_url, bio, location, company, website, created_at")
+      .select(
+        "id, name, email, account_type, avatar_url, bio, location, company, website, created_at, is_oauth_user, oauth_provider, oauth_provider_id",
+      )
       .eq("id", authUser.id)
       .maybeSingle();
 
     if (error) throw error;
     if (data) {
       setUser({
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        accountType: data.account_type,
-        avatar: data.avatar_url ?? undefined,
-        bio: data.bio ?? undefined,
-        location: data.location ?? undefined,
-        company: data.company ?? undefined,
-        website: data.website ?? undefined,
-        joinDate: data.created_at ?? undefined,
+        id: data.id as string,
+        name: data.name as string,
+        email: data.email as string,
+        accountType: data.account_type as "free" | "paid",
+        avatar: (data.avatar_url as string) ?? undefined,
+        bio: (data.bio as string) ?? undefined,
+        location: (data.location as string) ?? undefined,
+        company: (data.company as string) ?? undefined,
+        website: (data.website as string) ?? undefined,
+        joinDate: (data.created_at as string) ?? undefined,
+        isOAuthUser: (data.is_oauth_user as boolean) ?? false,
+        oauthProvider: (data.oauth_provider as string) ?? undefined,
+        oauthProviderId: (data.oauth_provider_id as string) ?? undefined,
       });
       setIsAuthenticated(true);
     } else {
@@ -80,6 +88,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      // Check if this is an OAuth user
+      const isOAuthUser = authUser.app_metadata?.provider !== "email";
+      const oauthProvider = isOAuthUser
+        ? authUser.app_metadata?.provider
+        : null;
+      const oauthProviderId = isOAuthUser
+        ? authUser.app_metadata?.provider_id || authUser.id
+        : null;
+
+      // Get avatar from OAuth provider if available
+      const avatarUrl =
+        authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture;
+
       const { data, error } = await supabase
         .from("users")
         .insert({
@@ -87,9 +108,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: authUser.email,
           name:
             authUser.user_metadata.full_name ||
+            authUser.user_metadata.name ||
             authUser.email?.split("@")[0] ||
             "User",
           account_type: "free",
+          avatar_url: avatarUrl,
+          is_oauth_user: isOAuthUser,
+          oauth_provider: oauthProvider,
+          oauth_provider_id: oauthProviderId,
+          oauth_metadata: isOAuthUser ? authUser.user_metadata : null,
         })
         .select()
         .single();
@@ -102,11 +129,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data) {
         console.log("User profile created successfully:", data.id);
         setUser({
-          id: data.id,
-          name: data.name,
+          id: data.id as string,
+          name: data.name as string,
           email: authUser.email || "",
-          accountType: data.account_type,
-          avatar: data.avatar_url,
+          accountType: data.account_type as "free" | "paid",
+          avatar: (data.avatar_url as string) ?? undefined,
+          isOAuthUser: (data.is_oauth_user as boolean) ?? false,
+          oauthProvider: (data.oauth_provider as string) ?? undefined,
+          oauthProviderId: (data.oauth_provider_id as string) ?? undefined,
         });
         setIsAuthenticated(true);
       }
@@ -176,7 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log(
             "Auth state changed:",
             event,
-            newSession ? "Session exists" : "No session"
+            newSession ? "Session exists" : "No session",
           );
 
           if (!newSession) {
@@ -195,6 +225,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               await fetchUserProfile(newSession.user);
             } catch (error) {
               console.error("Error fetching profile after sign in:", error);
+              // If it's an OAuth user and profile doesn't exist, create it
+              if (newSession.user.app_metadata?.provider !== "email") {
+                try {
+                  await createUserProfile(newSession.user);
+                } catch (createError) {
+                  console.error(
+                    "Error creating OAuth user profile:",
+                    createError,
+                  );
+                }
+              }
             } finally {
               setIsLoading(false);
             }
@@ -278,7 +319,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (profileError) {
           console.error(
             "Error fetching profile after registration:",
-            profileError
+            profileError,
           );
         } finally {
           setIsLoading(false);
@@ -328,52 +369,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-const logout = async () => {
-  if (!supabase) {
-    console.error("Supabase client not available");
-    return;
-  }
+  const logout = async () => {
+    if (!supabase) {
+      console.error("Supabase client not available");
+      return;
+    }
 
-  console.log("Attempting logout");
-  setIsLoading(true);
+    console.log("Attempting logout");
+    setIsLoading(true);
 
-  const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
 
-  if (error) {
-    console.error("Logout error:", error);
+    if (error) {
+      console.error("Logout error:", error);
+      setIsLoading(false);
+      return;
+    }
+
+    console.log("Logout successful");
+
+    setUser(null);
+    setSession(null);
+    setIsAuthenticated(false);
     setIsLoading(false);
-    return;
-  }
 
-  console.log("Logout successful");
+    // Clear browser history state and any query parameters
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", "/");
+    }
 
-  setUser(null);
-  setSession(null);
-  setIsAuthenticated(false);
-  setIsLoading(false);
+    // Clean navigation to homepage without any query parameters
+    router.replace("/");
+  };
 
-  // Clear browser history state and any query parameters
-  if (typeof window !== "undefined") {
-    window.history.replaceState(null, "", "/");
-  }
-  
-  // Clean navigation to homepage without any query parameters
-  router.replace("/");
-};
+  const refreshUser = async () => {
+    if (!session?.user) {
+      throw new Error("No authenticated user to refresh");
+    }
 
-const refreshUser = async () => {
-  if (!session?.user) {
-    throw new Error("No authenticated user to refresh");
-  }
-
-  try {
-    await fetchUserProfile(session.user);
-  } catch (error) {
-    console.error("Error refreshing user profile:", error);
-    throw error;
-  }
-};
-
+    try {
+      await fetchUserProfile(session.user);
+    } catch (error) {
+      console.error("Error refreshing user profile:", error);
+      throw error;
+    }
+  };
 
   return (
     <AuthContext.Provider
