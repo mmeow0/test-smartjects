@@ -17,7 +17,7 @@ function getBaseUrl(requestUrl: URL): string {
     console.warn(
       "Production environment detected but got localhost origin, using fallback",
     );
-    return "https://www.smartjects.com"; // Fallback for production
+    return "https://smartjects.com"; // Fallback for production
   }
 
   return origin;
