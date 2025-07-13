@@ -534,46 +534,59 @@ const ContractCard = memo(
     }, [contract.budget]);
 
     return (
-      <Card
-        className="hover:bg-muted/50 transition-colors cursor-pointer"
-        onClick={handleClick}
-      >
-        <CardHeader className="pb-2">
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-lg">
-                {contract.smartjectTitle}
-              </CardTitle>
-              <CardDescription>
-                Contract with {contract.otherParty} • You are the{" "}
-                {contract.role}
-              </CardDescription>
-            </div>
-            {getStatusBadge(contract.status)}
+     <Card
+    className="hover:bg-muted/50 transition-colors cursor-pointer p-4 flex flex-col justify-between"
+    onClick={handleClick}
+  >
+    {/* --- Header -------------------------------------------------------- */}
+    <div className="flex justify-between items-start mb-2">
+      <div>
+        <CardTitle className="text-base font-semibold leading-tight text-foreground">
+          {contract.smartjectTitle}
+        </CardTitle>
+        <CardDescription>
+          Contract with {contract.otherParty}
+        </CardDescription>
+      </div>
+
+      <div className="flex gap-2 flex-col">
+        {getStatusBadge(contract.status)}
+        {contract.role === "provider" ? (
+          <div className="flex flex-row items-center bg-sky-100 text-sky-700 px-3 py-1 rounded-full gap-2">
+            <Lightbulb className="h-4 w-4" />
+            <span className="text-xs">I provide</span>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground flex items-center">
-                <Clock className="h-4 w-4 mr-1" /> Next Milestone
-              </p>
-              <p className="font-medium">{contract.nextMilestone}</p>
-              <p className="text-xs text-muted-foreground">
-                Due: {formatMilestoneDate(contract.nextMilestoneDate)}
-              </p>
-            </div>
-            {contract.budget && (
-              <div>
-                <p className="text-sm text-muted-foreground flex items-center">
-                  <DollarSign className="h-4 w-4 mr-1" /> Budget
-                </p>
-                <p className="font-medium">{displayBudget}</p>
-              </div>
-            )}
+        ) : (
+          <div className="flex flex-row items-center bg-orange-100 text-orange-700 px-3 py-1 rounded-full gap-2">
+            <Briefcase className="h-4 w-4" />
+            <span className="text-xs">I need</span>
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
+    </div>
+
+    {/* --- Body ---------------------------------------------------------- */}
+    <CardContent className="p-0">
+      <div className="flex items-center text-sm text-muted-foreground mt-4 w-full justify-between">
+        {/* Бюджет */}
+        {contract.budget && (
+          <div className="flex items-center gap-1">
+            <Wallet className="h-4 w-4" />
+            <span className="font-medium">{displayBudget}</span>
+          </div>
+        )}
+
+        {/* Следующий майлстоун */}
+        <div className="flex items-center gap-1">
+          <Clock className="h-4 w-4" />
+          <span>
+            {contract.nextMilestone} •{" "}
+            {formatMilestoneDate(contract.nextMilestoneDate)}
+          </span>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
     );
   },
 );
