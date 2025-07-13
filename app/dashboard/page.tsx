@@ -16,12 +16,15 @@ import { useRequireAuth } from "@/hooks/use-auth-guard";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight,
+  Briefcase,
   CheckCircle,
   Clock,
   DollarSign,
   FileText,
   Handshake,
+  Lightbulb,
   MessageSquare,
+  Settings,
 } from "lucide-react";
 import { useUserSmartjects } from "@/hooks/use-user-smartjects";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -409,35 +412,63 @@ const ProposalCard = memo(
     }, [proposal.budget]);
 
     return (
-      <Card
-        className="hover:bg-muted/50 transition-colors cursor-pointer h-full"
-        onClick={handleClick}
-      >
-        <CardHeader className="pb-2">
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-lg">{proposal.title}</CardTitle>
-              <CardDescription>
-                {proposal.updatedAt
-                  ? `Last updated on ${new Date(
-                      proposal.updatedAt,
-                    ).toLocaleDateString()} • `
-                  : ""}
-                {proposal.type === "need" ? "I Need" : "I Provide"}
-              </CardDescription>
+    <Card
+  className="hover:bg-muted/50 transition-colors cursor-pointer p-4 flex flex-col justify-between"
+  onClick={handleClick}
+>
+      <div className="flex justify-between items-start mb-2">
+        <CardTitle className="text-base font-semibold leading-tight text-foreground">
+          {proposal.title}
+        </CardTitle>
+        <div className="flex gap-2 flex-col">
+          {proposal.type === "provide" ? (
+            <div className="flex flex-row items-center bg-sky-100 text-sky-700 px-3 py-1 rounded-full gap-2">
+              <Lightbulb className="h-4 w-4" />
+              <span className=" text-xs ">
+              I provide
+              </span>
             </div>
-            {getStatusBadge(proposal.status)}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {proposal.budget && (
-            <div className="flex items-center">
-              <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
-              <span className="font-medium">{displayBudget}</span>
+          ) : (
+            <div className="flex flex-row items-center bg-orange-100 text-orange-700 px-3 py-1 rounded-full gap-2">
+              <Briefcase className="h-4 w-4" />
+              <span className=" text-xs ">
+                I need
+              </span>
             </div>
           )}
-        </CardContent>
-      </Card>
+          {proposal.status === "draft" && (
+            <div className="flex flex-row justify-around items-center bg-yellow-100 text-yellow-600 px-3 py-1 rounded-full gap-2">
+              <Clock className="h-4 w-4" />
+              <span className="text-xs">
+                Draft
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+  <div className="flex items-center text-sm text-muted-foreground mt-4 w-full justify-between">
+    {proposal.budget && (
+      <div className="flex items-center gap-1">
+        <Briefcase className="h-4 w-4" />
+        <span className="font-medium">{displayBudget}</span>
+      </div>
+    )}
+    {proposal.timeline && (
+      <div className="flex items-center gap-1">
+        <Clock className="h-4 w-4" />
+        <span>{proposal.timeline}</span>
+      </div>
+    )}
+    {proposal.updatedAt && (
+      <div className="flex items-center gap-1">
+        <Settings className="h-4 w-4" />
+        <span>{new Date(proposal.updatedAt).toLocaleDateString()}</span>
+      </div>
+    )}
+  </div>
+</Card>
+
     );
   },
 );
@@ -502,7 +533,7 @@ const ContractCard = memo(
 
     return (
       <Card
-        className="hover:bg-muted/50 transition-colors cursor-pointer h-full"
+        className="hover:bg-muted/50 transition-colors cursor-pointer"
         onClick={handleClick}
       >
         <CardHeader className="pb-2">
