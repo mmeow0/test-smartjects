@@ -25,6 +25,7 @@ import {
   Lightbulb,
   MessageSquare,
   Settings,
+  Wallet,
 } from "lucide-react";
 import { useUserSmartjects } from "@/hooks/use-user-smartjects";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,6 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { CreateProposalModal } from "@/components/create-proposal-modal";
+import { ContractListType } from "@/lib/types";
 
 interface UserConversation {
   id: string;
@@ -450,7 +452,7 @@ const ProposalCard = memo(
   <div className="flex items-center text-sm text-muted-foreground mt-4 w-full justify-between">
     {proposal.budget && (
       <div className="flex items-center gap-1">
-        <Briefcase className="h-4 w-4" />
+        <Wallet className="h-4 w-4" />
         <span className="font-medium">{displayBudget}</span>
       </div>
     )}
@@ -481,7 +483,7 @@ const ContractCard = memo(
     contract,
     onNavigate,
   }: {
-    contract: any;
+    contract: ContractListType;
     onNavigate: (id: string) => void;
   }) => {
     const handleClick = useCallback(() => {
@@ -586,7 +588,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [proposals, setProposals] = useState<any[]>([]);
-  const [activeContracts, setActiveContracts] = useState<any[]>([]);
+  const [activeContracts, setActiveContracts] = useState<ContractListType[]>([]);
   const [activeTab, setActiveTab] = useState("believe");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const tabsRef = useRef<HTMLDivElement>(null);
