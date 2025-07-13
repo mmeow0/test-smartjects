@@ -106,7 +106,7 @@ export default function EditProposalPage({
         description: proposal.description || "",
         scope: proposal.scope || "",
         timeline: proposal.timeline || "",
-        budget: proposal.budget || "",
+        budget: proposal.budget ? proposal.budget.toString() : "",
         deliverables: proposal.deliverables || "",
         requirements:
           proposal.type === "need" ? proposal.requirements || "" : "",
@@ -121,7 +121,7 @@ export default function EditProposalPage({
         setPrivateFields({
           scope: proposal.privateFields.scope || "",
           timeline: proposal.privateFields.timeline || "",
-          budget: proposal.privateFields.budget || "",
+          budget: proposal.privateFields.budget || undefined,
           deliverables: proposal.privateFields.deliverables || "",
           requirements: proposal.privateFields.requirements || "",
           expertise: proposal.privateFields.expertise || "",
@@ -184,7 +184,7 @@ export default function EditProposalPage({
   const [privateFields, setPrivateFields] = useState<ProposalPrivateFields>({
     scope: "",
     timeline: "",
-    budget: "",
+    budget: undefined,
     deliverables: "",
     requirements: "",
     expertise: "",
@@ -377,7 +377,7 @@ export default function EditProposalPage({
         title: formData.title,
         description: formData.description,
         isCooperationProposal: isCooperationProposal,
-        budget: formData.budget,
+        budget: formData.budget ? Number(formData.budget) : undefined,
         timeline: formData.timeline,
         scope: formData.scope,
         deliverables: formData.deliverables,
@@ -463,7 +463,11 @@ export default function EditProposalPage({
         title: formData.title,
         description: formData.description,
         isCooperationProposal: isCooperationProposal,
-        budget: isCooperationProposal ? "" : formData.budget,
+        budget: isCooperationProposal
+          ? undefined
+          : formData.budget
+            ? Number(formData.budget)
+            : undefined,
         timeline: isCooperationProposal ? "" : formData.timeline,
         scope: isCooperationProposal ? "" : formData.scope,
         deliverables: isCooperationProposal ? "" : formData.deliverables,
@@ -844,15 +848,18 @@ export default function EditProposalPage({
               fieldName="budget"
               label="Budget"
               publicValue={formData.budget}
-              privateValue={privateFields.budget || ""}
+              privateValue={privateFields.budget?.toString() || ""}
               onPublicChangeAction={(value) =>
                 setFormData((prev) => ({ ...prev, budget: value }))
               }
               onPrivateChangeAction={(value) =>
-                handlePrivateFieldChange("budget", value)
+                handlePrivateFieldChange(
+                  "budget",
+                  value ? Number(value) : undefined,
+                )
               }
-              fieldType="input"
-              placeholder="e.g., $5,000, $10,000-$15,000"
+              fieldType="number"
+              placeholder="e.g., 5000, 10000"
               privatePlaceholder="Confidential budget details..."
               hasPrivateField={enabledPrivateFields.budget}
               onTogglePrivateFieldAction={(enabled) =>
@@ -1244,7 +1251,11 @@ export default function EditProposalPage({
                       <p className="text-sm font-medium flex items-center gap-1">
                         <DollarSign className="h-4 w-4" /> Budget
                       </p>
-                      <p>{formData.budget || "Not specified"}</p>
+                      <p>
+                        {formData.budget
+                          ? `$${Number(formData.budget).toLocaleString()}`
+                          : "Not specified"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm font-medium flex items-center gap-1">
@@ -1266,7 +1277,9 @@ export default function EditProposalPage({
                 description={formData.description}
                 scope={formData.scope}
                 timeline={formData.timeline}
-                budget={formData.budget}
+                budget={
+                  formData.budget ? Number(formData.budget).toString() : ""
+                }
                 deliverables={formData.deliverables}
                 requirements={formData.requirements}
                 expertise={formData.expertise}

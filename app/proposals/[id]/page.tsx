@@ -118,15 +118,25 @@ export default function ProposalDetailPage({
 
   // Helper function to display field value or "not specified"
   const displayField = (
-    value: string | undefined | null,
+    value: string | number | undefined | null,
     hideNotSpecified = false,
   ) => {
-    if (!value || value.trim() === "") {
+    if (!value || (typeof value === "string" && value.trim() === "")) {
       return hideNotSpecified ? null : (
         <span className="text-muted-foreground italic">not specified</span>
       );
     }
     return value;
+  };
+
+  // Helper function to display budget with proper formatting
+  const displayBudget = (budget: number | undefined | null) => {
+    if (!budget) {
+      return (
+        <span className="text-muted-foreground italic">not specified</span>
+      );
+    }
+    return `${budget.toLocaleString()}`;
   };
 
   const isProposalOwner = proposal.userId === user.id;
@@ -358,8 +368,8 @@ export default function ProposalDetailPage({
             </CardHeader>
             <CardContent>
               <div className="flex items-center">
-                <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>{displayField(proposal.budget)}</span>
+                <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
+                <span>{displayBudget(proposal.budget)}</span>
               </div>
             </CardContent>
           </Card>
@@ -509,7 +519,7 @@ export default function ProposalDetailPage({
                     )}
                     {!proposal.isCooperationProposal && (
                       <DetailSection title="Budget">
-                        {displayField(proposal.budget)}
+                        {displayBudget(proposal.budget)}
                       </DetailSection>
                     )}
                     <DetailSection title="Submitted On">
@@ -662,7 +672,7 @@ export default function ProposalDetailPage({
                   description={proposal.description}
                   scope={proposal.scope || ""}
                   timeline={proposal.timeline || ""}
-                  budget={proposal.budget || ""}
+                  budget={proposal.budget ? proposal.budget.toString() : ""}
                   deliverables={proposal.deliverables ?? ""}
                   requirements={
                     proposal.type === "need" ? proposal.requirements : undefined
@@ -1254,7 +1264,10 @@ export default function ProposalDetailPage({
                                 Private Budget:
                               </p>
                               <p className="text-sm text-amber-800">
-                                {proposal.privateFields.budget}
+                                {typeof proposal.privateFields.budget ===
+                                "number"
+                                  ? `$${proposal.privateFields.budget.toLocaleString()}`
+                                  : proposal.privateFields.budget}
                               </p>
                             </div>
                           )}

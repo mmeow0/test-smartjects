@@ -115,7 +115,7 @@ export type NDARequest = {
 export type ProposalPrivateFields = {
   scope?: string;
   timeline?: string;
-  budget?: string;
+  budget?: number;
   deliverables?: string;
   requirements?: string;
   expertise?: string;
@@ -132,7 +132,7 @@ export type ProposalType = {
   title: string;
   description: string;
   isCooperationProposal?: boolean;
-  budget?: string;
+  budget?: number;
   timeline?: string;
   scope?: string;
   deliverables?: string;
@@ -255,7 +255,7 @@ export type ContractType = {
   startDate: string;
   endDate: string;
   exclusivityEnds: string;
-  budget: string;
+  budget: number;
   scope: string;
   createdAt: string;
   updatedAt: string;
@@ -289,7 +289,7 @@ export type ContractListType = {
   startDate: string;
   endDate: string;
   status: "pending_start" | "active" | "completed" | "cancelled";
-  budget: string;
+  budget: number;
   nextMilestone?: string;
   nextMilestoneId?: string;
   nextMilestoneDate?: string;
@@ -462,7 +462,7 @@ export type Database = {
           type: string;
           title: string;
           description: string | null;
-          budget: string | null;
+          budget: number | null;
           timeline: string | null;
           scope: string | null;
           deliverables: string | null;
@@ -483,7 +483,7 @@ export type Database = {
           type: string;
           title: string;
           description?: string | null;
-          budget?: string | null;
+          budget?: number | null;
           timeline?: string | null;
           scope?: string | null;
           deliverables?: string | null;
@@ -504,7 +504,7 @@ export type Database = {
           type?: string;
           title?: string;
           description?: string | null;
-          budget?: string | null;
+          budget?: number | null;
           timeline?: string | null;
           scope?: string | null;
           deliverables?: string | null;

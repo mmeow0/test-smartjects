@@ -1,16 +1,23 @@
-"use client"
+"use client";
 
-import { useEffect, useState, use } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Progress } from "@/components/ui/progress"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useAuth } from "@/components/auth-provider"
-import { useToast } from "@/hooks/use-toast"
+import { useEffect, useState, use } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/components/auth-provider";
+import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Calendar,
@@ -28,80 +35,85 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-} from "lucide-react"
-import { ContractDocumentPreview } from "@/components/contract-document-preview"
-import { contractService } from "@/lib/services"
-import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
-import { MilestoneCard } from "@/components/contract/milestone-card"
-import { QuickMilestoneActions } from "@/components/contract/quick-milestone-actions"
-import { ContractWorkflow } from "@/components/contract/contract-workflow"
-import { ContractCompletion } from "@/components/contract/contract-completion"
+} from "lucide-react";
+import { ContractDocumentPreview } from "@/components/contract-document-preview";
+import { contractService } from "@/lib/services";
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
+import { MilestoneCard } from "@/components/contract/milestone-card";
+import { QuickMilestoneActions } from "@/components/contract/quick-milestone-actions";
+import { ContractWorkflow } from "@/components/contract/contract-workflow";
+import { ContractCompletion } from "@/components/contract/contract-completion";
 
-export default function ContractDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ContractDetailsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
 
-  const router = useRouter()
-  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(true)
-  const [expandedMilestone, setExpandedMilestone] = useState<string | null>(null)
-  const [isCheckingSigningStatus, setIsCheckingSigningStatus] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [contract, setContract] = useState<any>(null)
+  const router = useRouter();
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [expandedMilestone, setExpandedMilestone] = useState<string | null>(
+    null
+  );
+  const [isCheckingSigningStatus, setIsCheckingSigningStatus] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [contract, setContract] = useState<any>(null);
 
   // Load contract data
   const loadContract = async () => {
     // Don't load while auth is still loading or access is denied
     if (authLoading || !canAccess) {
-      return
+      return;
     }
 
-    setIsLoading(true)
-    setError(null)
+    setIsLoading(true);
+    setError(null);
 
     try {
       // Check if contract is fully signed using contractId
-      const { isSigned, matchId, proposalId } = await contractService.isContractFullySigned(id)
-      
+      const { isSigned, matchId, proposalId } =
+        await contractService.isContractFullySigned(id);
+
       if (!isSigned) {
         // Contract not fully signed - redirect to signing page if we have match/proposal IDs
         if (matchId && proposalId) {
-          router.push(`/matches/${matchId}/contract/${proposalId}`)
-          return
+          router.push(`/matches/${matchId}/contract/${proposalId}`);
+          return;
         } else {
-          setError("Contract not found or not fully signed")
-          setIsCheckingSigningStatus(false)
-          setIsLoading(false)
-          return
+          setError("Contract not found or not fully signed");
+          setIsCheckingSigningStatus(false);
+          setIsLoading(false);
+          return;
         }
       }
 
       // Contract is fully signed - load contract data
-      const contractData = await contractService.getContractById(id)
-      
+      const contractData = await contractService.getContractById(id);
+
       if (!contractData) {
-        setError("Contract not found or access denied")
-        setIsCheckingSigningStatus(false)
-        setIsLoading(false)
-        return
+        setError("Contract not found or access denied");
+        setIsCheckingSigningStatus(false);
+        setIsLoading(false);
+        return;
       }
 
-      setContract(contractData)
-      setIsCheckingSigningStatus(false)
-      setIsLoading(false)
-      
+      setContract(contractData);
+      setIsCheckingSigningStatus(false);
+      setIsLoading(false);
     } catch (error) {
-      console.error("Error loading contract:", error)
-      setError("Failed to load contract data")
-      setIsCheckingSigningStatus(false)
-      setIsLoading(false)
+      console.error("Error loading contract:", error);
+      setError("Failed to load contract data");
+      setIsCheckingSigningStatus(false);
+      setIsLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    loadContract()
-  }, [authLoading, canAccess, router, id])
-
+    loadContract();
+  }, [authLoading, canAccess, router, id]);
 
   if (authLoading || !canAccess || isLoading || isCheckingSigningStatus) {
     return (
@@ -110,12 +122,14 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">
-              {isCheckingSigningStatus ? "Checking contract access..." : "Loading contract..."}
+              {isCheckingSigningStatus
+                ? "Checking contract access..."
+                : "Loading contract..."}
             </p>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error || !contract) {
@@ -123,118 +137,129 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <p className="text-destructive mb-4">{error || "Contract not found"}</p>
-            <Button onClick={() => router.back()}>
-              Go Back
-            </Button>
+            <p className="text-destructive mb-4">
+              {error || "Contract not found"}
+            </p>
+            <Button onClick={() => router.back()}>Go Back</Button>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   // Calculate overall progress
-  const completedMilestones = contract?.paymentSchedule?.filter((m: any) => m.status === "completed").length || 0
-  const totalMilestones = contract?.paymentSchedule?.length || 0
-  const progressPercentage = totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 0
-  const hasMilestones = totalMilestones > 0
+  const completedMilestones =
+    contract?.paymentSchedule?.filter((m: any) => m.status === "completed")
+      .length || 0;
+  const totalMilestones = contract?.paymentSchedule?.length || 0;
+  const progressPercentage =
+    totalMilestones > 0
+      ? Math.round((completedMilestones / totalMilestones) * 100)
+      : 0;
+  const hasMilestones = totalMilestones > 0;
 
   // Get contract status information for contracts without milestones
   const getContractStatusInfo = () => {
     switch (contract?.status) {
-      case 'pending_start':
-        return { 
-          label: 'Awaiting Work to Begin', 
-          percentage: 0, 
-          color: 'bg-yellow-500',
-          description: 'Provider needs to start work on this contract'
-        }
-      case 'active':
-        return { 
-          label: 'Work in Progress', 
-          percentage: 50, 
-          color: 'bg-blue-500',
-          description: 'Provider is actively working on deliverables'
-        }
-      case 'pending_review':
-        return { 
-          label: 'Awaiting Client Review', 
-          percentage: 90, 
-          color: 'bg-purple-500',
-          description: 'Work completed, waiting for client approval'
-        }
-      case 'completed':
-        return { 
-          label: 'Contract Completed', 
-          percentage: 100, 
-          color: 'bg-green-500',
-          description: 'All work delivered and approved'
-        }
-      case 'cancelled':
-        return { 
-          label: 'Contract Cancelled', 
-          percentage: 0, 
-          color: 'bg-red-500',
-          description: 'Contract has been cancelled'
-        }
+      case "pending_start":
+        return {
+          label: "Awaiting Work to Begin",
+          percentage: 0,
+          color: "bg-yellow-500",
+          description: "Provider needs to start work on this contract",
+        };
+      case "active":
+        return {
+          label: "Work in Progress",
+          percentage: 50,
+          color: "bg-blue-500",
+          description: "Provider is actively working on deliverables",
+        };
+      case "pending_review":
+        return {
+          label: "Awaiting Client Review",
+          percentage: 90,
+          color: "bg-purple-500",
+          description: "Work completed, waiting for client approval",
+        };
+      case "completed":
+        return {
+          label: "Contract Completed",
+          percentage: 100,
+          color: "bg-green-500",
+          description: "All work delivered and approved",
+        };
+      case "cancelled":
+        return {
+          label: "Contract Cancelled",
+          percentage: 0,
+          color: "bg-red-500",
+          description: "Contract has been cancelled",
+        };
       default:
-        return { 
-          label: 'Status Unknown', 
-          percentage: 0, 
-          color: 'bg-gray-500',
-          description: 'Contract status is unclear'
-        }
+        return {
+          label: "Status Unknown",
+          percentage: 0,
+          color: "bg-gray-500",
+          description: "Contract status is unclear",
+        };
     }
-  }
+  };
 
   // Get the next milestone
-  const nextMilestone = contract?.paymentSchedule?.find((m: any) => m.status === "in_progress" || m.status === "pending")
+  const nextMilestone = contract?.paymentSchedule?.find(
+    (m: any) => m.status === "in_progress" || m.status === "pending"
+  );
 
   // Determine if the user is the provider or needer
-  const isProvider = user?.id === contract?.provider?.id
-  const otherParty = isProvider ? contract?.needer : contract?.provider
+  const isProvider = user?.id === contract?.provider?.id;
+  const otherParty = isProvider ? contract?.needer : contract?.provider;
 
   const toggleMilestone = (id: string) => {
     if (expandedMilestone === id) {
-      setExpandedMilestone(null)
+      setExpandedMilestone(null);
     } else {
-      setExpandedMilestone(id)
+      setExpandedMilestone(id);
     }
-  }
+  };
 
   const handleDownloadContract = () => {
     toast({
       title: "Download started",
       description: "The contract document is being downloaded.",
-    })
-  }
+    });
+  };
 
   const handleSendMessage = () => {
-    router.push(`/contracts/${id}/messages`)
-  }
+    router.push(`/contracts/${id}/messages`);
+  };
 
   const handleUploadDocument = () => {
-    router.push(`/contracts/${id}/upload`)
-  }
+    router.push(`/contracts/${id}/upload`);
+  };
 
   const handleReportIssue = () => {
-    router.push(`/contracts/${id}/issue`)
-  }
+    router.push(`/contracts/${id}/issue`);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-100 text-green-800">Active</Badge>
+        return <Badge className="bg-green-100 text-green-800">Active</Badge>;
       case "pending_start":
-        return <Badge className="bg-blue-100 text-blue-800">Pending Start</Badge>
+        return (
+          <Badge className="bg-blue-100 text-blue-800">Pending Start</Badge>
+        );
       case "completed":
-        return <Badge className="bg-purple-100 text-purple-800">Completed</Badge>
+        return (
+          <Badge className="bg-purple-100 text-purple-800">Completed</Badge>
+        );
       case "cancelled":
-        return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>
+        return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Badge variant="outline">{status}</Badge>;
     }
-  }
+  };
 
   const getMilestoneStatusBadge = (status: string) => {
     switch (status) {
@@ -243,58 +268,58 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
           <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
             <CheckCircle className="h-3 w-3" /> Completed
           </Badge>
-        )
+        );
       case "submitted":
         return (
           <Badge className="bg-purple-100 text-purple-800 flex items-center gap-1">
             <Clock className="h-3 w-3" /> Submitted for Review
           </Badge>
-        )
+        );
       case "in_progress":
         return (
           <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
             <Clock className="h-3 w-3" /> In Progress
           </Badge>
-        )
+        );
       case "pending":
         return (
           <Badge variant="outline" className="flex items-center gap-1">
             <Clock className="h-3 w-3" /> Pending
           </Badge>
-        )
+        );
       case "overdue":
         return (
           <Badge variant="destructive" className="flex items-center gap-1">
             <AlertTriangle className="h-3 w-3" /> Overdue
           </Badge>
-        )
+        );
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Badge variant="outline">{status}</Badge>;
     }
-  }
+  };
 
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "contract_signed":
-        return <FileText className="h-4 w-4 text-green-600" />
+        return <FileText className="h-4 w-4 text-green-600" />;
       case "milestone_completed":
-        return <CheckCircle className="h-4 w-4 text-green-600" />
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
       case "payment_processed":
-        return <DollarSign className="h-4 w-4 text-green-600" />
+        return <DollarSign className="h-4 w-4 text-green-600" />;
       case "document_uploaded":
-        return <FileText className="h-4 w-4 text-blue-600" />
+        return <FileText className="h-4 w-4 text-blue-600" />;
       case "comment_added":
-        return <MessageSquare className="h-4 w-4 text-blue-600" />
+        return <MessageSquare className="h-4 w-4 text-blue-600" />;
       case "issue_reported":
-        return <AlertTriangle className="h-4 w-4 text-amber-600" />
+        return <AlertTriangle className="h-4 w-4 text-amber-600" />;
       case "issue_resolved":
-        return <Check className="h-4 w-4 text-green-600" />
+        return <Check className="h-4 w-4 text-green-600" />;
       case "contract_cancelled":
-        return <XCircle className="h-4 w-4 text-red-600" />
+        return <XCircle className="h-4 w-4 text-red-600" />;
       default:
-        return <History className="h-4 w-4 text-gray-600" />
+        return <History className="h-4 w-4 text-gray-600" />;
     }
-  }
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -310,7 +335,10 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
           </div>
           <p className="text-muted-foreground">
             Contract for{" "}
-            <Link href={`/smartject/${contract?.smartjectId}`} className="text-primary hover:underline">
+            <Link
+              href={`/smartject/${contract?.smartjectId}`}
+              className="text-primary hover:underline"
+            >
               {contract?.smartjectTitle}
             </Link>
           </p>
@@ -321,17 +349,23 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Contract Overview</CardTitle>
-            <CardDescription>Key information about this contract</CardDescription>
+            <CardDescription>
+              Key information about this contract
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={otherParty?.avatar || "/placeholder.svg"} />
-                  <AvatarFallback>{otherParty?.name?.charAt(0) || "U"}</AvatarFallback>
+                  <AvatarFallback>
+                    {otherParty?.name?.charAt(0) || "U"}
+                  </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-sm text-muted-foreground">{isProvider ? "Client" : "Provider"}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {isProvider ? "Client" : "Provider"}
+                  </p>
                   <p className="font-medium">{otherParty?.name}</p>
                 </div>
               </div>
@@ -341,19 +375,31 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
                   <p className="text-sm text-muted-foreground flex items-center">
                     <Calendar className="h-4 w-4 mr-1" /> Start Date
                   </p>
-                  <p className="font-medium">{contract?.startDate ? new Date(contract.startDate).toLocaleDateString() : "TBD"}</p>
+                  <p className="font-medium">
+                    {contract?.startDate
+                      ? new Date(contract.startDate).toLocaleDateString()
+                      : "TBD"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground flex items-center">
                     <Calendar className="h-4 w-4 mr-1" /> End Date
                   </p>
-                  <p className="font-medium">{contract?.endDate ? new Date(contract.endDate).toLocaleDateString() : "TBD"}</p>
+                  <p className="font-medium">
+                    {contract?.endDate
+                      ? new Date(contract.endDate).toLocaleDateString()
+                      : "TBD"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground flex items-center">
                     <DollarSign className="h-4 w-4 mr-1" /> Budget
                   </p>
-                  <p className="font-medium">{contract?.budget}</p>
+                  <p className="font-medium">
+                    {contract?.budget
+                      ? `$${contract.budget.toLocaleString()}`
+                      : "Not specified"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -364,7 +410,12 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
               </h3>
               <p className="text-sm">
                 This contract includes an exclusivity period that ends on{" "}
-                <span className="font-medium">{contract?.exclusivityEnds ? new Date(contract.exclusivityEnds).toLocaleDateString() : "TBD"}</span>.
+                <span className="font-medium">
+                  {contract?.exclusivityEnds
+                    ? new Date(contract.exclusivityEnds).toLocaleDateString()
+                    : "TBD"}
+                </span>
+                .
               </p>
             </div>
 
@@ -376,9 +427,11 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
             <div>
               <h3 className="text-sm font-medium mb-2">Deliverables</h3>
               <ul className="list-disc pl-5 text-sm space-y-1">
-                {contract?.deliverables?.map((deliverable: string, index: number) => (
-                  <li key={index}>{deliverable}</li>
-                )) || <li>No deliverables specified</li>}
+                {contract?.deliverables?.map(
+                  (deliverable: string, index: number) => (
+                    <li key={index}>{deliverable}</li>
+                  )
+                ) || <li>No deliverables specified</li>}
               </ul>
             </div>
 
@@ -398,12 +451,16 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
                 ) : (
                   <>
                     <div className="flex justify-between text-sm">
-                      <span className="font-medium">{getContractStatusInfo().label}</span>
-                      <span className="text-muted-foreground">{getContractStatusInfo().percentage}% Complete</span>
+                      <span className="font-medium">
+                        {getContractStatusInfo().label}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {getContractStatusInfo().percentage}% Complete
+                      </span>
                     </div>
-                    <Progress 
-                      value={getContractStatusInfo().percentage} 
-                      className="h-2" 
+                    <Progress
+                      value={getContractStatusInfo().percentage}
+                      className="h-2"
                     />
                     <div className="text-xs text-muted-foreground mt-1">
                       {getContractStatusInfo().description}
@@ -421,12 +478,13 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <p className="font-medium">{nextMilestone?.name}</p>
-                    <p className="text-sm text-muted-foreground">{nextMilestone?.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {nextMilestone?.description}
+                    </p>
                   </div>
                   {getMilestoneStatusBadge(nextMilestone?.status || "pending")}
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                 
                   <div>
                     <span className="text-muted-foreground">Amount:</span>{" "}
                     <span className="font-medium">{nextMilestone?.amount}</span>
@@ -446,7 +504,7 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
                 startDate={contract.startDate}
                 endDate={contract.endDate}
                 exclusivityEnds={contract.exclusivityEnds}
-                budget={contract.budget}
+                budget={contract.budget ? contract.budget.toString() : ""}
                 scope={contract.scope}
                 deliverables={contract.deliverables}
                 paymentSchedule={contract.paymentSchedule}
@@ -479,7 +537,7 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
               userRole={isProvider ? "provider" : "needer"}
               onMilestoneUpdate={() => {
                 // Reload contract data
-                window.location.reload()
+                window.location.reload();
               }}
             />
           )}
@@ -491,9 +549,9 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
             </CardHeader>
             <CardContent className="space-y-4">
               {contract?.status === "active" && (
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-between" 
+                <Button
+                  variant="outline"
+                  className="w-full justify-between"
                   onClick={() => router.push(`/contracts/${id}/messages`)}
                 >
                   View Messages
@@ -501,9 +559,9 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
                 </Button>
               )}
 
-              <Button 
-                variant="outline" 
-                className="w-full justify-between" 
+              <Button
+                variant="outline"
+                className="w-full justify-between"
                 onClick={() => router.push(`/contracts/${id}/documents`)}
               >
                 View All Documents
@@ -511,9 +569,9 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
               </Button>
 
               {/* {contract?.status === "active" && (
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-between" 
+                <Button
+                  variant="outline"
+                  className="w-full justify-between"
                   onClick={() => router.push(`/contracts/${id}/schedule-meeting`)}
                 >
                   Schedule Meeting
@@ -544,11 +602,14 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
           <Card>
             <CardHeader>
               <CardTitle>Milestones & Payment Schedule</CardTitle>
-              <CardDescription>Track progress and payment milestones</CardDescription>
+              <CardDescription>
+                Track progress and payment milestones
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {contract?.paymentSchedule && contract.paymentSchedule.length > 0 ? (
+                {contract?.paymentSchedule &&
+                contract.paymentSchedule.length > 0 ? (
                   contract.paymentSchedule.map((milestone: any) => (
                     <MilestoneCard
                       key={milestone.id}
@@ -563,7 +624,9 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
                   <div className="space-y-4">
                     <div className="text-center py-8 text-muted-foreground">
                       <p>This contract doesn't have specific milestones.</p>
-                      <p>Use the workflow below to manage the contract progress.</p>
+                      <p>
+                        Use the workflow below to manage the contract progress.
+                      </p>
                     </div>
                     <ContractWorkflow
                       contractId={id}
@@ -575,7 +638,7 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
               </div>
             </CardContent>
           </Card>
-          
+
           {/* Contract Completion - only show for contracts with milestones */}
           {hasMilestones && (
             <ContractCompletion
@@ -590,18 +653,25 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
           <Card>
             <CardHeader>
               <CardTitle>Contract Documents</CardTitle>
-              <CardDescription>All documents related to this contract</CardDescription>
+              <CardDescription>
+                All documents related to this contract
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {contract?.documents?.map((doc: any, index: number) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-md">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 border rounded-md"
+                  >
                     <div className="flex items-center">
                       <FileText className="h-5 w-5 mr-3 text-blue-500" />
                       <div>
                         <p className="font-medium">{doc.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          Uploaded on {new Date(doc.uploadedAt).toLocaleDateString()} • {doc.size}
+                          Uploaded on{" "}
+                          {new Date(doc.uploadedAt).toLocaleDateString()} •{" "}
+                          {doc.size}
                         </p>
                       </div>
                     </div>
@@ -627,7 +697,9 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
           <Card>
             <CardHeader>
               <CardTitle>Contract Messages</CardTitle>
-              <CardDescription>Communication history for this contract</CardDescription>
+              <CardDescription>
+                Communication history for this contract
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4 mb-4">
@@ -658,21 +730,32 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
           <Card>
             <CardHeader>
               <CardTitle>Activity Log</CardTitle>
-              <CardDescription>History of all contract-related activities</CardDescription>
+              <CardDescription>
+                History of all contract-related activities
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {contract?.activity?.map((activity: any) => (
-                  <div key={activity.id} className="flex items-start gap-3 p-3 border-b last:border-0">
-                    <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
+                  <div
+                    key={activity.id}
+                    className="flex items-start gap-3 p-3 border-b last:border-0"
+                  >
+                    <div className="mt-0.5">
+                      {getActivityIcon(activity.type)}
+                    </div>
                     <div className="flex-1">
                       <div className="flex justify-between mb-1">
-                        <span className="font-medium">{activity.description}</span>
+                        <span className="font-medium">
+                          {activity.description}
+                        </span>
                         <span className="text-xs text-muted-foreground">
                           {new Date(activity.date).toLocaleString()}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground">By {activity.user}</p>
+                      <p className="text-sm text-muted-foreground">
+                        By {activity.user}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -690,25 +773,25 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button 
-                variant="outline" 
-                className="justify-start" 
+              <Button
+                variant="outline"
+                className="justify-start"
                 onClick={() => router.push(`/contracts/${id}/extend`)}
               >
                 <Calendar className="h-4 w-4 mr-2" />
                 Request Timeline Extension
               </Button>
-              <Button 
-                variant="outline" 
-                className="justify-start" 
+              <Button
+                variant="outline"
+                className="justify-start"
                 onClick={() => router.push(`/contracts/${id}/modify`)}
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Request Contract Modification
               </Button>
-              <Button 
-                variant="outline" 
-                className="justify-start" 
+              <Button
+                variant="outline"
+                className="justify-start"
                 onClick={() => router.push(`/contracts/${id}/dispute`)}
               >
                 <AlertTriangle className="h-4 w-4 mr-2" />
@@ -723,15 +806,25 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
         <Card>
           <CardHeader>
             <CardTitle>Contract Completion</CardTitle>
-            <CardDescription>This contract has been successfully completed</CardDescription>
+            <CardDescription>
+              This contract has been successfully completed
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col items-center justify-center py-6 text-center">
               <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
-              <h3 className="text-xl font-bold mb-2">Contract Successfully Completed</h3>
+              <h3 className="text-xl font-bold mb-2">
+                Contract Successfully Completed
+              </h3>
               <p className="text-muted-foreground mb-6 max-w-md">
-                All milestones have been delivered and payments processed. The exclusivity period ends on{" "}
-                <span className="font-medium">{contract?.exclusivityEnds ? new Date(contract.exclusivityEnds).toLocaleDateString() : "TBD"}</span>.
+                All milestones have been delivered and payments processed. The
+                exclusivity period ends on{" "}
+                <span className="font-medium">
+                  {contract?.exclusivityEnds
+                    ? new Date(contract.exclusivityEnds).toLocaleDateString()
+                    : "TBD"}
+                </span>
+                .
               </p>
               <div className="flex gap-4">
                 <Button variant="outline" onClick={handleDownloadContract}>
@@ -747,5 +840,5 @@ export default function ContractDetailsPage({ params }: { params: Promise<{ id: 
         </Card>
       )}
     </div>
-  )
+  );
 }

@@ -1,62 +1,79 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
-import { contractService } from "@/lib/services/contract.service"
-import { ContractListType } from "@/lib/types"
-import { Calendar, Clock, Download, FileText, Search, Shield } from "lucide-react"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
+import { contractService } from "@/lib/services/contract.service";
+import { ContractListType } from "@/lib/types";
+import {
+  Calendar,
+  Clock,
+  Download,
+  FileText,
+  Search,
+  Shield,
+} from "lucide-react";
 
 export default function ContractsPage() {
   // Helper function to safely format dates
   const formatDate = (dateString: string | null | undefined): string => {
-    if (!dateString) return "N/A"
+    if (!dateString) return "N/A";
     try {
-      const date = new Date(dateString)
-      if (isNaN(date.getTime())) return "Invalid Date"
-      return date.toLocaleDateString()
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Invalid Date";
+      return date.toLocaleDateString();
     } catch {
-      return "Invalid Date"
+      return "Invalid Date";
     }
-  }
-  const router = useRouter()
-  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [activeContracts, setActiveContracts] = useState<ContractListType[]>([])
-  const [completedContracts, setCompletedContracts] = useState<ContractListType[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  };
+  const router = useRouter();
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [activeContracts, setActiveContracts] = useState<ContractListType[]>(
+    [],
+  );
+  const [completedContracts, setCompletedContracts] = useState<
+    ContractListType[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch contracts data
   useEffect(() => {
     const fetchContracts = async () => {
-      if (authLoading || !canAccess || !user?.id) return
-      
-      setLoading(true)
-      setError(null)
-      try {
-        const contractsData = await contractService.getUserContracts(user.id)
-        setActiveContracts(contractsData.activeContracts)
-        setCompletedContracts(contractsData.completedContracts)
-      } catch (error) {
-        console.error("Error fetching contracts:", error)
-        setError("Failed to load contracts. Please try again.")
-      } finally {
-        setLoading(false)
-      }
-    }
+      if (authLoading || !canAccess || !user?.id) return;
 
-    fetchContracts()
-  }, [authLoading, canAccess, user])
+      setLoading(true);
+      setError(null);
+      try {
+        const contractsData = await contractService.getUserContracts(user.id);
+        setActiveContracts(contractsData.activeContracts);
+        setCompletedContracts(contractsData.completedContracts);
+      } catch (error) {
+        console.error("Error fetching contracts:", error);
+        setError("Failed to load contracts. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchContracts();
+  }, [authLoading, canAccess, user]);
 
   if (authLoading || !canAccess) {
-    return null
+    return null;
   }
 
   if (loading) {
@@ -69,7 +86,7 @@ export default function ContractsPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -78,55 +95,69 @@ export default function ContractsPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>
-              Try Again
-            </Button>
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
-  const filterContracts = (contracts: ContractListType[]): ContractListType[] => {
+  const filterContracts = (
+    contracts: ContractListType[],
+  ): ContractListType[] => {
     return contracts
       .filter((contract) => {
         // Filter by search term
-        if (searchTerm && !contract.smartjectTitle.toLowerCase().includes(searchTerm.toLowerCase())) {
-          return false
+        if (
+          searchTerm &&
+          !contract.smartjectTitle
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
+        ) {
+          return false;
         }
 
         // Filter by status
         if (statusFilter !== "all" && contract.status !== statusFilter) {
-          return false
+          return false;
         }
 
-        return true
+        return true;
       })
-      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-  }
+      .sort(
+        (a, b) =>
+          new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+      );
+  };
 
-  const filteredActiveContracts = filterContracts(activeContracts)
-  const filteredCompletedContracts = filterContracts(completedContracts)
+  const filteredActiveContracts = filterContracts(activeContracts);
+  const filteredCompletedContracts = filterContracts(completedContracts);
 
-  const getStatusBadge = (status: ContractListType['status']) => {
+  const getStatusBadge = (status: ContractListType["status"]) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-green-100 text-green-800">Active</Badge>
+        return <Badge className="bg-green-100 text-green-800">Active</Badge>;
       case "pending_start":
-        return <Badge className="bg-blue-100 text-blue-800">Pending Start</Badge>
+        return (
+          <Badge className="bg-blue-100 text-blue-800">Pending Start</Badge>
+        );
       case "completed":
-        return <Badge className="bg-purple-100 text-purple-800">Completed</Badge>
+        return (
+          <Badge className="bg-purple-100 text-purple-800">Completed</Badge>
+        );
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Badge variant="outline">{status}</Badge>;
     }
-  }
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold">Smart Contracts</h1>
-          <p className="text-muted-foreground">Manage your active and completed contracts</p>
+          <p className="text-muted-foreground">
+            Manage your active and completed contracts
+          </p>
         </div>
       </div>
 
@@ -156,8 +187,12 @@ export default function ContractsPage() {
 
       <Tabs defaultValue="active">
         <TabsList className="mb-6">
-          <TabsTrigger value="active">Active Contracts ({filteredActiveContracts.length})</TabsTrigger>
-          <TabsTrigger value="completed">Completed Contracts ({filteredCompletedContracts.length})</TabsTrigger>
+          <TabsTrigger value="active">
+            Active Contracts ({filteredActiveContracts.length})
+          </TabsTrigger>
+          <TabsTrigger value="completed">
+            Completed Contracts ({filteredCompletedContracts.length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="space-y-6">
@@ -168,7 +203,8 @@ export default function ContractsPage() {
               onClick={async () => {
                 try {
                   // Check if contract is fully signed
-                 const { isSigned, matchId, proposalId } = await contractService.isContractFullySigned(contract.id);
+                  const { isSigned, matchId, proposalId } =
+                    await contractService.isContractFullySigned(contract.id);
                   if (!isSigned) {
                     // Contract is fully signed - go to contract details
                     router.push(`/matches/${matchId}/contract/${proposalId}`);
@@ -188,7 +224,8 @@ export default function ContractsPage() {
                   <div>
                     <CardTitle>{contract.smartjectTitle}</CardTitle>
                     <CardDescription>
-                      Contract with {contract.otherParty} • You are the {contract.role}
+                      Contract with {contract.otherParty} • You are the{" "}
+                      {contract.role}
                     </CardDescription>
                   </div>
                   {getStatusBadge(contract.status)}
@@ -209,16 +246,24 @@ export default function ContractsPage() {
                     <p className="text-sm text-muted-foreground flex items-center">
                       <FileText className="h-4 w-4 mr-1" /> Budget
                     </p>
-                    <p className="font-medium">{contract.budget}</p>
+                    <p className="font-medium">
+                      {contract.budget
+                        ? `$${contract.budget.toLocaleString()}`
+                        : "Not specified"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground flex items-center">
                       <Clock className="h-4 w-4 mr-1" /> Next Milestone
                     </p>
                     {contract.nextMilestoneId ? (
-                      <p 
+                      <p
                         className="font-medium text-primary cursor-pointer hover:underline"
-                        onClick={() => router.push(`/contracts/${contract.id}/milestone/${contract.nextMilestoneId}`)}
+                        onClick={() =>
+                          router.push(
+                            `/contracts/${contract.id}/milestone/${contract.nextMilestoneId}`,
+                          )
+                        }
                       >
                         {contract.nextMilestone}
                       </p>
@@ -233,7 +278,9 @@ export default function ContractsPage() {
                     <p className="text-sm text-muted-foreground flex items-center">
                       <Shield className="h-4 w-4 mr-1" /> Exclusivity Ends
                     </p>
-                    <p className="font-medium">{formatDate(contract.exclusivityEnds)}</p>
+                    <p className="font-medium">
+                      {formatDate(contract.exclusivityEnds)}
+                    </p>
                   </div>
                 </div>
                 <div className="flex justify-end">
@@ -241,18 +288,23 @@ export default function ContractsPage() {
                     <Download className="h-4 w-4 mr-2" />
                     Download
                   </Button>
-                  <Button 
+                  <Button
                     size="sm"
                     onClick={async (e) => {
-                      e.stopPropagation()
+                      e.stopPropagation();
                       try {
                         // Check if contract is fully signed
-                        const { isSigned, matchId, proposalId } = await contractService.isContractFullySigned(contract.id);
+                        const { isSigned, matchId, proposalId } =
+                          await contractService.isContractFullySigned(
+                            contract.id,
+                          );
                         console.log(isSigned, matchId, proposalId);
-                        
+
                         if (!isSigned) {
                           // Contract is fully signed - go to contract details
-                          router.push(`/matches/${matchId}/contract/${proposalId}`);
+                          router.push(
+                            `/matches/${matchId}/contract/${proposalId}`,
+                          );
                         } else {
                           // Contract not fully signed - show message or redirect to signing
                           console.log("Contract not fully signed yet");
@@ -280,7 +332,9 @@ export default function ContractsPage() {
                     : "You don't have any active contracts yet."}
                 </p>
                 {!searchTerm && statusFilter === "all" && (
-                  <Button onClick={() => router.push("/matches")}>View Your Matches</Button>
+                  <Button onClick={() => router.push("/matches")}>
+                    View Your Matches
+                  </Button>
                 )}
               </CardContent>
             </Card>
@@ -299,7 +353,8 @@ export default function ContractsPage() {
                   <div>
                     <CardTitle>{contract.smartjectTitle}</CardTitle>
                     <CardDescription>
-                      Contract with {contract.otherParty} • You were the {contract.role}
+                      Contract with {contract.otherParty} • You were the{" "}
+                      {contract.role}
                     </CardDescription>
                   </div>
                   {getStatusBadge(contract.status)}
@@ -320,7 +375,11 @@ export default function ContractsPage() {
                     <p className="text-sm text-muted-foreground flex items-center">
                       <FileText className="h-4 w-4 mr-1" /> Budget
                     </p>
-                    <p className="font-medium">{contract.budget}</p>
+                    <p className="font-medium">
+                      {contract.budget
+                        ? `$${contract.budget.toLocaleString()}`
+                        : "Not specified"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground flex items-center">
@@ -335,7 +394,9 @@ export default function ContractsPage() {
                     <p className="text-sm text-muted-foreground flex items-center">
                       <Shield className="h-4 w-4 mr-1" /> Exclusivity Ended
                     </p>
-                    <p className="font-medium">{formatDate(contract.exclusivityEnds)}</p>
+                    <p className="font-medium">
+                      {formatDate(contract.exclusivityEnds)}
+                    </p>
                   </div>
                 </div>
                 <div className="flex justify-end">
@@ -343,12 +404,12 @@ export default function ContractsPage() {
                     <Download className="h-4 w-4 mr-2" />
                     Download
                   </Button>
-                  <Button 
+                  <Button
                     size="sm"
                     onClick={(e) => {
-                      e.stopPropagation()
+                      e.stopPropagation();
                       // Completed contracts are assumed to be fully signed
-                      router.push(`/contracts/${contract.id}`)
+                      router.push(`/contracts/${contract.id}`);
                     }}
                   >
                     View Details
@@ -372,5 +433,5 @@ export default function ContractsPage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

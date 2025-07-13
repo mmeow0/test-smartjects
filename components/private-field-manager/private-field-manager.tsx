@@ -23,7 +23,7 @@ interface PrivateFieldManagerProps {
   privateValue: string;
   onPublicChangeAction: (value: string) => void;
   onPrivateChangeAction: (value: string) => void;
-  fieldType?: "input" | "textarea";
+  fieldType?: "input" | "textarea" | "number";
   placeholder?: string;
   privatePlaceholder?: string;
   rows?: number;
@@ -62,24 +62,27 @@ export function PrivateFieldManager({
     value: string,
     onChangeAction: (value: string) => void,
     fieldPlaceholder?: string,
-    isPrivate = false
+    isPrivate = false,
   ) => {
     const commonProps = {
       id: isPrivate ? `${fieldName}-private` : fieldName,
       name: isPrivate ? `${fieldName}-private` : fieldName,
       value,
-      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-        onChangeAction(e.target.value),
+      onChange: (
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+      ) => onChangeAction(e.target.value),
       placeholder: fieldPlaceholder,
       disabled,
       className: isPrivate ? "border-amber-200 bg-amber-50/30" : "",
     };
 
-    return fieldType === "textarea" ? (
-      <Textarea {...commonProps} rows={rows} />
-    ) : (
-      <Input {...commonProps} />
-    );
+    if (fieldType === "textarea") {
+      return <Textarea {...commonProps} rows={rows} />;
+    } else if (fieldType === "number") {
+      return <Input {...commonProps} type="number" />;
+    } else {
+      return <Input {...commonProps} />;
+    }
   };
 
   const renderPrivateFieldContent = () => {
@@ -104,7 +107,7 @@ export function PrivateFieldManager({
             privateValue,
             onPrivateChangeAction,
             privatePlaceholder || `Confidential ${label.toLowerCase()}...`,
-            true
+            true,
           )}
           <p className="text-xs text-amber-600">
             This information is only visible to users who have signed an NDA.
@@ -122,7 +125,10 @@ export function PrivateFieldManager({
               <Lock className="h-4 w-4" />
               Confidential {label}
             </Label>
-            <Badge variant="outline" className="border-amber-200 text-amber-700">
+            <Badge
+              variant="outline"
+              className="border-amber-200 text-amber-700"
+            >
               <Lock className="h-3 w-3 mr-1" />
               NDA Required
             </Badge>
@@ -135,7 +141,8 @@ export function PrivateFieldManager({
               </span>
             </div>
             <p className="text-xs text-amber-600 text-center mt-2">
-              This proposal contains confidential information that requires a signed NDA to access.
+              This proposal contains confidential information that requires a
+              signed NDA to access.
             </p>
           </div>
         </div>
@@ -176,7 +183,9 @@ export function PrivateFieldManager({
             <div className="flex items-center justify-center space-x-2 text-gray-500">
               <Lock className="h-5 w-5" />
               <span className="text-sm">
-                {privateValue ? "Confidential content exists" : "No confidential content"}
+                {privateValue && privateValue !== "0"
+                  ? "Confidential content exists"
+                  : "No confidential content"}
               </span>
             </div>
           </div>
@@ -214,7 +223,10 @@ export function PrivateFieldManager({
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Add a confidential version of this field that requires NDA to view</p>
+                  <p>
+                    Add a confidential version of this field that requires NDA
+                    to view
+                  </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -242,8 +254,9 @@ export function PrivateFieldManager({
           <div className="text-xs text-blue-700">
             <p className="font-medium">Confidential Information Notice</p>
             <p>
-              The confidential version of this field will only be visible to users who sign an NDA 
-              during the negotiation process. Make sure sensitive information is only in the confidential field.
+              The confidential version of this field will only be visible to
+              users who sign an NDA during the negotiation process. Make sure
+              sensitive information is only in the confidential field.
             </p>
           </div>
         </div>

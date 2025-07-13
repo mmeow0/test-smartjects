@@ -103,7 +103,7 @@ export function CreateProposalModal({
   // Form state
   const [currentStep, setCurrentStep] = useState(1);
   const [proposalType, setProposalType] = useState<"need" | "provide" | null>(
-    initialProposalType || null
+    initialProposalType || null,
   );
   const [isCooperationProposal, setIsCooperationProposal] = useState(false);
   const [formData, setFormData] = useState({
@@ -112,7 +112,7 @@ export function CreateProposalModal({
     description: "",
     scope: "",
     timeline: "",
-    budget: "",
+    budget: 0,
     deliverables: "",
     requirements: "",
     expertise: "",
@@ -125,7 +125,7 @@ export function CreateProposalModal({
   const [privateFields, setPrivateFields] = useState<ProposalPrivateFields>({
     scope: "",
     timeline: "",
-    budget: "",
+    budget: 0,
     deliverables: "",
     requirements: "",
     expertise: "",
@@ -175,7 +175,7 @@ export function CreateProposalModal({
     deliverables: [],
   });
   const [editingMilestoneId, setEditingMilestoneId] = useState<string | null>(
-    null
+    null,
   );
   const [totalPercentage, setTotalPercentage] = useState(0);
   const [newDeliverable, setNewDeliverable] = useState("");
@@ -184,7 +184,7 @@ export function CreateProposalModal({
   useEffect(() => {
     const total = milestones.reduce(
       (sum, milestone) => sum + milestone.percentage,
-      0
+      0,
     );
     setTotalPercentage(total);
   }, [milestones]);
@@ -233,7 +233,7 @@ export function CreateProposalModal({
         description: "",
         scope: "",
         timeline: "",
-        budget: "",
+        budget: 0,
         deliverables: "",
         requirements: "",
         expertise: "",
@@ -244,7 +244,7 @@ export function CreateProposalModal({
       setPrivateFields({
         scope: "",
         timeline: "",
-        budget: "",
+        budget: undefined,
         deliverables: "",
         requirements: "",
         expertise: "",
@@ -271,13 +271,16 @@ export function CreateProposalModal({
   }, [isOpen, smartjectId, initialProposalType]);
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handlePrivateFieldChange = (fieldName: string, value: string) => {
+  const handlePrivateFieldChange = (
+    fieldName: string,
+    value: string | number | undefined,
+  ) => {
     setPrivateFields((prev) => ({ ...prev, [fieldName]: value }));
   };
 
@@ -307,19 +310,21 @@ export function CreateProposalModal({
 
     try {
       // Prepare private fields (only include fields that are enabled and have content)
-      const proposalPrivateFields = Object.keys(enabledPrivateFields).reduce(
-        (acc, fieldName) => {
-          if (
-            enabledPrivateFields[fieldName] &&
-            privateFields[fieldName as keyof typeof privateFields]
+      const proposalPrivateFields: Partial<ProposalPrivateFields> = {};
+
+      Object.keys(enabledPrivateFields).forEach((fieldName) => {
+        const field = fieldName as keyof typeof privateFields;
+        if (enabledPrivateFields[field] && privateFields[field] !== undefined) {
+          if (field === "budget" && typeof privateFields[field] === "number") {
+            proposalPrivateFields[field] = privateFields[field] as number;
+          } else if (
+            field !== "budget" &&
+            typeof privateFields[field] === "string"
           ) {
-            acc[fieldName as keyof typeof privateFields] =
-              privateFields[fieldName as keyof typeof privateFields];
+            proposalPrivateFields[field] = privateFields[field] as string;
           }
-          return acc;
-        },
-        {} as typeof privateFields
-      );
+        }
+      });
 
       // Save the proposal to Supabase
       const proposalId = await proposalService.createProposal({
@@ -329,7 +334,7 @@ export function CreateProposalModal({
         title: formData.title,
         description: formData.description,
         isCooperationProposal: isCooperationProposal,
-        budget: formData.budget,
+        budget: formData.budget || undefined,
         timeline: formData.timeline,
         scope: formData.scope,
         deliverables: formData.deliverables,
@@ -423,19 +428,21 @@ export function CreateProposalModal({
 
     try {
       // Prepare private fields (only include fields that are enabled and have content)
-      const proposalPrivateFields = Object.keys(enabledPrivateFields).reduce(
-        (acc, fieldName) => {
-          if (
-            enabledPrivateFields[fieldName] &&
-            privateFields[fieldName as keyof typeof privateFields]
+      const proposalPrivateFields: Partial<ProposalPrivateFields> = {};
+
+      Object.keys(enabledPrivateFields).forEach((fieldName) => {
+        const field = fieldName as keyof typeof privateFields;
+        if (enabledPrivateFields[field] && privateFields[field] !== undefined) {
+          if (field === "budget" && typeof privateFields[field] === "number") {
+            proposalPrivateFields[field] = privateFields[field] as number;
+          } else if (
+            field !== "budget" &&
+            typeof privateFields[field] === "string"
           ) {
-            acc[fieldName as keyof typeof privateFields] =
-              privateFields[fieldName as keyof typeof privateFields];
+            proposalPrivateFields[field] = privateFields[field] as string;
           }
-          return acc;
-        },
-        {} as typeof privateFields
-      );
+        }
+      });
 
       // Save the proposal to Supabase
       const proposalId = await proposalService.createProposal({
@@ -445,7 +452,11 @@ export function CreateProposalModal({
         title: formData.title,
         description: formData.description,
         isCooperationProposal: isCooperationProposal,
-        budget: isCooperationProposal ? "" : formData.budget,
+        budget: isCooperationProposal
+          ? undefined
+          : formData.budget
+            ? formData.budget
+            : undefined,
         timeline: isCooperationProposal ? "" : formData.timeline,
         scope: isCooperationProposal ? "" : formData.scope,
         deliverables: isCooperationProposal ? "" : formData.deliverables,
@@ -466,7 +477,7 @@ export function CreateProposalModal({
         // Create milestones and deliverables
         const createdMilestones = await proposalService.createMilestones(
           proposalId,
-          milestones
+          milestones,
         );
         if (!createdMilestones) {
           throw new Error("Failed to create milestones");
@@ -479,7 +490,7 @@ export function CreateProposalModal({
             const deliverablesCreated =
               await proposalService.createDeliverables(
                 created.id,
-                milestone.deliverables
+                milestone.deliverables,
               );
             if (!deliverablesCreated) {
               throw new Error("Failed to create deliverables");
@@ -503,7 +514,7 @@ export function CreateProposalModal({
           const saved = await proposalService.saveFileReference(
             proposalId,
             file,
-            filePath
+            filePath,
           );
           if (!saved) {
             throw new Error("Failed to save file reference");
@@ -771,16 +782,26 @@ export function CreateProposalModal({
             <PrivateFieldManager
               fieldName="budget"
               label="Budget"
-              publicValue={formData.budget}
-              privateValue={privateFields.budget || ""}
+              publicValue={formData.budget.toString()}
+              privateValue={
+                privateFields.budget !== undefined
+                  ? privateFields.budget.toString()
+                  : ""
+              }
               onPublicChangeAction={(value) =>
-                setFormData((prev) => ({ ...prev, budget: value }))
+                setFormData((prev) => ({
+                  ...prev,
+                  budget: value ? Number(value) : 0,
+                }))
               }
               onPrivateChangeAction={(value) =>
-                handlePrivateFieldChange("budget", value)
+                handlePrivateFieldChange(
+                  "budget",
+                  value ? Number(value) : undefined,
+                )
               }
-              fieldType="input"
-              placeholder="e.g., $5,000, $10,000-$15,000"
+              fieldType="number"
+              placeholder="e.g., 5000, 10000"
               privatePlaceholder="Confidential budget details..."
               hasPrivateField={enabledPrivateFields.budget}
               onTogglePrivateFieldAction={(enabled) =>
@@ -1096,7 +1117,9 @@ export function CreateProposalModal({
                     <div>
                       <Label className="text-sm font-medium">Budget</Label>
                       <p className="text-sm text-muted-foreground">
-                        {formData.budget || "Not specified"}
+                        {formData.budget
+                          ? `$${formData.budget.toLocaleString()}`
+                          : "Not specified"}
                       </p>
                     </div>
 
@@ -1197,8 +1220,8 @@ export function CreateProposalModal({
       // Update existing milestone
       setMilestones(
         milestones.map((m) =>
-          m.id === editingMilestoneId ? currentMilestone : m
-        )
+          m.id === editingMilestoneId ? currentMilestone : m,
+        ),
       );
       toast({
         title: "Milestone updated",
@@ -1281,7 +1304,7 @@ export function CreateProposalModal({
     setCurrentMilestone({
       ...currentMilestone,
       deliverables: currentMilestone.deliverables.map((d) =>
-        d.id === id ? { ...d, completed: !d.completed } : d
+        d.id === id ? { ...d, completed: !d.completed } : d,
       ),
     });
   };
