@@ -106,7 +106,7 @@ export default function CreateProposalPage() {
     description: "",
     scope: "",
     timeline: "",
-    budget: "",
+    budget: 0,
     deliverables: "",
     requirements: "",
     expertise: "",
@@ -284,7 +284,7 @@ export default function CreateProposalPage() {
         title: formData.title,
         description: formData.description,
         isCooperationProposal: isCooperationProposal,
-        budget: formData.budget ? Number(formData.budget) : undefined,
+        budget: formData.budget > 0 ? formData.budget : undefined,
         timeline: formData.timeline,
         scope: formData.scope,
         deliverables: formData.deliverables,
@@ -400,8 +400,8 @@ export default function CreateProposalPage() {
         isCooperationProposal: isCooperationProposal,
         budget: isCooperationProposal
           ? undefined
-          : formData.budget
-            ? Number(formData.budget)
+          : formData.budget > 0
+            ? formData.budget
             : undefined,
         timeline: isCooperationProposal ? "" : formData.timeline,
         scope: isCooperationProposal ? "" : formData.scope,
@@ -830,17 +830,28 @@ export default function CreateProposalPage() {
             <PrivateFieldManager
               fieldName="budget"
               label="Budget"
-              publicValue={formData.budget}
-              privateValue={privateFields.budget?.toString() || ""}
-              onPublicChangeAction={(value) =>
-                setFormData((prev) => ({ ...prev, budget: value }))
+              publicValue={
+                formData.budget > 0 ? formData.budget.toString() : ""
               }
-              onPrivateChangeAction={(value) =>
+              privateValue={
+                privateFields.budget !== undefined
+                  ? privateFields.budget.toString()
+                  : ""
+              }
+              onPublicChangeAction={(value) => {
+                const numericValue = value.replace(/[^0-9.]/g, "");
+                setFormData((prev) => ({
+                  ...prev,
+                  budget: numericValue ? Number(numericValue) : 0,
+                }));
+              }}
+              onPrivateChangeAction={(value) => {
+                const numericValue = value.replace(/[^0-9.]/g, "");
                 handlePrivateFieldChange(
                   "budget",
-                  value ? Number(value) : undefined,
-                )
-              }
+                  numericValue ? Number(numericValue) : undefined,
+                );
+              }}
               fieldType="number"
               placeholder="e.g., 5000, 10000"
               privatePlaceholder="Confidential budget details..."
@@ -1206,7 +1217,7 @@ export default function CreateProposalPage() {
                         </p>
                         <p>
                           {formData.budget
-                            ? `$${Number(formData.budget).toLocaleString()}`
+                            ? `$${formData.budget.toLocaleString()}`
                             : "Not specified"}
                         </p>
                       </div>
@@ -1247,9 +1258,7 @@ export default function CreateProposalPage() {
                 description={formData.description}
                 scope={formData.scope}
                 timeline={formData.timeline}
-                budget={
-                  formData.budget ? Number(formData.budget).toString() : ""
-                }
+                budget={formData.budget ? formData.budget.toString() : ""}
                 deliverables={formData.deliverables}
                 requirements={formData.requirements}
                 expertise={formData.expertise}

@@ -106,7 +106,7 @@ export default function EditProposalPage({
         description: proposal.description || "",
         scope: proposal.scope || "",
         timeline: proposal.timeline || "",
-        budget: proposal.budget ? proposal.budget.toString() : "",
+        budget: proposal.budget || 0,
         deliverables: proposal.deliverables || "",
         requirements:
           proposal.type === "need" ? proposal.requirements || "" : "",
@@ -171,7 +171,7 @@ export default function EditProposalPage({
     description: "",
     scope: "",
     timeline: "",
-    budget: "",
+    budget: 0,
     deliverables: "",
     requirements: "",
     expertise: "",
@@ -377,7 +377,7 @@ export default function EditProposalPage({
         title: formData.title,
         description: formData.description,
         isCooperationProposal: isCooperationProposal,
-        budget: formData.budget ? Number(formData.budget) : undefined,
+        budget: formData.budget > 0 ? formData.budget : undefined,
         timeline: formData.timeline,
         scope: formData.scope,
         deliverables: formData.deliverables,
@@ -465,8 +465,8 @@ export default function EditProposalPage({
         isCooperationProposal: isCooperationProposal,
         budget: isCooperationProposal
           ? undefined
-          : formData.budget
-            ? Number(formData.budget)
+          : formData.budget > 0
+            ? formData.budget
             : undefined,
         timeline: isCooperationProposal ? "" : formData.timeline,
         scope: isCooperationProposal ? "" : formData.scope,
@@ -847,17 +847,28 @@ export default function EditProposalPage({
             <PrivateFieldManager
               fieldName="budget"
               label="Budget"
-              publicValue={formData.budget}
-              privateValue={privateFields.budget?.toString() || ""}
-              onPublicChangeAction={(value) =>
-                setFormData((prev) => ({ ...prev, budget: value }))
+              publicValue={
+                formData.budget > 0 ? formData.budget.toString() : ""
               }
-              onPrivateChangeAction={(value) =>
+              privateValue={
+                privateFields.budget !== undefined
+                  ? privateFields.budget.toString()
+                  : ""
+              }
+              onPublicChangeAction={(value) => {
+                const numericValue = value.replace(/[^0-9.]/g, "");
+                setFormData((prev) => ({
+                  ...prev,
+                  budget: numericValue ? Number(numericValue) : 0,
+                }));
+              }}
+              onPrivateChangeAction={(value) => {
+                const numericValue = value.replace(/[^0-9.]/g, "");
                 handlePrivateFieldChange(
                   "budget",
-                  value ? Number(value) : undefined,
-                )
-              }
+                  numericValue ? Number(numericValue) : undefined,
+                );
+              }}
               fieldType="number"
               placeholder="e.g., 5000, 10000"
               privatePlaceholder="Confidential budget details..."
@@ -1253,7 +1264,7 @@ export default function EditProposalPage({
                       </p>
                       <p>
                         {formData.budget
-                          ? `$${Number(formData.budget).toLocaleString()}`
+                          ? `$${formData.budget.toLocaleString()}`
                           : "Not specified"}
                       </p>
                     </div>
@@ -1277,9 +1288,7 @@ export default function EditProposalPage({
                 description={formData.description}
                 scope={formData.scope}
                 timeline={formData.timeline}
-                budget={
-                  formData.budget ? Number(formData.budget).toString() : ""
-                }
+                budget={formData.budget ? formData.budget.toString() : ""}
                 deliverables={formData.deliverables}
                 requirements={formData.requirements}
                 expertise={formData.expertise}

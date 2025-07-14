@@ -64,6 +64,29 @@ export function PrivateFieldManager({
     fieldPlaceholder?: string,
     isPrivate = false,
   ) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // Allow: backspace, delete, tab, escape, enter, period, and minus
+      if (
+        [8, 9, 27, 13, 46, 110, 190, 189].indexOf(e.keyCode) !== -1 ||
+        // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+        (e.keyCode === 65 && e.ctrlKey === true) ||
+        (e.keyCode === 67 && e.ctrlKey === true) ||
+        (e.keyCode === 86 && e.ctrlKey === true) ||
+        (e.keyCode === 88 && e.ctrlKey === true) ||
+        // Allow: home, end, left, right, down, up
+        (e.keyCode >= 35 && e.keyCode <= 40)
+      ) {
+        return;
+      }
+      // Ensure that it is a number and stop the keypress
+      if (
+        (e.shiftKey || e.keyCode < 48 || e.keyCode > 57) &&
+        (e.keyCode < 96 || e.keyCode > 105)
+      ) {
+        e.preventDefault();
+      }
+    };
+
     const commonProps = {
       id: isPrivate ? `${fieldName}-private` : fieldName,
       name: isPrivate ? `${fieldName}-private` : fieldName,
@@ -79,7 +102,7 @@ export function PrivateFieldManager({
     if (fieldType === "textarea") {
       return <Textarea {...commonProps} rows={rows} />;
     } else if (fieldType === "number") {
-      return <Input {...commonProps} type="number" />;
+      return <Input {...commonProps} type="number" onKeyDown={handleKeyDown} />;
     } else {
       return <Input {...commonProps} />;
     }
