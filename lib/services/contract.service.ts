@@ -1954,6 +1954,34 @@ export const contractService = {
         throw updateError;
       }
 
+      // Update contract status from pending_start to active if needed
+      const { data: contractData } = await supabase
+        .from("contracts")
+        .select("status")
+        .eq("id", milestoneData.contract_id)
+        .single();
+
+      if (contractData && contractData.status === "pending_start") {
+        const { error: contractUpdateError } = await supabase
+          .from("contracts")
+          .update({
+            status: "active",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", milestoneData.contract_id);
+
+        if (contractUpdateError) {
+          console.error("Error updating contract status:", contractUpdateError);
+          // Don't throw here as milestone was already updated successfully
+        } else {
+          // Send contract activation message
+          await this.sendContractMessage(
+            milestoneData.contract_id,
+            "Contract has been activated - work has begun on the first milestone",
+          );
+        }
+      }
+
       // Add status history entry
       await supabase.from("contract_milestone_status_history").insert({
         milestone_id: milestoneId,
@@ -2029,7 +2057,7 @@ export const contractService = {
       const senderIds = [...new Set(messages.map((m) => m.sender_id))];
 
       // Get user data for all senders
-      const { data: usersData } = await supabase
+      const { data: usersData, error: usersError } = await supabase
         .from("users")
         .select("id, name, avatar_url")
         .in("id", senderIds);
@@ -2386,7 +2414,6 @@ export const contractService = {
       await this.sendContractMessage(
         contractId,
         "🎉 All milestones have been completed! The contract is now ready for final review and closure.",
-        "system",
       );
 
       return { success: true };
@@ -2455,7 +2482,7 @@ export const contractService = {
         ? `✅ Contract has been approved and marked as completed!${reviewComments ? "\n\nClient comments: " + reviewComments : ""}\n\n🎊 Congratulations on successfully completing this project!`
         : `❌ Contract completion has been rejected and returned to active status.${reviewComments ? "\n\nClient comments: " + reviewComments : ""}\n\nPlease address any remaining issues.`;
 
-      await this.sendContractMessage(contractId, message, "system");
+      await this.sendContractMessage(contractId, message);
 
       return { success: true };
     } catch (error) {
@@ -3066,7 +3093,6 @@ This milestone is now ready for review and approval.`;
       await this.sendContractMessage(
         contractId,
         "Work has been started on this contract.",
-        "system",
       );
 
       return { success: true };
@@ -3133,7 +3159,6 @@ This milestone is now ready for review and approval.`;
         await this.sendContractMessage(
           contractId,
           "Contract has been submitted for review",
-          "system",
         );
       }
 
@@ -3202,7 +3227,7 @@ This milestone is now ready for review and approval.`;
         ? `Contract has been approved and marked as completed.${reviewComments ? "\n\nClient comments: " + reviewComments : ""}`
         : `Contract has been rejected and returned for revision.${reviewComments ? "\n\nClient comments: " + reviewComments : ""}`;
 
-      await this.sendContractMessage(contractId, message, "system");
+      await this.sendContractMessage(contractId, message);
 
       return { success: true };
     } catch (error) {
