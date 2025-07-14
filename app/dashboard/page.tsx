@@ -937,7 +937,7 @@ export default function DashboardPage() {
                   </Button>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[400px]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[130px]">
                 {displayedData.activeProposals.map((proposal) => (
                   <ProposalCard
                     key={proposal.id}
@@ -972,7 +972,7 @@ export default function DashboardPage() {
                   View All <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
-              <div className="space-y-4 min-h-[400px]">
+              <div className="space-y-4 min-h-[200px]">
                 {displayedData.contracts.map((contract) => (
                   <ContractCard
                     key={contract.id}

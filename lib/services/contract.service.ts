@@ -397,28 +397,39 @@ export const contractService = {
     }
   },
 
-  // Helper function to calculate timeline
-  calculateTimeline(startDate: string, endDate: string): string {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const diffWeeks = Math.floor(diffDays / 7);
-    const diffMonths = Math.floor(diffDays / 30);
+    // Возвращает строку вида "15 months" или "1 year 3 months"
+    calculateTimeline(startDate: string, endDate: string): string {
+      const start = new Date(startDate);
+      const end   = new Date(endDate);
 
-    if (diffMonths >= 1) {
-      const remainingDays = diffDays % 30;
-      if (remainingDays === 0) {
-        return `${diffMonths} month${diffMonths > 1 ? "s" : ""}`;
-      } else {
-        return `${diffMonths}.${Math.floor((remainingDays / 30) * 10)} months`;
+      // годовая и помесячная разница
+      let years  = end.getUTCFullYear()  - start.getUTCFullYear();
+      let months = end.getUTCMonth()     - start.getUTCMonth();
+      let days   = end.getUTCDate()      - start.getUTCDate();
+
+      // если в конце месяца число меньше, чем в начале ─ вычитаем месяц
+      if (days < 0) {
+        months -= 1;
+        // добавляем количество дней в предыдущем месяце, чтобы days был положительный (опционально)
+        const daysInPrevMonth = new Date(end.getUTCFullYear(), end.getUTCMonth(), 0).getUTCDate();
+        days += daysInPrevMonth;
       }
-    } else if (diffWeeks >= 1) {
-      return `${diffWeeks} week${diffWeeks > 1 ? "s" : ""}`;
-    } else {
-      return `${diffDays} day${diffDays > 1 ? "s" : ""}`;
-    }
-  },
+
+      // если месяцы ушли в минус после коррекции дней ─ вычитаем год
+      if (months < 0) {
+        years  -= 1;
+        months += 12;
+      }
+
+      // Собираем красивую строку
+      const parts: string[] = [];
+      if (years)  parts.push(`${years} year${years > 1 ? "s" : ""}`);
+      if (months) parts.push(`${months} month${months > 1 ? "s" : ""}`);
+      if (!years && !months) // когда меньше месяца
+        parts.push(`${days} day${days > 1 ? "s" : ""}`);
+
+      return parts.join(" ");
+    },
 
   // Sign contract by updating the appropriate signing status in the database
   async signContract(
