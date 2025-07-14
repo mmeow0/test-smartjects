@@ -386,6 +386,7 @@ export default function EditProposalPage({
         approach: formData.approach,
         team: formData.team,
         additionalInfo: formData.additionalInfo,
+        milestones: milestones,
         privateFields: proposalPrivateFields,
         status: "draft" as const,
       };
@@ -476,6 +477,7 @@ export default function EditProposalPage({
         approach: isCooperationProposal ? "" : formData.approach,
         team: isCooperationProposal ? "" : formData.team,
         additionalInfo: formData.additionalInfo,
+        milestones: isCooperationProposal ? [] : milestones,
         privateFields: proposalPrivateFields,
         status: "submitted" as const,
       };
