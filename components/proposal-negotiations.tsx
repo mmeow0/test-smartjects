@@ -324,19 +324,7 @@ export function ProposalNegotiations({
                             )}
                           </div>
                         ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              router.push(
-                                `/matches/${negotiation.matchId}/negotiate/${negotiation.proposalId}/${conversation.otherParty.id}`,
-                              )
-                            }
-                          >
-                            {negotiation.status === "interest_only"
-                              ? "Start Discussion"
-                              : "Open"}
-                          </Button>
+                          null
                         )}
                       </div>
                     </div>
