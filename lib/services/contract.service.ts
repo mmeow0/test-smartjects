@@ -397,39 +397,44 @@ export const contractService = {
     }
   },
 
-    // Возвращает строку вида "15 months" или "1 year 3 months"
-    calculateTimeline(startDate: string, endDate: string): string {
-      const start = new Date(startDate);
-      const end   = new Date(endDate);
+  // Возвращает строку вида "15 months" или "1 year 3 months"
+  calculateTimeline(startDate: string, endDate: string): string {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
 
-      // годовая и помесячная разница
-      let years  = end.getUTCFullYear()  - start.getUTCFullYear();
-      let months = end.getUTCMonth()     - start.getUTCMonth();
-      let days   = end.getUTCDate()      - start.getUTCDate();
+    // годовая и помесячная разница
+    let years = end.getUTCFullYear() - start.getUTCFullYear();
+    let months = end.getUTCMonth() - start.getUTCMonth();
+    let days = end.getUTCDate() - start.getUTCDate();
 
-      // если в конце месяца число меньше, чем в начале ─ вычитаем месяц
-      if (days < 0) {
-        months -= 1;
-        // добавляем количество дней в предыдущем месяце, чтобы days был положительный (опционально)
-        const daysInPrevMonth = new Date(end.getUTCFullYear(), end.getUTCMonth(), 0).getUTCDate();
-        days += daysInPrevMonth;
-      }
+    // если в конце месяца число меньше, чем в начале ─ вычитаем месяц
+    if (days < 0) {
+      months -= 1;
+      // добавляем количество дней в предыдущем месяце, чтобы days был положительный (опционально)
+      const daysInPrevMonth = new Date(
+        end.getUTCFullYear(),
+        end.getUTCMonth(),
+        0,
+      ).getUTCDate();
+      days += daysInPrevMonth;
+    }
 
-      // если месяцы ушли в минус после коррекции дней ─ вычитаем год
-      if (months < 0) {
-        years  -= 1;
-        months += 12;
-      }
+    // если месяцы ушли в минус после коррекции дней ─ вычитаем год
+    if (months < 0) {
+      years -= 1;
+      months += 12;
+    }
 
-      // Собираем красивую строку
-      const parts: string[] = [];
-      if (years)  parts.push(`${years} year${years > 1 ? "s" : ""}`);
-      if (months) parts.push(`${months} month${months > 1 ? "s" : ""}`);
-      if (!years && !months) // когда меньше месяца
-        parts.push(`${days} day${days > 1 ? "s" : ""}`);
+    // Собираем красивую строку
+    const parts: string[] = [];
+    if (years) parts.push(`${years} year${years > 1 ? "s" : ""}`);
+    if (months) parts.push(`${months} month${months > 1 ? "s" : ""}`);
+    if (!years && !months)
+      // когда меньше месяца
+      parts.push(`${days} day${days > 1 ? "s" : ""}`);
 
-      return parts.join(" ");
-    },
+    return parts.join(" ");
+  },
 
   // Sign contract by updating the appropriate signing status in the database
   async signContract(
@@ -2026,7 +2031,7 @@ export const contractService = {
       // Get user data for all senders
       const { data: usersData } = await supabase
         .from("users")
-        .select("id, name, avatar")
+        .select("id, name, avatar_url")
         .in("id", senderIds);
 
       return messages.map((message) => {
@@ -2038,7 +2043,7 @@ export const contractService = {
           sender: {
             id: message.sender_id,
             name: sender?.name || "Unknown User",
-            avatar: sender?.avatar || null,
+            avatar: sender?.avatar_url || null,
           },
           createdAt: message.created_at,
           isOwnMessage: message.sender_id === currentUser.id,
@@ -2105,7 +2110,7 @@ export const contractService = {
       // Get sender data separately
       const { data: sender } = await supabase
         .from("users")
-        .select("id, name, avatar")
+        .select("id, name, avatar_url")
         .eq("id", currentUser.id)
         .single();
 
@@ -2116,7 +2121,7 @@ export const contractService = {
         sender: {
           id: currentUser.id,
           name: sender?.name || "Unknown User",
-          avatar: sender?.avatar || null,
+          avatar: sender?.avatar_url || null,
         },
         createdAt: data.created_at,
         isOwnMessage: true,
