@@ -355,11 +355,11 @@ const StatsCard = memo(
   }) => (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">{title}</CardTitle>
+        <CardTitle className="text-md">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-bold">{value}</div>
+        <div className="text-2xl font-bold">{value}</div>
       </CardContent>
     </Card>
   ),
@@ -905,6 +905,131 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 bg-gray-50">
+        <div className="border-t border-gray-200 pt-8 grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div
+          onClick={() => scrollToTabsAndSwitch("believe")}
+          className="cursor-pointer hover:scale-105 transition-transform"
+        >
+          <StatsCard
+            title="Believed Smartjects"
+            description="Smartjects you've shown interest in"
+            value={processedData.believed.length}
+          />
+        </div>
+        <div
+          onClick={() => scrollToTabsAndSwitch("need")}
+          className="cursor-pointer hover:scale-105 transition-transform"
+        >
+          <StatsCard
+            title="I Need"
+            description="Smartjects you're looking to implement"
+            value={processedData.need.length}
+          />
+        </div>
+        <div
+          onClick={() => scrollToTabsAndSwitch("provide")}
+          className="cursor-pointer hover:scale-105 transition-transform"
+        >
+          <StatsCard
+            title="I Provide"
+            description="Smartjects you can implement"
+            value={processedData.provide.length}
+          />
+        </div>
+      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} ref={tabsRef}>
+        {/* <TabsList className="mb-6">
+          <TabsTrigger value="believe">I Believe</TabsTrigger>
+          <TabsTrigger value="need">I Need</TabsTrigger>
+          <TabsTrigger value="provide">I Provide</TabsTrigger>
+        </TabsList> */}
+
+        <TabsContent value="believe" className="space-y-4">
+          {isLoading ? (
+            <SkeletonGrid />
+          ) : processedData.believed.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {processedData.believed.map((smartject) => (
+                <SmartjectCard
+                  key={smartject.id}
+                  smartject={smartject}
+                  onVoted={memoizedRefetch}
+                  userVotes={smartject.userVotes}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              message="You haven't believed in any Smartjects yet."
+              href="/discover"
+              buttonText="Browse Smartjects"
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="need" className="space-y-4">
+          {isLoading ? (
+            <SkeletonGrid />
+          ) : user?.accountType === "paid" ? (
+            processedData.need.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {processedData.need.map((smartject) => (
+                  <SmartjectCard
+                    key={smartject.id}
+                    smartject={smartject}
+                    onVoted={memoizedRefetch}
+                    userVotes={smartject.userVotes}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                message="You haven't indicated need for any smartjects yet."
+                href="/discover"
+                buttonText="Explore Smartjects"
+              />
+            )
+          ) : (
+            <EmptyState
+              message="Upgrade to a paid account to indicate need for smartjects."
+              href="/upgrade"
+              buttonText="Upgrade Now"
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="provide" className="space-y-4">
+          {isLoading ? (
+            <SkeletonGrid />
+          ) : user?.accountType === "paid" ? (
+            processedData.provide.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {processedData.provide.map((smartject) => (
+                  <SmartjectCard
+                    key={smartject.id}
+                    smartject={smartject}
+                    onVoted={memoizedRefetch}
+                    userVotes={smartject.userVotes}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                message="You haven't indicated ability to provide any smartjects yet."
+                href="/discover"
+                buttonText="Explore Smartjects"
+              />
+            )
+          ) : (
+            <EmptyState
+              message="Upgrade to a paid account to indicate you can provide smartjects."
+              href="/upgrade"
+              buttonText="Upgrade Now"
+            />
+          )}
+        </TabsContent>
+      </Tabs>
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
         {user?.accountType === "free" && (
           <Button className="mt-4 md:mt-0" asChild>
@@ -1036,132 +1161,6 @@ export default function DashboardPage() {
           </div>
         </>
       )}
-
-      <div className="border-t border-gray-200 pt-8 grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div
-          onClick={() => scrollToTabsAndSwitch("believe")}
-          className="cursor-pointer hover:scale-105 transition-transform"
-        >
-          <StatsCard
-            title="Believed Smartjects"
-            description="Smartjects you've shown interest in"
-            value={processedData.believed.length}
-          />
-        </div>
-        <div
-          onClick={() => scrollToTabsAndSwitch("need")}
-          className="cursor-pointer hover:scale-105 transition-transform"
-        >
-          <StatsCard
-            title="I Need"
-            description="Smartjects you're looking to implement"
-            value={processedData.need.length}
-          />
-        </div>
-        <div
-          onClick={() => scrollToTabsAndSwitch("provide")}
-          className="cursor-pointer hover:scale-105 transition-transform"
-        >
-          <StatsCard
-            title="I Provide"
-            description="Smartjects you can implement"
-            value={processedData.provide.length}
-          />
-        </div>
-      </div>
-      <Tabs value={activeTab} onValueChange={setActiveTab} ref={tabsRef}>
-        {/* <TabsList className="mb-6">
-          <TabsTrigger value="believe">I Believe</TabsTrigger>
-          <TabsTrigger value="need">I Need</TabsTrigger>
-          <TabsTrigger value="provide">I Provide</TabsTrigger>
-        </TabsList> */}
-
-        <TabsContent value="believe" className="space-y-4">
-          {isLoading ? (
-            <SkeletonGrid />
-          ) : processedData.believed.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {processedData.believed.map((smartject) => (
-                <SmartjectCard
-                  key={smartject.id}
-                  smartject={smartject}
-                  onVoted={memoizedRefetch}
-                  userVotes={smartject.userVotes}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              message="You haven't believed in any Smartjects yet."
-              href="/discover"
-              buttonText="Browse Smartjects"
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="need" className="space-y-4">
-          {isLoading ? (
-            <SkeletonGrid />
-          ) : user?.accountType === "paid" ? (
-            processedData.need.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {processedData.need.map((smartject) => (
-                  <SmartjectCard
-                    key={smartject.id}
-                    smartject={smartject}
-                    onVoted={memoizedRefetch}
-                    userVotes={smartject.userVotes}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                message="You haven't indicated need for any smartjects yet."
-                href="/discover"
-                buttonText="Explore Smartjects"
-              />
-            )
-          ) : (
-            <EmptyState
-              message="Upgrade to a paid account to indicate need for smartjects."
-              href="/upgrade"
-              buttonText="Upgrade Now"
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="provide" className="space-y-4">
-          {isLoading ? (
-            <SkeletonGrid />
-          ) : user?.accountType === "paid" ? (
-            processedData.provide.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {processedData.provide.map((smartject) => (
-                  <SmartjectCard
-                    key={smartject.id}
-                    smartject={smartject}
-                    onVoted={memoizedRefetch}
-                    userVotes={smartject.userVotes}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                message="You haven't indicated ability to provide any smartjects yet."
-                href="/discover"
-                buttonText="Explore Smartjects"
-              />
-            )
-          ) : (
-            <EmptyState
-              message="Upgrade to a paid account to indicate you can provide smartjects."
-              href="/upgrade"
-              buttonText="Upgrade Now"
-            />
-          )}
-        </TabsContent>
-      </Tabs>
-
       <CreateProposalModal
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}

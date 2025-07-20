@@ -1210,7 +1210,8 @@ export const contractService = {
           `
           *,
           provider:users!contracts_provider_id_fkey(id, name, email),
-          needer:users!contracts_needer_id_fkey(id, name, email)
+          needer:users!contracts_needer_id_fkey(id, name, email),
+          matches!contracts_match_id_fkey(smartject_id)
         `,
         )
         .or(`provider_id.eq.${userId},needer_id.eq.${userId}`)
@@ -1268,7 +1269,8 @@ export const contractService = {
 
         return {
           id: contract.id,
-          smartjectId: contract.match_id,
+          matchId: contract.match_id,
+          smartjectId: contract.matches?.smartject_id || contract.match_id,
           smartjectTitle: contract.title || "Unknown Project",
           otherParty: otherParty || "Unknown Party",
           role: role,
@@ -3321,6 +3323,142 @@ This milestone is now ready for review and approval.`;
         hasMilestones: false,
         userRole: null,
       };
+    }
+  },
+
+  async getUserContractsForSmartject(
+    userId: string,
+    smartjectId: string,
+  ): Promise<{
+    activeContracts: ContractListType[];
+    completedContracts: ContractListType[];
+  }> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // First get match IDs for this smartject
+      const { data: matchIds, error: matchError } = await supabase
+        .from("matches")
+        .select("id")
+        .eq("smartject_id", smartjectId);
+
+      if (matchError || !matchIds || matchIds.length === 0) {
+        return { activeContracts: [], completedContracts: [] };
+      }
+
+      const matchIdList = matchIds.map((m) => m.id);
+
+      // Get contracts where user is either provider or needer for those matches
+      const { data: contractsData, error: contractsError } = await supabase
+        .from("contracts")
+        .select(
+          `
+          *,
+          provider:users!contracts_provider_id_fkey(id, name, email),
+          needer:users!contracts_needer_id_fkey(id, name, email)
+        `,
+        )
+        .or(`provider_id.eq.${userId},needer_id.eq.${userId}`)
+        .in("match_id", matchIdList)
+        .order("created_at", { ascending: false });
+
+      if (contractsError) {
+        console.error("Error fetching contracts:", contractsError);
+        return { activeContracts: [], completedContracts: [] };
+      }
+
+      const contracts = contractsData || [];
+
+      // Get contract milestones for all contracts
+      const contractIds = contracts.map((c) => c.id);
+
+      let contractMilestonesData: any[] = [];
+      if (contractIds.length > 0) {
+        const { data } = await supabase
+          .from("contract_milestones")
+          .select("*")
+          .in("contract_id", contractIds);
+        contractMilestonesData = data || [];
+      }
+
+      // Transform contracts to match the expected format
+      const transformedContracts = contracts.map((contract) => {
+        const isProvider = contract.provider_id === userId;
+        const otherParty = isProvider
+          ? contract.needer?.name
+          : contract.provider?.name;
+        const role = isProvider ? "provider" : "needer";
+
+        // Find contract milestones for this contract
+        const milestones =
+          contractMilestonesData?.filter(
+            (m) => m.contract_id === contract.id,
+          ) || [];
+
+        // Find next milestone (in_progress or pending)
+        const nextMilestone = milestones
+          .filter((m) => m.status === "in_progress" || m.status === "pending")
+          .sort(
+            (a: any, b: any) => (a.percentage || 0) - (b.percentage || 0),
+          )[0];
+
+        // For completed contracts, show the last completed milestone
+        const finalMilestone =
+          contract.status === "completed" && milestones.length > 0
+            ? milestones
+                .filter((m) => m.status === "completed")
+                .sort(
+                  (a: any, b: any) => (b.percentage || 0) - (a.percentage || 0),
+                )[0]
+            : null;
+
+        return {
+          id: contract.id,
+          matchId: contract.match_id,
+          smartjectId: smartjectId,
+          smartjectTitle: contract.title || "Unknown Project",
+          otherParty: otherParty || "Unknown Party",
+          role: role,
+          startDate: contract.start_date,
+          endDate: contract.end_date,
+          status: contract.status,
+          budget: contract.budget,
+          nextMilestone: nextMilestone
+            ? nextMilestone.name
+            : milestones.length === 0
+              ? "No milestones defined"
+              : "All milestones completed",
+          nextMilestoneId: nextMilestone ? nextMilestone.id : undefined,
+          nextMilestoneDate: nextMilestone
+            ? nextMilestone.due_date
+            : contract.end_date,
+          finalMilestone: finalMilestone
+            ? finalMilestone.name
+            : contract.status === "completed" && milestones.length === 0
+              ? "Contract completed"
+              : undefined,
+          completionDate:
+            contract.status === "completed" ? contract.end_date : undefined,
+          exclusivityEnds: contract.exclusivity_ends,
+        };
+      });
+
+      // Separate active and completed contracts
+      const activeContracts = transformedContracts.filter(
+        (contract) => contract.status !== "completed",
+      );
+
+      const completedContracts = transformedContracts.filter(
+        (contract) => contract.status === "completed",
+      );
+
+      return {
+        activeContracts,
+        completedContracts,
+      };
+    } catch (error) {
+      console.error("Error in getUserContractsForSmartject:", error);
+      return { activeContracts: [], completedContracts: [] };
     }
   },
 };

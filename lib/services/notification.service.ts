@@ -157,6 +157,140 @@ class NotificationService {
   }
 
   /**
+   * Get unread notifications count for a specific proposal
+   */
+  async getUnreadCountByProposalId(
+    proposalId: string,
+    userId: string,
+  ): Promise<number> {
+    try {
+      const { count, error } = await this.supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("recipient_user_id", userId)
+        .eq("related_proposal_id", proposalId)
+        .is("read_at", null);
+
+      if (error) {
+        console.error("Error fetching unread count by proposal:", error);
+        return 0;
+      }
+
+      return count || 0;
+    } catch (error) {
+      console.error("Error in getUnreadCountByProposalId:", error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get unread notifications count for a specific contract/match
+   */
+  async getUnreadCountByMatchId(
+    matchId: string,
+    userId: string,
+  ): Promise<number> {
+    try {
+      const { count, error } = await this.supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("recipient_user_id", userId)
+        .eq("related_match_id", matchId)
+        .is("read_at", null);
+
+      if (error) {
+        console.error("Error fetching unread count by match:", error);
+        return 0;
+      }
+
+      return count || 0;
+    } catch (error) {
+      console.error("Error in getUnreadCountByMatchId:", error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get unread notifications counts for multiple proposals
+   */
+  async getUnreadCountsByProposalIds(
+    proposalIds: string[],
+    userId: string,
+  ): Promise<{ [proposalId: string]: number }> {
+    try {
+      const { data, error } = await this.supabase
+        .from("notifications")
+        .select("related_proposal_id")
+        .eq("recipient_user_id", userId)
+        .in("related_proposal_id", proposalIds)
+        .is("read_at", null);
+
+      if (error) {
+        console.error("Error fetching unread counts by proposals:", error);
+        return {};
+      }
+
+      // Count notifications per proposal
+      const counts: { [proposalId: string]: number } = {};
+      proposalIds.forEach((id) => (counts[id] = 0));
+
+      (data || []).forEach((item: any) => {
+        if (
+          item.related_proposal_id &&
+          counts.hasOwnProperty(item.related_proposal_id)
+        ) {
+          counts[item.related_proposal_id]++;
+        }
+      });
+
+      return counts;
+    } catch (error) {
+      console.error("Error in getUnreadCountsByProposalIds:", error);
+      return {};
+    }
+  }
+
+  /**
+   * Get unread notifications counts for multiple contracts/matches
+   */
+  async getUnreadCountsByMatchIds(
+    matchIds: string[],
+    userId: string,
+  ): Promise<{ [matchId: string]: number }> {
+    try {
+      const { data, error } = await this.supabase
+        .from("notifications")
+        .select("related_match_id")
+        .eq("recipient_user_id", userId)
+        .in("related_match_id", matchIds)
+        .is("read_at", null);
+
+      if (error) {
+        console.error("Error fetching unread counts by matches:", error);
+        return {};
+      }
+
+      // Count notifications per match
+      const counts: { [matchId: string]: number } = {};
+      matchIds.forEach((id) => (counts[id] = 0));
+
+      (data || []).forEach((item: any) => {
+        if (
+          item.related_match_id &&
+          counts.hasOwnProperty(item.related_match_id)
+        ) {
+          counts[item.related_match_id]++;
+        }
+      });
+
+      return counts;
+    } catch (error) {
+      console.error("Error in getUnreadCountsByMatchIds:", error);
+      return {};
+    }
+  }
+
+  /**
    * Mark notification as read
    */
   async markAsRead(

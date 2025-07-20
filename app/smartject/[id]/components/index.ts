@@ -6,3 +6,4 @@ export { ProposalSidebar } from "./ProposalSidebar";
 export { SmartjectContent } from "./SmartjectContent";
 export { SmartjectCard } from "./SmartjectCard";
 export { SmartjectTabs } from "./SmartjectTabs";
+export { UserActivity } from "./UserActivity";

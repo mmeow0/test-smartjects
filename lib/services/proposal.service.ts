@@ -688,4 +688,75 @@ export const proposalService = {
       return false;
     }
   },
+
+  async getUserProposalsForSmartject(
+    userId: string,
+    smartjectId: string,
+  ): Promise<ProposalType[]> {
+    const supabase = getSupabaseBrowserClient();
+
+    const { data, error } = await supabase
+      .from("proposals")
+      .select(
+        `
+        *,
+        smartjects (
+          title
+        ),
+        proposal_nda_signatures (
+          id,
+          signer_user_id,
+          signed_at,
+          created_at
+        )
+      `,
+      )
+      .eq("user_id", userId)
+      .eq("smartject_id", smartjectId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error(
+        `Error fetching user proposals for smartject ${smartjectId}:`,
+        error,
+      );
+      return [];
+    }
+
+    return data.map((proposal: any) => ({
+      id: proposal.id,
+      smartjectId: proposal.smartject_id,
+      userId: proposal.user_id,
+      type: proposal.type,
+      title: proposal.title,
+      description: proposal.description || "",
+      isCooperationProposal: proposal.is_cooperation_proposal || false,
+      budget: proposal.budget,
+      timeline: proposal.timeline,
+      scope: proposal.scope,
+      deliverables: proposal.deliverables,
+      requirements: proposal.requirements,
+      expertise: proposal.expertise,
+      approach: proposal.approach,
+      team: proposal.team,
+      additionalInfo: proposal.additional_info,
+      privateFields: proposal.private_fields || {},
+      ndaSignatures:
+        proposal.proposal_nda_signatures
+          ?.filter(
+            (sig: any) =>
+              sig.hasOwnProperty("status") && sig.status === "approved",
+          )
+          .map((sig: any) => ({
+            id: sig.id,
+            proposalId: proposal.id,
+            signerUserId: sig.signer_user_id,
+            signedAt: sig.approved_at || sig.signed_at,
+            createdAt: sig.created_at,
+          })) || [],
+      status: proposal.status,
+      createdAt: proposal.created_at,
+      updatedAt: proposal.updated_at,
+    }));
+  },
 };

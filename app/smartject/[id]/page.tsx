@@ -13,7 +13,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useSmartjectById } from "@/hooks/use-smartject-by-id";
 
 // Import our new components
-import { SmartjectCard, SmartjectTabs, CommentsSection } from "./components";
+import {
+  SmartjectCard,
+  SmartjectTabs,
+  CommentsSection,
+  UserActivity,
+} from "./components";
 import { CreateProposalModal } from "@/components/create-proposal-modal";
 
 export default function SmartjectDetailPage({
@@ -34,6 +39,10 @@ export default function SmartjectDetailPage({
     commentsRef,
     needProposals,
     provideProposals,
+    userProposals,
+    userContracts,
+    unreadProposalCounts,
+    unreadContractCounts,
     isLoading,
     isSubmitting,
     setIsSubmitting,
@@ -200,6 +209,14 @@ export default function SmartjectDetailPage({
     router.push(`/matches/new/negotiate/${proposalId}`);
   };
 
+  const handleViewProposal = (proposalId: string) => {
+    router.push(`/proposals/${proposalId}`);
+  };
+
+  const handleViewContract = (contractId: string) => {
+    router.push(`/contracts/${contractId}`);
+  };
+
   // If loading, show loading state
   if (isLoading || !smartject) {
     return (
@@ -249,14 +266,35 @@ export default function SmartjectDetailPage({
               />
             </div>
           </div>
+
+          {/* User Activity Section - Below comments */}
+          {isAuthenticated && user?.accountType === 'paid' && (
+            <div>
+              <div className="text-xl font-semibold mb-4 pl-4">My Activity</div>
+              <UserActivity
+                userProposals={userProposals}
+                userContracts={userContracts}
+                unreadProposalCounts={unreadProposalCounts}
+                unreadContractCounts={unreadContractCounts}
+                onViewProposal={handleViewProposal}
+                onViewContract={handleViewContract}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right Column - Content Tabs */}
         <div className="lg:col-span-7">
           <SmartjectTabs
             smartject={smartject}
-            needProposals={needProposals}
-            provideProposals={provideProposals}
+            needProposals={needProposals.map((proposal) => ({
+              ...proposal,
+              budget: proposal.budget?.toString(),
+            }))}
+            provideProposals={provideProposals.map((proposal) => ({
+              ...proposal,
+              budget: proposal.budget?.toString(),
+            }))}
             user={user}
             isAuthenticated={isAuthenticated}
             onViewProposalDetails={handleRespondToProposal}

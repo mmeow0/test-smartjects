@@ -282,6 +282,7 @@ export type ContractMilestoneType = {
 
 export type ContractListType = {
   id: string;
+  matchId: string;
   smartjectId: string;
   smartjectTitle: string;
   otherParty: string;
