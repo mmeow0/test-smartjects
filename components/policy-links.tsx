@@ -17,6 +17,15 @@ export function PolicyLinks() {
           <div className="hidden sm:block w-px h-4 bg-gray-300"></div>
 
           <Link
+            href="/terms-of-service"
+            className="text-sm sm:text-base text-[#FF7100] hover:text-opacity-80 transition-colors hover:underline focus:outline-none focus:ring-2 focus:ring-[#FF7100] focus:ring-opacity-50 rounded px-2 py-1"
+          >
+            Terms of Service
+          </Link>
+
+          <div className="hidden sm:block w-px h-4 bg-gray-300"></div>
+
+          <Link
             href="/cookie-policy"
             className="text-sm sm:text-base text-[#FF7100] hover:text-opacity-80 transition-colors hover:underline focus:outline-none focus:ring-2 focus:ring-[#FF7100] focus:ring-opacity-50 rounded px-2 py-1"
           >
