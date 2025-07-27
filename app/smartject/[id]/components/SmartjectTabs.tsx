@@ -133,7 +133,7 @@ export function SmartjectTabs({
               )}
             </TabsList>
 
-            <div className="p-6">
+            <div className="p-0">
               <TabsContent value="details" className="mt-0">
                 <SmartjectDetails smartject={smartject} />
               </TabsContent>

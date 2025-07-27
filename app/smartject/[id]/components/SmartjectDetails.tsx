@@ -98,22 +98,19 @@ export function SmartjectDetails({ smartject }: SmartjectDetailsProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x relative">
         {[
           ...detailSections.map((section, index) => (
-            <div key={`section-${index}`} className="relative px-4 py-2">
+            <div key={`section-${index}`} className="relative px-1 py-1">
               {index !== 0 && index !== 1 && (
                 <div className="absolute left-4 right-4 top-0 h-px bg-border" />
               )}
-              {index % 2 === 1 && (
-                <div className="absolute top-4 bottom-4 left-0 w-px bg-border hidden md:block" />
-              )}
 
-              <Card className="h-full border-none shadow-none">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
+              <Card className="h-full border-none shadow-none pl-0">
+                <CardHeader className="pb-3 pl-3">
+                  <CardTitle className="flex items-center gap-2 text-base pl-0">
                     {section.icon}
                     {section.title}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-0">
+                <CardContent className="pl-3 pt-0">
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {section.content}
                   </p>
@@ -124,7 +121,6 @@ export function SmartjectDetails({ smartject }: SmartjectDetailsProps) {
           // Industries
           <div key="industries" className="relative px-4 py-2">
             <div className="absolute left-4 right-4 top-0 h-px bg-border" />
-            <div className="absolute top-4 bottom-4 left-0 w-px bg-border hidden md:block" />
             <Card className="h-full border-none shadow-none">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -154,7 +150,6 @@ export function SmartjectDetails({ smartject }: SmartjectDetailsProps) {
           // Business Functions
           <div key="functions" className="relative px-4 py-2">
             <div className="absolute left-4 right-4 top-0 h-px bg-border" />
-            <div className="absolute top-4 bottom-4 left-0 w-px bg-border hidden md:block" />
             <Card className="h-full border-none shadow-none">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">

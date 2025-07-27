@@ -335,7 +335,7 @@ export const SearchFilters = memo(
                 >
                   <Audience className="w-4 h-4 flex-shrink-0" />
                   <span className="text-sm font-medium text-gray-700 truncate">
-                    Audience
+                    Users
                     {selectedAudience.length > 0 && (
                       <span className="ml-1 text-blue-600">
                         ({selectedAudience.length})
@@ -348,7 +348,7 @@ export const SearchFilters = memo(
                   <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-56 max-h-60 overflow-hidden">
                     <div className="p-2 border-b border-gray-100">
                       <Input
-                        placeholder="Search audience..."
+                        placeholder="Search users..."
                         value={audienceSearchTerm}
                         onChange={(e) => onAudienceSearchChange(e.target.value)}
                         className="h-8 text-sm border-gray-200"
@@ -380,7 +380,7 @@ export const SearchFilters = memo(
                         ))
                       ) : (
                         <div className="px-4 py-3 text-sm text-gray-500">
-                          No audience found
+                          No users found
                         </div>
                       )}
                     </div>
@@ -396,7 +396,7 @@ export const SearchFilters = memo(
                 >
                   <Functions className="w-4 h-4 flex-shrink-0" />
                   <span className="text-sm font-medium text-gray-700 truncate">
-                    Functions
+                    Needs Groups
                     {selectedFunctions.length > 0 && (
                       <span className="ml-1 text-blue-600">
                         ({selectedFunctions.length})
@@ -409,7 +409,7 @@ export const SearchFilters = memo(
                   <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-56 max-h-60 overflow-hidden">
                     <div className="p-2 border-b border-gray-100">
                       <Input
-                        placeholder="Search functions..."
+                        placeholder="Search needs groups..."
                         value={functionsSearchTerm}
                         onChange={(e) =>
                           onFunctionsSearchChange(e.target.value)
@@ -443,7 +443,7 @@ export const SearchFilters = memo(
                         ))
                       ) : (
                         <div className="px-4 py-3 text-sm text-gray-500">
-                          No functions found
+                          No needs groups found
                         </div>
                       )}
                     </div>
@@ -639,7 +639,7 @@ export const SearchFilters = memo(
                     <div className="flex items-center gap-2">
                       <Audience className="w-4 h-4" />
                       <span className="text-sm font-medium text-gray-700">
-                        Audience
+                        Users
                       </span>
                       {selectedAudience.length > 0 && (
                         <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
@@ -653,7 +653,7 @@ export const SearchFilters = memo(
                     <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-hidden">
                       <div className="p-2 border-b border-gray-100">
                         <Input
-                          placeholder="Search audience..."
+                          placeholder="Search users..."
                           value={audienceSearchTerm}
                           onChange={(e) =>
                             onAudienceSearchChange(e.target.value)
@@ -687,7 +687,7 @@ export const SearchFilters = memo(
                           ))
                         ) : (
                           <div className="px-4 py-3 text-sm text-gray-500">
-                            No audience found
+                            No users found
                           </div>
                         )}
                       </div>
@@ -704,7 +704,7 @@ export const SearchFilters = memo(
                     <div className="flex items-center gap-2">
                       <Functions className="w-4 h-4" />
                       <span className="text-sm font-medium text-gray-700">
-                        Functions
+                        Needs Groups
                       </span>
                       {selectedFunctions.length > 0 && (
                         <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
@@ -718,7 +718,7 @@ export const SearchFilters = memo(
                     <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-hidden">
                       <div className="p-2 border-b border-gray-100">
                         <Input
-                          placeholder="Search functions..."
+                          placeholder="Search needs groups..."
                           value={functionsSearchTerm}
                           onChange={(e) =>
                             onFunctionsSearchChange(e.target.value)
@@ -752,7 +752,7 @@ export const SearchFilters = memo(
                           ))
                         ) : (
                           <div className="px-4 py-3 text-sm text-gray-500">
-                            No functions found
+                            No needs groups found
                           </div>
                         )}
                       </div>
