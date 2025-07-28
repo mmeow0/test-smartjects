@@ -32,6 +32,7 @@ interface NDARequestFormProps {
   proposalTitle: string;
   onRequestSubmitted: () => void;
   disabled?: boolean;
+  className?: string;
 }
 
 export function NDARequestForm({
@@ -39,6 +40,7 @@ export function NDARequestForm({
   proposalTitle,
   onRequestSubmitted,
   disabled = false,
+  className,
 }: NDARequestFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [requestMessage, setRequestMessage] = useState("");
@@ -156,31 +158,35 @@ export function NDARequestForm({
         proposalId,
         user.id,
         requestMessage,
-        selectedFiles
+        selectedFiles,
       );
 
       toast({
         title: "NDA Request Submitted",
-        description: "Your request has been sent to the proposal owner for review",
+        description:
+          "Your request has been sent to the proposal owner for review",
       });
 
       // Reset form
       setRequestMessage("");
       setSelectedFiles([]);
       setIsOpen(false);
-      
+
       // Notify parent component
       onRequestSubmitted();
     } catch (error: any) {
       console.error("Error submitting NDA request:", error);
-      
+
       // Check if it's a migration-related error
-      if (error?.message?.includes('Database migration required') || 
-          error?.message?.includes('column "status"') ||
-          error?.message?.includes('migration required')) {
+      if (
+        error?.message?.includes("Database migration required") ||
+        error?.message?.includes('column "status"') ||
+        error?.message?.includes("migration required")
+      ) {
         toast({
           title: "Database Migration Required",
-          description: "The NDA approval system requires database updates. Please contact your administrator to apply migrations.",
+          description:
+            "The NDA approval system requires database updates. Please contact your administrator to apply migrations.",
           variant: "destructive",
         });
       } else {
@@ -198,7 +204,7 @@ export function NDARequestForm({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button disabled={disabled} className="w-full">
+        <Button disabled={disabled} className={`w-full ${className || ""}`}>
           <Shield className="h-4 w-4 mr-2" />
           Request NDA Access
         </Button>
@@ -224,9 +230,9 @@ export function NDARequestForm({
                 Non-Disclosure Agreement
               </p>
               <p className="text-sm text-amber-700 mt-1">
-                By submitting this request, you agree to maintain confidentiality
-                of any private information shared with you. The proposal owner
-                will review your request before granting access.
+                By submitting this request, you agree to maintain
+                confidentiality of any private information shared with you. The
+                proposal owner will review your request before granting access.
               </p>
             </div>
           </div>
@@ -254,7 +260,8 @@ export function NDARequestForm({
             <div>
               <Label>Supporting Documents (Optional)</Label>
               <p className="text-sm text-muted-foreground">
-                Upload documents that support your request (portfolio, credentials, etc.)
+                Upload documents that support your request (portfolio,
+                credentials, etc.)
               </p>
             </div>
 
@@ -289,7 +296,8 @@ export function NDARequestForm({
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  PDF, DOC, DOCX, TXT, JPG, PNG up to 10MB each (max {maxFiles} files)
+                  PDF, DOC, DOCX, TXT, JPG, PNG up to 10MB each (max {maxFiles}{" "}
+                  files)
                 </p>
               </div>
             </div>
@@ -297,7 +305,9 @@ export function NDARequestForm({
             {/* Selected Files */}
             {selectedFiles.length > 0 && (
               <div className="space-y-2">
-                <Label>Selected Files ({selectedFiles.length}/{maxFiles})</Label>
+                <Label>
+                  Selected Files ({selectedFiles.length}/{maxFiles})
+                </Label>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {selectedFiles.map((file, index) => (
                     <div

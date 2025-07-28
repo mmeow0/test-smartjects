@@ -163,7 +163,7 @@ export function ProposalNegotiations({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-semibold">
-            {isProposalOwner ? "Inquiries & Discussions" : "Negotiations"}
+            Negotiations
           </h3>
           <p className="text-muted-foreground">
             {isProposalOwner

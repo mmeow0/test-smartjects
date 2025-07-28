@@ -203,7 +203,12 @@ const getProposalNegotiations = async (proposalId: string, userId: string) => {
       );
       const otherPartyId = proposal.user_id;
 
-      if (!otherPartyId || regularMessages.length === 0) {
+      // Check if the user has sent any messages (including interest expressions)
+      const userMessages = proposalMessages.filter(
+        (msg) => msg.sender_id === userId,
+      );
+
+      if (!otherPartyId || userMessages.length === 0) {
         return { active: [], completed: [] };
       }
 
