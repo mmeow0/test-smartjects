@@ -409,7 +409,7 @@ export default function ProposalDetailPage({
               <div className="flex gap-2">
                 {!hasExpressedInterest ? (
                   <Button
-                    variant="outline"
+                    variant='default'
                     onClick={expressInterest}
                     disabled={isExpressingInterest}
                   >
@@ -1192,37 +1192,7 @@ export default function ProposalDetailPage({
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-between p-4 rounded-lg border-2 border-dashed">
-                          <div className="flex items-center gap-2">
-                            <EyeOff className="h-4 w-4 text-orange-600" />
-                            <div>
-                              <p className="font-medium text-orange-900">
-                                NDA Access Required
-                              </p>
-                              <p className="text-sm text-orange-700">
-                                Submit an NDA request to view private proposal
-                                details
-                              </p>
-                            </div>
-                          </div>
-                          {canRequestNda && !migrationNeeded && (
-                            <div className="ml-4">
-                              <NDARequestForm
-                                proposalId={id}
-                                proposalTitle={proposal.title}
-                                onRequestSubmitted={handleNdaRequestSubmitted}
-                                disabled={loadingUserRequest}
-                              />
-                            </div>
-                          )}
-                          {migrationNeeded && (
-                            <div className="ml-4">
-                              <Badge variant="destructive" className="text-xs">
-                                Migration Required
-                              </Badge>
-                            </div>
-                          )}
-                        </div>
+                        null
                       )}
                     </div>
 

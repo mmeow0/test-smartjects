@@ -213,13 +213,6 @@ export default function UpgradePage() {
             </p>
           </div>
           <div>
-            <h3 className="font-bold mb-2">Is there a free trial?</h3>
-            <p className="text-muted-foreground">
-              We don't offer a free trial, but we do have a 30-day money-back guarantee if you're not satisfied with the
-              Pro plan.
-            </p>
-          </div>
-          <div>
             <h3 className="font-bold mb-2">What payment methods do you accept?</h3>
             <p className="text-muted-foreground">
               We accept all major credit cards, PayPal, and bank transfers for annual plans.

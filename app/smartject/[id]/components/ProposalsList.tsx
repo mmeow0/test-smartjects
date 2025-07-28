@@ -137,14 +137,6 @@ export function ProposalsList({
             >
               View Details
             </Button>
-            {proposal.userId !== currentUser?.id && (
-              <Button
-                className="flex-1 bg-yellow-300 hover:bg-yellow-400 text-black"
-                onClick={() => onNegotiate(proposal.id)}
-              >
-                Negotiate
-              </Button>
-            )}
           </div>
         </div>
       ))}
