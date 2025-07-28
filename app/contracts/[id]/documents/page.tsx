@@ -1,76 +1,96 @@
-"use client"
+"use client";
 
-import { use, useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
-import { useToast } from "@/hooks/use-toast"
-import { ArrowLeft, Download, FileText, Upload, Loader2, Calendar, User } from "lucide-react"
-import { contractService } from "@/lib/services"
+import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
+import { useToast } from "@/hooks/use-toast";
+import {
+  ArrowLeft,
+  Download,
+  FileText,
+  Upload,
+  Loader2,
+  Calendar,
+  User,
+} from "lucide-react";
+import { contractService } from "@/lib/services";
 
 interface ContractDocument {
-  id: string
-  name: string
-  type: string
-  size: string
-  url: string
-  uploadedAt: string
-  uploadedBy: string
+  id: string;
+  name: string;
+  type: string;
+  size: string;
+  url: string;
+  uploadedAt: string;
+  uploadedBy: string;
+  uploadedById: string;
 }
 
-export default function ContractDocumentsPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ContractDocumentsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
 
-  const router = useRouter()
-  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(true)
-  const [isUploading, setIsUploading] = useState(false)
-  const [contract, setContract] = useState<any>(null)
-  const [documents, setDocuments] = useState<ContractDocument[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [contract, setContract] = useState<any>(null);
+  const [documents, setDocuments] = useState<ContractDocument[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   // Load contract and documents data
   // Load contract data
   useEffect(() => {
     const loadContract = async () => {
       if (authLoading || !canAccess) {
-        return
+        return;
       }
 
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
 
       try {
         // Load contract data
-        const contractData = await contractService.getContractById(id)
+        const contractData = await contractService.getContractById(id);
         if (!contractData) {
-          setError("Contract not found or access denied")
-          setIsLoading(false)
-          return
+          setError("Contract not found or access denied");
+          setIsLoading(false);
+          return;
         }
 
-        setContract(contractData)
+        setContract(contractData);
 
         // Load documents
-        const documentsData = await contractService.getContractDocuments(id)
-        setDocuments(documentsData)
+        const documentsData = await contractService.getContractDocuments(id);
+        setDocuments(documentsData);
 
-        setIsLoading(false)
+        setIsLoading(false);
       } catch (error) {
-        console.error("Error loading contract documents:", error)
-        setError("Failed to load contract documents")
-        setIsLoading(false)
+        console.error("Error loading contract documents:", error);
+        setError("Failed to load contract documents");
+        setIsLoading(false);
       }
-    }
+    };
 
-    loadContract()
-  }, [authLoading, canAccess, user, id, router])
+    loadContract();
+  }, [authLoading, canAccess, user, id, router]);
 
   // Redirect if not authenticated or not paid
   if (authLoading || !canAccess) {
-    return null
+    return null;
   }
 
   // Loading state
@@ -81,7 +101,9 @@ export default function ContractDocumentsPage({ params }: { params: Promise<{ id
           <Card className="w-full max-w-4xl">
             <CardHeader className="text-center">
               <CardTitle>Loading...</CardTitle>
-              <CardDescription>Please wait while we load your contract documents.</CardDescription>
+              <CardDescription>
+                Please wait while we load your contract documents.
+              </CardDescription>
             </CardHeader>
             <CardContent className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin" />
@@ -89,7 +111,7 @@ export default function ContractDocumentsPage({ params }: { params: Promise<{ id
           </Card>
         </div>
       </div>
-    )
+    );
   }
 
   // Error state
@@ -111,65 +133,66 @@ export default function ContractDocumentsPage({ params }: { params: Promise<{ id
           </Card>
         </div>
       </div>
-    )
+    );
   }
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    setIsUploading(true)
+    setIsUploading(true);
 
     try {
       // TODO: Implement actual file upload to storage
       // For now, just show a success message
-      await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate upload
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate upload
 
       toast({
         title: "Document uploaded",
         description: `${file.name} has been uploaded successfully.`,
-      })
+      });
 
       // Reload documents
-      const updatedDocuments = await contractService.getContractDocuments(id)
-      setDocuments(updatedDocuments)
-
+      const updatedDocuments = await contractService.getContractDocuments(id);
+      setDocuments(updatedDocuments);
     } catch (error) {
-      console.error("Error uploading document:", error)
+      console.error("Error uploading document:", error);
       toast({
         title: "Upload failed",
         description: "Failed to upload document. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsUploading(false)
+      setIsUploading(false);
       // Reset file input
-      event.target.value = ""
+      event.target.value = "";
     }
-  }
+  };
 
   const handleDownload = (document: ContractDocument) => {
     // TODO: Implement actual download
     toast({
       title: "Download started",
       description: `Downloading ${document.name}...`,
-    })
-  }
+    });
+  };
 
   const getFileIcon = (type: string) => {
     switch (type.toLowerCase()) {
-      case 'pdf':
-        return <FileText className="h-8 w-8 text-red-500" />
-      case 'doc':
-      case 'docx':
-        return <FileText className="h-8 w-8 text-blue-500" />
-      case 'xls':
-      case 'xlsx':
-        return <FileText className="h-8 w-8 text-green-500" />
+      case "pdf":
+        return <FileText className="h-8 w-8 text-red-500" />;
+      case "doc":
+      case "docx":
+        return <FileText className="h-8 w-8 text-blue-500" />;
+      case "xls":
+      case "xlsx":
+        return <FileText className="h-8 w-8 text-green-500" />;
       default:
-        return <FileText className="h-8 w-8 text-gray-500" />
+        return <FileText className="h-8 w-8 text-gray-500" />;
     }
-  }
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -192,7 +215,8 @@ export default function ContractDocumentsPage({ params }: { params: Promise<{ id
           <CardHeader>
             <CardTitle>Upload New Document</CardTitle>
             <CardDescription>
-              Upload documents related to this contract. Supported formats: PDF, DOC, DOCX, XLS, XLSX
+              Upload documents related to this contract. Supported formats: PDF,
+              DOC, DOCX, XLS, XLSX
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -243,7 +267,9 @@ export default function ContractDocumentsPage({ params }: { params: Promise<{ id
               <div className="text-center py-8 text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No documents uploaded yet.</p>
-                <p className="text-sm">Upload your first document to get started.</p>
+                <p className="text-sm">
+                  Upload your first document to get started.
+                </p>
               </div>
             ) : (
               <div className="grid gap-4">
@@ -263,7 +289,12 @@ export default function ContractDocumentsPage({ params }: { params: Promise<{ id
                           </span>
                           <span className="flex items-center gap-1">
                             <User className="h-3 w-3" />
-                            {document.uploadedBy}
+                            <Link
+                              href={`/profile/${document.uploadedById}`}
+                              className="hover:underline"
+                            >
+                              {document.uploadedBy}
+                            </Link>
                           </span>
                           <span>{document.size}</span>
                         </div>
@@ -285,5 +316,5 @@ export default function ContractDocumentsPage({ params }: { params: Promise<{ id
         </Card>
       </div>
     </div>
-  )
+  );
 }

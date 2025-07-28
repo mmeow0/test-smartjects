@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback, memo, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -165,7 +166,12 @@ const ConversationCard = memo(
               </Avatar>
               <div>
                 <CardTitle className="text-xl">
-                  {conversation.otherParty.name}
+                  <Link
+                    href={`/profile/${conversation.otherParty.id}`}
+                    className="hover:underline"
+                  >
+                    {conversation.otherParty.name}
+                  </Link>
                 </CardTitle>
                 <CardDescription className="flex items-center gap-2">
                   <Handshake className="h-4 w-4" />
@@ -905,7 +911,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 bg-gray-50">
-        <div className="border-t border-gray-200 pt-8 grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="border-t border-gray-200 pt-8 grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div
           onClick={() => scrollToTabsAndSwitch("believe")}
           className="cursor-pointer hover:scale-105 transition-transform"

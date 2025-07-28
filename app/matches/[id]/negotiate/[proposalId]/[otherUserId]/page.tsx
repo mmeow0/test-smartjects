@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo, use } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useMemo, useCallback, use } from "react";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -57,6 +58,7 @@ interface Milestone {
 interface Message {
   id: string;
   sender: "provider" | "needer";
+  senderId: string;
   senderName: string;
   content: string;
   timestamp: string;
@@ -112,14 +114,11 @@ export default function IndividualNegotiatePage({
     useState<IndividualNegotiationData | null>(null);
 
   // Interest functionality
-  const {
-    hasExpressedInterest,
-    isExpressingInterest,
-    expressInterest,
-  } = useInterest({
-    proposalId: proposalId,
-    isProposalOwner: negotiation?.proposalAuthor?.id === user?.id,
-  });
+  const { hasExpressedInterest, isExpressingInterest, expressInterest } =
+    useInterest({
+      proposalId: proposalId,
+      isProposalOwner: negotiation?.proposalAuthor?.id === user?.id,
+    });
   const [negotiationLoading, setNegotiationLoading] = useState(true);
 
   const [message, setMessage] = useState("");
@@ -288,6 +287,7 @@ export default function IndividualNegotiatePage({
             sender: (message.sender_id === providerId
               ? "provider"
               : "needer") as "provider" | "needer",
+            senderId: (message.sender_id as string) || "",
             senderName: (message.users?.name as string) || "",
             content: (message.content as string) || "",
             timestamp: (message.created_at as string) || "",
@@ -483,6 +483,7 @@ export default function IndividualNegotiatePage({
                 sender: (message.sender_id === prev.provider.id
                   ? "provider"
                   : "needer") as "provider" | "needer",
+                senderId: (message.sender_id as string) || "",
                 senderName: (message.users?.name as string) || "",
                 content: (message.content as string) || "",
                 timestamp: (message.created_at as string) || "",
@@ -621,7 +622,9 @@ export default function IndividualNegotiatePage({
             .single();
 
           const proposalTitle =
-            proposalData?.title as string || negotiation.smartjectTitle || "Proposal";
+            (proposalData?.title as string) ||
+            negotiation.smartjectTitle ||
+            "Proposal";
 
           await notificationService.createTermsAcceptedNotification(
             proposalId,
@@ -789,7 +792,12 @@ export default function IndividualNegotiatePage({
                         </Avatar>
                         <div className="flex-1">
                           <div className="flex justify-between items-center mb-2">
-                            <h4 className="font-semibold">{msg.senderName}</h4>
+                            <Link
+                              href={`/profile/${msg.senderId}`}
+                              className="font-semibold hover:underline"
+                            >
+                              {msg.senderName}
+                            </Link>
                             <span className="text-xs text-muted-foreground">
                               {formatDate(msg.timestamp)}
                             </span>

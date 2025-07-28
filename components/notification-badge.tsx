@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -154,9 +155,16 @@ export function NotificationBadge() {
                       <p className="text-sm text-muted-foreground mb-1 line-clamp-2">
                         {notification.message}
                       </p>
-                      {notification.senderName && (
+                      {notification.senderName && notification.senderUserId && (
                         <p className="text-xs text-muted-foreground mb-1">
-                          From: {notification.senderName}
+                          From:{" "}
+                          <Link
+                            href={`/profile/${notification.senderUserId}`}
+                            className="hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {notification.senderName}
+                          </Link>
                         </p>
                       )}
                       {!notification.readAt && (

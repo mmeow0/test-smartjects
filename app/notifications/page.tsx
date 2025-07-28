@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -299,7 +300,20 @@ function NotificationsList({
                       {notification.senderName && (
                         <>
                           <span>•</span>
-                          <span>From: {notification.senderName}</span>
+                          <span>
+                            From:{" "}
+                            {notification.senderUserId ? (
+                              <Link
+                                href={`/profile/${notification.senderUserId}`}
+                                className="hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {notification.senderName}
+                              </Link>
+                            ) : (
+                              notification.senderName
+                            )}
+                          </span>
                         </>
                       )}
                       {!notification.readAt && (

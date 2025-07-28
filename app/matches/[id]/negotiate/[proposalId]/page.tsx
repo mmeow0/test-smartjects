@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo, use } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, useMemo, use } from "react";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -120,14 +121,11 @@ export default function NegotiatePage({
   const { toast } = useToast();
 
   // Interest functionality
-  const {
-    hasExpressedInterest,
-    isExpressingInterest,
-    expressInterest,
-  } = useInterest({
-    proposalId: proposalId,
-    isProposalOwner: proposal?.userId === user?.id,
-  });
+  const { hasExpressedInterest, isExpressingInterest, expressInterest } =
+    useInterest({
+      proposalId: proposalId,
+      isProposalOwner: proposal?.userId === user?.id,
+    });
 
   // State for negotiation data
   const [negotiation, setNegotiation] = useState<NegotiationData | null>(null);
@@ -598,7 +596,9 @@ export default function NegotiatePage({
             .single();
 
           const proposalTitle =
-            proposalData?.title as string || negotiation.smartjectTitle || "Proposal";
+            (proposalData?.title as string) ||
+            negotiation.smartjectTitle ||
+            "Proposal";
 
           await notificationService.createTermsAcceptedNotification(
             proposalId,
@@ -831,9 +831,12 @@ export default function NegotiatePage({
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">
+                    <Link
+                      href={`/profile/${negotiation?.proposalAuthor?.id}`}
+                      className="font-medium hover:underline"
+                    >
                       {negotiation?.proposalAuthor?.name}
-                    </p>
+                    </Link>
                     <p className="text-sm text-muted-foreground">
                       Submitted this proposal
                     </p>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Calendar, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Proposal {
   id: string;
@@ -12,6 +12,10 @@ interface Proposal {
   status: string;
   budget?: string;
   timeline?: string;
+  user?: {
+    name: string;
+    avatar?: string;
+  };
 }
 
 interface User {
@@ -60,7 +64,12 @@ export function ProposalsList({
     return (
       <div className="text-center py-6">
         <p className="text-muted-foreground mb-4">No proposals yet</p>
-        <Button onClick={onCreateProposal} className="bg-yellow-400 hover:bg-yellow-500 text-black">Create Proposal</Button>
+        <Button
+          onClick={onCreateProposal}
+          className="bg-yellow-400 hover:bg-yellow-500 text-black"
+        >
+          Create Proposal
+        </Button>
       </div>
     );
   }
@@ -72,7 +81,9 @@ export function ProposalsList({
           <div className="flex justify-between items-start mb-3">
             <div className="flex items-start flex-1 mr-2">
               <Avatar className="h-8 w-8 mr-2 flex-shrink-0">
-                <AvatarFallback>{proposal.title.charAt(0)}</AvatarFallback>
+                <AvatarFallback>
+                  {proposal.user?.name?.charAt(0) || proposal.title.charAt(0)}
+                </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
                 <div
@@ -81,11 +92,21 @@ export function ProposalsList({
                 >
                   {proposal.title}
                 </div>
-                {proposal.userId === currentUser?.id && (
-                  <Badge className="mt-1 bg-yellow-500" variant="default">
-                    My Proposal
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2 mt-1">
+                  {proposal.user?.name && (
+                    <Link
+                      href={`/profile/${proposal.userId}`}
+                      className="text-sm text-muted-foreground hover:underline"
+                    >
+                      by {proposal.user.name}
+                    </Link>
+                  )}
+                  {proposal.userId === currentUser?.id && (
+                    <Badge className="bg-yellow-500" variant="default">
+                      My Proposal
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
             <Badge variant="outline" className="flex-shrink-0">

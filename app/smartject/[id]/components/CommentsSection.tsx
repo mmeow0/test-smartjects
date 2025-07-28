@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Comment {
   id: string;
+  userId: string;
   content: string;
   createdAt: string;
   user?: {
@@ -68,7 +69,10 @@ export function CommentsSection({
               <p className="text-muted-foreground mb-4">
                 Please log in to join the discussion
               </p>
-              <Button asChild className="bg-yellow-400 hover:bg-yellow-500 text-black">
+              <Button
+                asChild
+                className="bg-yellow-400 hover:bg-yellow-500 text-black"
+              >
                 <Link href="/auth/login">Log In</Link>
               </Button>
             </div>
@@ -92,9 +96,18 @@ export function CommentsSection({
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-semibold">
-                      {comment.user?.name || "Anonymous"}
-                    </h4>
+                    {comment.userId ? (
+                      <Link
+                        href={`/profile/${comment.userId}`}
+                        className="font-semibold hover:underline"
+                      >
+                        {comment.user?.name || "Anonymous"}
+                      </Link>
+                    ) : (
+                      <h4 className="font-semibold">
+                        {comment.user?.name || "Anonymous"}
+                      </h4>
+                    )}
                     <span className="text-xs text-muted-foreground">
                       {new Date(comment.createdAt).toLocaleDateString()}
                     </span>

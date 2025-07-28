@@ -1,16 +1,22 @@
-"use client"
+"use client";
 
-import { useEffect, useState, use } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Textarea } from "@/components/ui/textarea"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { useToast } from "@/hooks/use-toast"
+import { useEffect, useState, use } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Calendar,
@@ -27,231 +33,249 @@ import {
   User,
   Loader2,
   Play,
-} from "lucide-react"
-import { contractService } from "@/lib/services/contract.service"
-import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
+} from "lucide-react";
+import { contractService } from "@/lib/services/contract.service";
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 
 interface MilestoneMessage {
-  id: string
-  content: string
-  messageType: string
+  id: string;
+  content: string;
+  messageType: string;
   sender: {
-    id: string
-    name: string
-    avatar?: string
-  }
-  createdAt: string
-  isOwnMessage: boolean
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+  createdAt: string;
+  isOwnMessage: boolean;
 }
 
 interface StatusHistoryEntry {
-  id: string
-  oldStatus: string | null
-  newStatus: string
-  actionType: string
-  comments: string | null
+  id: string;
+  oldStatus: string | null;
+  newStatus: string;
+  actionType: string;
+  comments: string | null;
   changedBy: {
-    id: string
-    name: string
-  }
-  createdAt: string
+    id: string;
+    name: string;
+  };
+  createdAt: string;
 }
 
 interface Milestone {
-  id: string
-  contractId: string
-  contractTitle: string
-  name: string
-  description: string
-  percentage: number
-  amount: string
-  dueDate: string
-  status: string
-  completedDate?: string
-  submittedForReview: boolean
-  submittedAt?: string
+  id: string;
+  contractId: string;
+  contractTitle: string;
+  name: string;
+  description: string;
+  percentage: number;
+  amount: string;
+  dueDate: string;
+  status: string;
+  completedDate?: string;
+  submittedForReview: boolean;
+  submittedAt?: string;
   submittedBy?: {
-    id: string
-    name: string
-  }
-  reviewedAt?: string
+    id: string;
+    name: string;
+  };
+  reviewedAt?: string;
   reviewedBy?: {
-    id: string
-    name: string
-  }
-  reviewStatus?: string
-  reviewComments?: string
+    id: string;
+    name: string;
+  };
+  reviewStatus?: string;
+  reviewComments?: string;
   deliverables: Array<{
-    id: string
-    name: string
-    description: string
-    status: string
-    completedDate?: string
-  }>
-  messages: MilestoneMessage[]
-  statusHistory: StatusHistoryEntry[]
+    id: string;
+    name: string;
+    description: string;
+    status: string;
+    completedDate?: string;
+  }>;
+  messages: MilestoneMessage[];
+  statusHistory: StatusHistoryEntry[];
   documents: Array<{
-    id: string
-    name: string
-    type: string
-    size: string
-    url: string
-    uploadedAt: string
-  }>
+    id: string;
+    name: string;
+    type: string;
+    size: string;
+    url: string;
+    uploadedAt: string;
+  }>;
   files: Array<{
-    id: string
-    name: string
-    type: string
-    size: number
-    url: string
-    uploadedAt: string
-    uploadedBy: string
-  }>
-  userRole: "provider" | "needer"
-  canReview: boolean
-  canSendMessage: boolean
-  canStartWork: boolean
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    url: string;
+    uploadedAt: string;
+    uploadedBy: string;
+    uploadedById: string;
+  }>;
+  userRole: "provider" | "needer";
+  canReview: boolean;
+  canSendMessage: boolean;
+  canStartWork: boolean;
 }
 
-export default function MilestoneDetailsPage({ 
-  params 
-}: { 
-  params: Promise<{ id: string; milestoneId: string }> 
+export default function MilestoneDetailsPage({
+  params,
+}: {
+  params: Promise<{ id: string; milestoneId: string }>;
 }) {
-  const { id: contractId, milestoneId } = use(params)
-  const router = useRouter()
-  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(true)
-  const [milestone, setMilestone] = useState<Milestone | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [newMessage, setNewMessage] = useState("")
-  const [isSendingMessage, setIsSendingMessage] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isReviewing, setIsReviewing] = useState(false)
-  const [reviewComments, setReviewComments] = useState("")
+  const { id: contractId, milestoneId } = use(params);
+  const router = useRouter();
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [milestone, setMilestone] = useState<Milestone | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [newMessage, setNewMessage] = useState("");
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [reviewComments, setReviewComments] = useState("");
 
   // Load milestone data
   useEffect(() => {
     const loadMilestone = async () => {
       if (authLoading || !canAccess) {
-        return
+        return;
       }
 
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
 
       try {
-        const milestoneData = await contractService.getMilestoneByIdEnhanced(contractId, milestoneId)
-        
+        const milestoneData = await contractService.getMilestoneByIdEnhanced(
+          contractId,
+          milestoneId,
+        );
+
         if (!milestoneData) {
-          setError("Milestone not found or access denied")
-          setIsLoading(false)
-          return
+          setError("Milestone not found or access denied");
+          setIsLoading(false);
+          return;
         }
 
-        setMilestone(milestoneData)
-        setIsLoading(false)
-        
+        setMilestone(milestoneData);
+        setIsLoading(false);
       } catch (error) {
-        console.error("Error loading milestone:", error)
-        setError("Failed to load milestone data")
-        setIsLoading(false)
+        console.error("Error loading milestone:", error);
+        setError("Failed to load milestone data");
+        setIsLoading(false);
       }
-    }
+    };
 
-    loadMilestone()
-  }, [authLoading, canAccess, contractId, milestoneId])
+    loadMilestone();
+  }, [authLoading, canAccess, contractId, milestoneId]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !milestone) return
+    if (!newMessage.trim() || !milestone) return;
 
-    setIsSendingMessage(true)
+    setIsSendingMessage(true);
     try {
-      const message = await contractService.sendMilestoneMessage(milestoneId, newMessage.trim())
-      setMilestone(prev => prev ? {
-        ...prev,
-        messages: [...prev.messages, message]
-      } : null)
-      setNewMessage("")
+      const message = await contractService.sendMilestoneMessage(
+        milestoneId,
+        newMessage.trim(),
+      );
+      setMilestone((prev) =>
+        prev
+          ? {
+              ...prev,
+              messages: [...prev.messages, message],
+            }
+          : null,
+      );
+      setNewMessage("");
       toast({
         title: "Message sent",
         description: "Your message has been sent successfully.",
-      })
+      });
     } catch (error) {
-      console.error("Error sending message:", error)
+      console.error("Error sending message:", error);
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSendingMessage(false)
+      setIsSendingMessage(false);
     }
-  }
-
-
+  };
 
   const handleReview = async (approved: boolean) => {
-    if (!milestone) return
+    if (!milestone) return;
 
-    setIsReviewing(true)
+    setIsReviewing(true);
     try {
-      await contractService.reviewMilestone(milestoneId, approved, reviewComments.trim() || undefined)
-      
+      await contractService.reviewMilestone(
+        milestoneId,
+        approved,
+        reviewComments.trim() || undefined,
+      );
+
       // Reload milestone data
-      const updatedMilestone = await contractService.getMilestoneByIdEnhanced(contractId, milestoneId)
+      const updatedMilestone = await contractService.getMilestoneByIdEnhanced(
+        contractId,
+        milestoneId,
+      );
       if (updatedMilestone) {
-        setMilestone(updatedMilestone)
+        setMilestone(updatedMilestone);
       }
 
-      setReviewComments("")
+      setReviewComments("");
       toast({
         title: approved ? "Milestone approved" : "Milestone rejected",
-        description: approved 
+        description: approved
           ? "Milestone has been approved and marked as completed."
           : "Milestone has been rejected and returned for revision.",
-      })
+      });
     } catch (error) {
-      console.error("Error reviewing milestone:", error)
+      console.error("Error reviewing milestone:", error);
       toast({
         title: "Error",
         description: "Failed to review milestone. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsReviewing(false)
+      setIsReviewing(false);
     }
-  }
+  };
 
   const handleStartWork = async () => {
-    if (!milestone) return
+    if (!milestone) return;
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
-      await contractService.startMilestone(milestoneId)
-      
+      await contractService.startMilestone(milestoneId);
+
       // Reload milestone data
-      const updatedMilestone = await contractService.getMilestoneByIdEnhanced(contractId, milestoneId)
+      const updatedMilestone = await contractService.getMilestoneByIdEnhanced(
+        contractId,
+        milestoneId,
+      );
       if (updatedMilestone) {
-        setMilestone(updatedMilestone)
+        setMilestone(updatedMilestone);
       }
 
       toast({
         title: "Work started",
         description: "You have started work on this milestone.",
-      })
+      });
     } catch (error) {
-      console.error("Error starting milestone:", error)
+      console.error("Error starting milestone:", error);
       toast({
         title: "Error",
         description: "Failed to start milestone work. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const getMilestoneStatusBadge = (status: string) => {
     switch (status) {
@@ -260,63 +284,63 @@ export default function MilestoneDetailsPage({
           <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
             <CheckCircle className="h-3 w-3" /> Completed
           </Badge>
-        )
+        );
       case "submitted":
         return (
           <Badge className="bg-purple-100 text-purple-800 flex items-center gap-1">
             <Clock className="h-3 w-3" /> Submitted for Review
           </Badge>
-        )
+        );
       case "in_progress":
         return (
           <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
             <Clock className="h-3 w-3" /> In Progress
           </Badge>
-        )
+        );
       case "pending":
         return (
           <Badge className="bg-gray-100 text-gray-800 flex items-center gap-1">
             <Clock className="h-3 w-3" /> Pending
           </Badge>
-        )
+        );
       case "overdue":
         return (
           <Badge variant="destructive" className="flex items-center gap-1">
             <AlertTriangle className="h-3 w-3" /> Overdue
           </Badge>
-        )
+        );
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Badge variant="outline">{status}</Badge>;
     }
-  }
+  };
 
   const getMessageTypeIcon = (messageType: string) => {
     switch (messageType) {
       case "submission":
-        return <CheckCircle className="h-4 w-4 text-blue-600" />
+        return <CheckCircle className="h-4 w-4 text-blue-600" />;
       case "review":
-        return <User className="h-4 w-4 text-purple-600" />
+        return <User className="h-4 w-4 text-purple-600" />;
       case "system":
-        return <AlertTriangle className="h-4 w-4 text-amber-600" />
+        return <AlertTriangle className="h-4 w-4 text-amber-600" />;
       default:
-        return <MessageSquare className="h-4 w-4 text-gray-600" />
+        return <MessageSquare className="h-4 w-4 text-gray-600" />;
     }
-  }
+  };
 
   const getActionTypeIcon = (actionType: string) => {
     switch (actionType) {
       case "submit":
-        return <CheckCircle className="h-4 w-4 text-blue-600" />
+        return <CheckCircle className="h-4 w-4 text-blue-600" />;
       case "approve":
-        return <Check className="h-4 w-4 text-green-600" />
+        return <Check className="h-4 w-4 text-green-600" />;
       case "reject":
-        return <XCircle className="h-4 w-4 text-red-600" />
+        return <XCircle className="h-4 w-4 text-red-600" />;
       case "complete":
-        return <CheckCircle className="h-4 w-4 text-green-600" />
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
       default:
-        return <History className="h-4 w-4 text-gray-600" />
+        return <History className="h-4 w-4 text-gray-600" />;
     }
-  }
+  };
 
   if (authLoading || !canAccess || isLoading) {
     return (
@@ -328,7 +352,7 @@ export default function MilestoneDetailsPage({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error || !milestone) {
@@ -336,14 +360,14 @@ export default function MilestoneDetailsPage({
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <p className="text-destructive mb-4">{error || "Milestone not found"}</p>
-            <Button onClick={() => router.back()}>
-              Go Back
-            </Button>
+            <p className="text-destructive mb-4">
+              {error || "Milestone not found"}
+            </p>
+            <Button onClick={() => router.back()}>Go Back</Button>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -360,7 +384,10 @@ export default function MilestoneDetailsPage({
           </div>
           <p className="text-muted-foreground">
             Milestone for{" "}
-            <Link href={`/contracts/${contractId}`} className="text-primary hover:underline">
+            <Link
+              href={`/contracts/${contractId}`}
+              className="text-primary hover:underline"
+            >
               {milestone.contractTitle}
             </Link>
           </p>
@@ -393,7 +420,9 @@ export default function MilestoneDetailsPage({
                   <Calendar className="h-4 w-4 mr-1" /> Due Date
                 </p>
                 <p className="font-medium">
-                  {milestone.dueDate ? new Date(milestone.dueDate).toLocaleDateString() : "TBD"}
+                  {milestone.dueDate
+                    ? new Date(milestone.dueDate).toLocaleDateString()
+                    : "TBD"}
                 </p>
               </div>
               <div>
@@ -414,13 +443,22 @@ export default function MilestoneDetailsPage({
                 <h3 className="text-sm font-medium mb-2">Deliverables</h3>
                 <ul className="space-y-2">
                   {milestone.deliverables.map((deliverable) => (
-                    <li key={deliverable.id} className="flex items-center gap-2 text-sm">
+                    <li
+                      key={deliverable.id}
+                      className="flex items-center gap-2 text-sm"
+                    >
                       {deliverable.status === "completed" ? (
                         <CheckCircle className="h-4 w-4 text-green-600" />
                       ) : (
                         <Clock className="h-4 w-4 text-gray-400" />
                       )}
-                      <span className={deliverable.status === "completed" ? "line-through text-muted-foreground" : ""}>
+                      <span
+                        className={
+                          deliverable.status === "completed"
+                            ? "line-through text-muted-foreground"
+                            : ""
+                        }
+                      >
                         {deliverable.name}
                       </span>
                     </li>
@@ -433,14 +471,19 @@ export default function MilestoneDetailsPage({
             {milestone.submittedForReview && (
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h3 className="text-sm font-medium mb-2 flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-1 text-blue-600" /> Submitted for Review
+                  <CheckCircle className="h-4 w-4 mr-1 text-blue-600" />{" "}
+                  Submitted for Review
                 </h3>
                 <div className="text-sm space-y-1">
                   <p>
-                    Submitted by <span className="font-medium">{milestone.submittedBy?.name}</span>
+                    Submitted by{" "}
+                    <span className="font-medium">
+                      {milestone.submittedBy?.name}
+                    </span>
                     {milestone.submittedAt && (
                       <span className="text-muted-foreground">
-                        {" "}on {new Date(milestone.submittedAt).toLocaleString()}
+                        {" "}
+                        on {new Date(milestone.submittedAt).toLocaleString()}
                       </span>
                     )}
                   </p>
@@ -449,23 +492,33 @@ export default function MilestoneDetailsPage({
             )}
 
             {milestone.reviewStatus && (
-              <div className={`p-4 rounded-lg ${
-                milestone.reviewStatus === "approved" ? "bg-green-50" : "bg-red-50"
-              }`}>
+              <div
+                className={`p-4 rounded-lg ${
+                  milestone.reviewStatus === "approved"
+                    ? "bg-green-50"
+                    : "bg-red-50"
+                }`}
+              >
                 <h3 className="text-sm font-medium mb-2 flex items-center">
                   {milestone.reviewStatus === "approved" ? (
                     <Check className="h-4 w-4 mr-1 text-green-600" />
                   ) : (
                     <XCircle className="h-4 w-4 mr-1 text-red-600" />
                   )}
-                  {milestone.reviewStatus === "approved" ? "Approved" : "Rejected"}
+                  {milestone.reviewStatus === "approved"
+                    ? "Approved"
+                    : "Rejected"}
                 </h3>
                 <div className="text-sm space-y-1">
                   <p>
-                    Reviewed by <span className="font-medium">{milestone.reviewedBy?.name}</span>
+                    Reviewed by{" "}
+                    <span className="font-medium">
+                      {milestone.reviewedBy?.name}
+                    </span>
                     {milestone.reviewedAt && (
                       <span className="text-muted-foreground">
-                        {" "}on {new Date(milestone.reviewedAt).toLocaleString()}
+                        {" "}
+                        on {new Date(milestone.reviewedAt).toLocaleString()}
                       </span>
                     )}
                   </p>
@@ -482,13 +535,15 @@ export default function MilestoneDetailsPage({
         <Card>
           <CardHeader>
             <CardTitle>Actions</CardTitle>
-            <CardDescription>Available actions for this milestone</CardDescription>
+            <CardDescription>
+              Available actions for this milestone
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Start Work button for providers */}
             {milestone.canStartWork && (
-              <Button 
-                className="w-full" 
+              <Button
+                className="w-full"
                 onClick={handleStartWork}
                 disabled={isSubmitting}
               >
@@ -502,28 +557,36 @@ export default function MilestoneDetailsPage({
             )}
 
             {/* Complete Milestone button for providers */}
-            {milestone.userRole === "provider" && milestone.status === "in_progress" && (
-              <Button 
-                className="w-full" 
-                onClick={() => router.push(`/contracts/${contractId}/milestone/${milestoneId}/complete`)}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Complete Milestone
-              </Button>
-            )}
+            {milestone.userRole === "provider" &&
+              milestone.status === "in_progress" && (
+                <Button
+                  className="w-full"
+                  onClick={() =>
+                    router.push(
+                      `/contracts/${contractId}/milestone/${milestoneId}/complete`,
+                    )
+                  }
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Complete Milestone
+                </Button>
+              )}
 
             {/* Waiting for review message for providers */}
-            {milestone.userRole === "provider" && milestone.status === "pending_review" && (
-              <div className="w-full p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center gap-2 text-blue-800 mb-2">
-                  <Clock className="h-4 w-4" />
-                  <span className="font-medium">Waiting for Review</span>
+            {milestone.userRole === "provider" &&
+              milestone.status === "pending_review" && (
+                <div className="w-full p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-blue-800 mb-2">
+                    <Clock className="h-4 w-4" />
+                    <span className="font-medium">Waiting for Review</span>
+                  </div>
+                  <p className="text-sm text-blue-600">
+                    Your milestone has been submitted for review. The client
+                    will review your work and either approve it or request
+                    changes.
+                  </p>
                 </div>
-                <p className="text-sm text-blue-600">
-                  Your milestone has been submitted for review. The client will review your work and either approve it or request changes.
-                </p>
-              </div>
-            )}
+              )}
 
             {/* Completed milestone indicator */}
             {milestone.status === "completed" && (
@@ -533,65 +596,75 @@ export default function MilestoneDetailsPage({
                   <span className="font-medium">Milestone Completed</span>
                 </div>
                 <p className="text-sm text-green-600">
-                  This milestone has been completed and approved. 
+                  This milestone has been completed and approved.
                   {milestone.completedDate && (
-                    <span> Completed on {new Date(milestone.completedDate).toLocaleDateString()}.</span>
+                    <span>
+                      {" "}
+                      Completed on{" "}
+                      {new Date(milestone.completedDate).toLocaleDateString()}.
+                    </span>
                   )}
                 </p>
               </div>
             )}
 
             {/* Review Milestone button for needers */}
-            {milestone.userRole === "needer" && milestone.status === "pending_review" && (
-              <Button 
-                className="w-full" 
-                onClick={() => router.push(`/contracts/${contractId}/milestone/${milestoneId}/review`)}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Review Milestone
-              </Button>
-            )}
+            {milestone.userRole === "needer" &&
+              milestone.status === "pending_review" && (
+                <Button
+                  className="w-full"
+                  onClick={() =>
+                    router.push(
+                      `/contracts/${contractId}/milestone/${milestoneId}/review`,
+                    )
+                  }
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Review Milestone
+                </Button>
+              )}
 
-            {milestone.userRole === "needer" && milestone.status === "pending_review" && (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">Quick Review:</p>
-                <Textarea
-                  placeholder="Add review comments (optional)..."
-                  value={reviewComments}
-                  onChange={(e) => setReviewComments(e.target.value)}
-                  className="min-h-[80px]"
-                />
-                <div className="flex gap-2">
-                  <Button 
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                    onClick={() => handleReview(true)}
-                    disabled={isReviewing}
-                    size="sm"
-                  >
-                    {isReviewing ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Check className="h-4 w-4 mr-2" />
-                    )}
-                    Quick Approve
-                  </Button>
-                  <Button 
-                    variant="destructive"
-                    className="flex-1"
-                    onClick={() => handleReview(false)}
-                    disabled={isReviewing}
-                    size="sm"
-                  >
-                    {isReviewing ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <XCircle className="h-4 w-4 mr-2" />
-                    )}
-                    Quick Reject
-                  </Button>
+            {milestone.userRole === "needer" &&
+              milestone.status === "pending_review" && (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">Quick Review:</p>
+                  <Textarea
+                    placeholder="Add review comments (optional)..."
+                    value={reviewComments}
+                    onChange={(e) => setReviewComments(e.target.value)}
+                    className="min-h-[80px]"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      onClick={() => handleReview(true)}
+                      disabled={isReviewing}
+                      size="sm"
+                    >
+                      {isReviewing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4 mr-2" />
+                      )}
+                      Quick Approve
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={() => handleReview(false)}
+                      disabled={isReviewing}
+                      size="sm"
+                    >
+                      {isReviewing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <XCircle className="h-4 w-4 mr-2" />
+                      )}
+                      Quick Reject
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {milestone.documents.length > 0 && (
               <div>
@@ -612,20 +685,30 @@ export default function MilestoneDetailsPage({
                 <h4 className="text-sm font-medium mb-2">Milestone Files</h4>
                 <div className="space-y-2">
                   {milestone.files.map((file) => (
-                    <div key={file.id} className="flex items-center justify-between text-sm">
+                    <div
+                      key={file.id}
+                      className="flex items-center justify-between text-sm"
+                    >
                       <div className="flex items-center min-w-0 flex-1">
                         <FileText className="h-4 w-4 mr-2 text-green-600 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-medium">{file.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            Uploaded by {file.uploadedBy} • {new Date(file.uploadedAt).toLocaleDateString()}
+                            Uploaded by{" "}
+                            <Link
+                              href={`/profile/${file.uploadedById}`}
+                              className="hover:underline"
+                            >
+                              {file.uploadedBy}
+                            </Link>{" "}
+                            • {new Date(file.uploadedAt).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => window.open(file.url, '_blank')}
+                        onClick={() => window.open(file.url, "_blank")}
                         className="ml-2 flex-shrink-0"
                       >
                         View
@@ -641,7 +724,9 @@ export default function MilestoneDetailsPage({
 
       <Tabs defaultValue="messages" className="mb-6">
         <TabsList className="mb-4">
-          <TabsTrigger value="messages">Messages ({milestone.messages.length})</TabsTrigger>
+          <TabsTrigger value="messages">
+            Messages ({milestone.messages.length})
+          </TabsTrigger>
           <TabsTrigger value="history">Status History</TabsTrigger>
         </TabsList>
 
@@ -649,7 +734,9 @@ export default function MilestoneDetailsPage({
           <Card>
             <CardHeader>
               <CardTitle>Milestone Chat</CardTitle>
-              <CardDescription>Communicate about this milestone</CardDescription>
+              <CardDescription>
+                Communicate about this milestone
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -662,25 +749,47 @@ export default function MilestoneDetailsPage({
                       </p>
                     ) : (
                       milestone.messages.map((message) => (
-                        <div key={message.id} className={`flex gap-3 ${message.isOwnMessage ? "justify-end" : ""}`}>
+                        <div
+                          key={message.id}
+                          className={`flex gap-3 ${message.isOwnMessage ? "justify-end" : ""}`}
+                        >
                           {!message.isOwnMessage && (
                             <Avatar className="h-8 w-8 mt-1">
-                              <AvatarImage src={message.sender.avatar || "/placeholder.svg"} />
-                              <AvatarFallback>{message.sender.name.charAt(0)}</AvatarFallback>
+                              <AvatarImage
+                                src={
+                                  message.sender.avatar || "/placeholder.svg"
+                                }
+                              />
+                              <AvatarFallback>
+                                {message.sender.name.charAt(0)}
+                              </AvatarFallback>
                             </Avatar>
                           )}
-                          <div className={`max-w-[70%] ${message.isOwnMessage ? "text-right" : ""}`}>
-                            <div className={`rounded-lg p-3 ${
-                              message.isOwnMessage 
-                                ? "bg-primary text-primary-foreground" 
-                                : message.messageType === "system"
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "bg-muted"
-                            }`}>
+                          <div
+                            className={`max-w-[70%] ${message.isOwnMessage ? "text-right" : ""}`}
+                          >
+                            <div
+                              className={`rounded-lg p-3 ${
+                                message.isOwnMessage
+                                  ? "bg-primary text-primary-foreground"
+                                  : message.messageType === "system"
+                                    ? "bg-amber-100 text-amber-800"
+                                    : "bg-muted"
+                              }`}
+                            >
                               <div className="flex items-center gap-2 mb-1">
                                 {getMessageTypeIcon(message.messageType)}
                                 <span className="text-xs font-medium">
-                                  {message.isOwnMessage ? "You" : message.sender.name}
+                                  {message.isOwnMessage ? (
+                                    "You"
+                                  ) : (
+                                    <Link
+                                      href={`/profile/${message.sender.id}`}
+                                      className="hover:underline"
+                                    >
+                                      {message.sender.name}
+                                    </Link>
+                                  )}
                                 </span>
                               </div>
                               <p className="text-sm">{message.content}</p>
@@ -691,8 +800,12 @@ export default function MilestoneDetailsPage({
                           </div>
                           {message.isOwnMessage && (
                             <Avatar className="h-8 w-8 mt-1">
-                              <AvatarImage src={user?.avatar || "/placeholder.svg"} />
-                              <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
+                              <AvatarImage
+                                src={user?.avatar || "/placeholder.svg"}
+                              />
+                              <AvatarFallback>
+                                {user?.name?.charAt(0) || "U"}
+                              </AvatarFallback>
                             </Avatar>
                           )}
                         </div>
@@ -710,14 +823,14 @@ export default function MilestoneDetailsPage({
                       onChange={(e) => setNewMessage(e.target.value)}
                       className="min-h-[60px] resize-none"
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault()
-                          handleSendMessage()
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
                         }
                       }}
                     />
-                    <Button 
-                      onClick={handleSendMessage} 
+                    <Button
+                      onClick={handleSendMessage}
                       disabled={!newMessage.trim() || isSendingMessage}
                       className="self-end"
                     >
@@ -738,7 +851,9 @@ export default function MilestoneDetailsPage({
           <Card>
             <CardHeader>
               <CardTitle>Status History</CardTitle>
-              <CardDescription>Timeline of milestone status changes</CardDescription>
+              <CardDescription>
+                Timeline of milestone status changes
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -748,20 +863,30 @@ export default function MilestoneDetailsPage({
                   </p>
                 ) : (
                   milestone.statusHistory.map((entry) => (
-                    <div key={entry.id} className="flex items-start gap-3 p-3 border-b last:border-0">
-                      <div className="mt-0.5">{getActionTypeIcon(entry.actionType)}</div>
+                    <div
+                      key={entry.id}
+                      className="flex items-start gap-3 p-3 border-b last:border-0"
+                    >
+                      <div className="mt-0.5">
+                        {getActionTypeIcon(entry.actionType)}
+                      </div>
                       <div className="flex-1">
                         <div className="flex justify-between mb-1">
                           <span className="font-medium capitalize">
-                            {entry.actionType.replace('_', ' ')} - {entry.newStatus}
+                            {entry.actionType.replace("_", " ")} -{" "}
+                            {entry.newStatus}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {new Date(entry.createdAt).toLocaleString()}
                           </span>
                         </div>
-                        <p className="text-sm text-muted-foreground">By {entry.changedBy.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          By {entry.changedBy.name}
+                        </p>
                         {entry.comments && (
-                          <p className="text-sm mt-2 italic">"{entry.comments}"</p>
+                          <p className="text-sm mt-2 italic">
+                            "{entry.comments}"
+                          </p>
                         )}
                       </div>
                     </div>
@@ -773,5 +898,5 @@ export default function MilestoneDetailsPage({
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

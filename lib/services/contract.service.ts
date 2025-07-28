@@ -1472,7 +1472,7 @@ export const contractService = {
         .select(
           `
           *,
-          uploaded_by_user:users!contract_documents_uploaded_by_fkey(name)
+          uploaded_by_user:users!contract_documents_uploaded_by_fkey(id, name)
         `,
         )
         .eq("contract_id", contractId)
@@ -1492,6 +1492,7 @@ export const contractService = {
           url: doc.url,
           uploadedAt: doc.uploaded_at,
           uploadedBy: (doc.uploaded_by_user as any)?.name || "Unknown User",
+          uploadedById: (doc.uploaded_by_user as any)?.id || "",
         })) || []
       );
     } catch (error) {
@@ -1752,7 +1753,7 @@ export const contractService = {
         .select(
           `
           *,
-          uploader:users!uploaded_by(name)
+          uploader:users!uploaded_by(id, name)
         `,
         )
         .eq("milestone_id", milestoneId)
@@ -1807,6 +1808,7 @@ export const contractService = {
             url: file.url,
             uploadedAt: file.created_at,
             uploadedBy: (file.uploader as any)?.name || "Unknown User",
+            uploadedById: (file.uploader as any)?.id || "",
           })) || [],
         canReview:
           currentUser.id === contractData.provider_id ||
@@ -2730,7 +2732,7 @@ export const contractService = {
         .select(
           `
         *,
-        uploader:users!uploaded_by(name)
+        uploader:users!uploaded_by(id, name)
       `,
         )
         .eq("milestone_id", milestoneId)
@@ -2804,6 +2806,7 @@ export const contractService = {
           url: file.url,
           uploadedAt: file.created_at,
           uploadedBy: (file.uploader as any)?.name || "Unknown User",
+          uploadedById: (file.uploader as any)?.id || "",
         })),
 
         userRole: isProvider ? "provider" : "needer",

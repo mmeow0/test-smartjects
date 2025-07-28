@@ -56,7 +56,7 @@ export default function ContractDetailsPage({
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [expandedMilestone, setExpandedMilestone] = useState<string | null>(
-    null
+    null,
   );
   const [isCheckingSigningStatus, setIsCheckingSigningStatus] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -208,7 +208,7 @@ export default function ContractDetailsPage({
 
   // Get the next milestone
   const nextMilestone = contract?.paymentSchedule?.find(
-    (m: any) => m.status === "in_progress" || m.status === "pending"
+    (m: any) => m.status === "in_progress" || m.status === "pending",
   );
 
   // Determine if the user is the provider or needer
@@ -366,7 +366,12 @@ export default function ContractDetailsPage({
                   <p className="text-sm text-muted-foreground">
                     {isProvider ? "Client" : "Provider"}
                   </p>
-                  <p className="font-medium">{otherParty?.name}</p>
+                  <Link
+                    href={`/profile/${otherParty?.id}`}
+                    className="font-medium hover:underline"
+                  >
+                    {otherParty?.name}
+                  </Link>
                 </div>
               </div>
 
@@ -430,7 +435,7 @@ export default function ContractDetailsPage({
                 {contract?.deliverables?.map(
                   (deliverable: string, index: number) => (
                     <li key={index}>{deliverable}</li>
-                  )
+                  ),
                 ) || <li>No deliverables specified</li>}
               </ul>
             </div>
