@@ -99,15 +99,17 @@ export default function UpgradePage() {
   }
 
   const features = [
-    "View smartjects",
-    "Unlimited proposals",
-    "Unlimited contracts",
-    "Advanced analytics",
-    "Priority support",
-    "Milestone tracking",
-  ]
+    "Browse smartjects",
+    "Collect believed smartjects",
+    "Comment on smartjects",
+    "Indicate demand",
+    "Indicate provider interest",
+    "Create proposals",
+    "Negotiate contracts",
+    "Generate smart contracts",
+  ];
 
-  const freeFeatures = features.slice(0, 1)
+  const freeFeatures = features.slice(0, 3);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)]">
@@ -170,8 +172,8 @@ export default function UpgradePage() {
         </Card>
 
         <Card className="border-yellow-400">
-          <CardHeader>
-            <div className="bg-yellow-300 text-black px-3 py-1 rounded-full text-sm font-medium w-fit mb-2">
+          <CardHeader className="relative">
+            <div className="bg-yellow-300 text-black px-3 py-1 rounded-full text-sm font-medium w-fit mb-2 absolute top-2 right-3">
               Recommended
             </div>
             <CardTitle>Pro Plan</CardTitle>
