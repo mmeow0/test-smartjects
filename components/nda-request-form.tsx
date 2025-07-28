@@ -244,7 +244,7 @@ export function NDARequestForm({
             </Label>
             <Textarea
               id="message"
-              placeholder="Please explain why you need access to the private information and how you plan to use it..."
+              placeholder="Share your reason and intended use..."
               value={requestMessage}
               onChange={(e) => setRequestMessage(e.target.value)}
               rows={4}
