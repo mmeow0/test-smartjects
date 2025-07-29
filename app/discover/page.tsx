@@ -28,8 +28,12 @@ import { useInfiniteSmartjects } from "@/hooks/use-infinite-smartjects";
 import { LoadMore } from "@/components/ui/load-more";
 import { Audience } from "@/components/icons/Audience";
 import { Functions } from "@/components/icons/Functions";
+import { DateRange } from "react-day-picker";
 import { Team } from "@/components/icons/Team";
 import { Industries } from "@/components/icons/Industries";
+import { SearchFilters } from "@/components/home/search-filters";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { format } from "date-fns";
 
 // Debounce hook inline
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -208,6 +212,8 @@ export default function SmartjectsHubPage() {
   const [showFunctionsDropdown, setShowFunctionsDropdown] = useState(false);
   const [showTeamsDropdown, setShowTeamsDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [showDateRangeDropdown, setShowDateRangeDropdown] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   // Mobile dropdown states
   const [showMobileIndustriesDropdown, setShowMobileIndustriesDropdown] =
@@ -313,18 +319,41 @@ export default function SmartjectsHubPage() {
     [filters.teams, setFilter],
   );
 
+  const handleDateRangeChange = useCallback(
+    (newDateRange?: DateRange) => {
+      setDateRange(newDateRange);
+
+      if (newDateRange?.from && newDateRange?.to) {
+        // Set both start and end dates for range filtering
+        setFilter("startDate", newDateRange.from.toISOString().split("T")[0]);
+        setFilter("endDate", newDateRange.to.toISOString().split("T")[0]);
+      } else if (newDateRange?.from) {
+        // Only start date selected
+        setFilter("startDate", newDateRange.from.toISOString().split("T")[0]);
+        setFilter("endDate", "");
+      } else {
+        // Clear date filters by setting empty strings
+        setFilter("startDate", "");
+        setFilter("endDate", "");
+      }
+    },
+    [setFilter],
+  );
+
   // Memoized total filters count
   const totalFiltersCount = useMemo(
     () =>
       selectedIndustries.length +
       selectedAudience.length +
       selectedFunctions.length +
-      selectedTeams.length,
+      selectedTeams.length +
+      (dateRange?.from ? 1 : 0),
     [
       selectedIndustries.length,
       selectedAudience.length,
       selectedFunctions.length,
       selectedTeams.length,
+      dateRange,
     ],
   );
 
@@ -334,6 +363,7 @@ export default function SmartjectsHubPage() {
     setSelectedFunctions([]);
     setSelectedAudience([]);
     setSelectedTeams([]);
+    setDateRange(undefined);
     // Clear search terms
     setIndustriesSearchTerm("");
     setAudienceSearchTerm("");
@@ -345,6 +375,7 @@ export default function SmartjectsHubPage() {
     setShowFunctionsDropdown(false);
     setShowTeamsDropdown(false);
     setShowSortDropdown(false);
+    setShowDateRangeDropdown(false);
     // Close mobile dropdowns
     setShowMobileIndustriesDropdown(false);
     setShowMobileAudienceDropdown(false);
@@ -815,40 +846,50 @@ export default function SmartjectsHubPage() {
                           </div>
                         )}
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Desktop Sort */}
-                  <div className="hidden lg:flex relative" ref={sortRef}>
-                    <div
-                      className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
-                      onClick={() => setShowSortDropdown(!showSortDropdown)}
-                    >
-                      <span className="text-sm font-medium text-gray-700">
-                        {sortOptions.find((opt) => opt.value === sortBy)?.label}
-                      </span>
-                      <ChevronDown className="w-4 h-4 text-gray-500" />
-                    </div>
-                    {showSortDropdown && (
-                      <div className="absolute top-12 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-40">
-                        {sortOptions.map((option) => (
-                          <div
-                            key={option.value}
-                            className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                              sortBy === option.value
-                                ? "bg-blue-50 text-blue-700"
-                                : "text-gray-700"
-                            }`}
-                            onClick={() => {
-                              setSortBy(option.value);
-                              setShowSortDropdown(false);
-                            }}
-                          >
-                            {option.label}
+                      {/* Date Range Picker */}
+                      <DateRangePicker
+                        date={dateRange}
+                        onSelect={handleDateRangeChange}
+                        placeholder="Select date range"
+                      />
+
+                      {/* Desktop Sort */}
+                      <div className="relative" ref={sortRef}>
+                        <div
+                          className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 h-10 cursor-pointer hover:bg-gray-50"
+                          onClick={() => setShowSortDropdown(!showSortDropdown)}
+                        >
+                          <span className="text-sm font-medium text-gray-700">
+                            {
+                              sortOptions.find((opt) => opt.value === sortBy)
+                                ?.label
+                            }
+                          </span>
+                          <ChevronDown className="w-4 h-4 text-gray-500" />
+                        </div>
+                        {showSortDropdown && (
+                          <div className="absolute top-12 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-40">
+                            {sortOptions.map((option) => (
+                              <div
+                                key={option.value}
+                                className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                                  sortBy === option.value
+                                    ? "bg-blue-50 text-blue-700"
+                                    : "text-gray-700"
+                                }`}
+                                onClick={() => {
+                                  setSortBy(option.value);
+                                  setShowSortDropdown(false);
+                                }}
+                              >
+                                {option.label}
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1149,6 +1190,13 @@ export default function SmartjectsHubPage() {
                       )}
                     </div>
 
+                    {/* Mobile Date Range */}
+                    <DateRangePicker
+                      date={dateRange}
+                      onSelect={handleDateRangeChange}
+                      placeholder="Select date range"
+                    />
+
                     {/* Mobile Sort */}
                     <div className="relative" ref={mobileSortRef}>
                       <div
@@ -1245,6 +1293,20 @@ export default function SmartjectsHubPage() {
                       onRemove={handleToggleTeams}
                     />
                   ))}
+                  {dateRange?.from && (
+                    <Badge
+                      variant="secondary"
+                      className="flex items-center gap-1 bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-full px-3 py-1"
+                    >
+                      {dateRange.to
+                        ? `${format(dateRange.from, "MMM d")} - ${format(dateRange.to, "MMM d, y")}`
+                        : format(dateRange.from, "MMM d, y")}
+                      <X
+                        className="h-3 w-3 cursor-pointer ml-1 hover:text-red-500"
+                        onClick={() => handleDateRangeChange(undefined)}
+                      />
+                    </Badge>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"

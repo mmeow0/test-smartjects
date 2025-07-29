@@ -6,6 +6,7 @@ import { toggleItem } from "@/lib/utils/array";
 import { DiscoverHeader } from "./discover-header";
 import { SearchFilters } from "./search-filters";
 import { SmartjectsGrid } from "./smartjects-grid";
+import { DateRange } from "react-day-picker";
 
 export const DiscoverSection = () => {
   const { user } = useAuth();
@@ -31,6 +32,8 @@ export const DiscoverSection = () => {
   const [showFunctionsDropdown, setShowFunctionsDropdown] = useState(false);
   const [showTeamsDropdown, setShowTeamsDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [showDateRangeDropdown, setShowDateRangeDropdown] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   // Search states for filter dropdowns
   const [industriesSearchTerm, setIndustriesSearchTerm] = useState("");
@@ -95,18 +98,41 @@ export const DiscoverSection = () => {
     [filters.teams, setFilter],
   );
 
+  const handleDateRangeChange = useCallback(
+    (newDateRange?: DateRange) => {
+      setDateRange(newDateRange);
+
+      if (newDateRange?.from && newDateRange?.to) {
+        // Set both start and end dates for range filtering
+        setFilter("startDate", newDateRange.from.toISOString().split("T")[0]);
+        setFilter("endDate", newDateRange.to.toISOString().split("T")[0]);
+      } else if (newDateRange?.from) {
+        // Only start date selected
+        setFilter("startDate", newDateRange.from.toISOString().split("T")[0]);
+        setFilter("endDate", "");
+      } else {
+        // Clear date filters by setting empty strings
+        setFilter("startDate", "");
+        setFilter("endDate", "");
+      }
+    },
+    [setFilter],
+  );
+
   // Memoized total filters count
   const totalFiltersCount = useMemo(
     () =>
       selectedIndustries.length +
       selectedAudience.length +
       selectedFunctions.length +
-      selectedTeams.length,
+      selectedTeams.length +
+      (dateRange?.from ? 1 : 0),
     [
       selectedIndustries.length,
       selectedAudience.length,
       selectedFunctions.length,
       selectedTeams.length,
+      dateRange,
     ],
   );
 
@@ -116,6 +142,7 @@ export const DiscoverSection = () => {
     setSelectedFunctions([]);
     setSelectedAudience([]);
     setSelectedTeams([]);
+    setDateRange(undefined);
     // Clear search terms
     setIndustriesSearchTerm("");
     setAudienceSearchTerm("");
@@ -127,6 +154,7 @@ export const DiscoverSection = () => {
     setShowFunctionsDropdown(false);
     setShowTeamsDropdown(false);
     setShowSortDropdown(false);
+    setShowDateRangeDropdown(false);
     // Clear server-side filters
     clearFilters();
   }, [clearFilters]);
@@ -224,6 +252,12 @@ export const DiscoverSection = () => {
             filteredAudience={filteredAudience}
             filteredFunctions={filteredFunctions}
             filteredTeams={filteredTeams}
+            dateRange={dateRange}
+            onDateRangeChange={handleDateRangeChange}
+            showDateRangeDropdown={showDateRangeDropdown}
+            onToggleDateRangeDropdown={() =>
+              setShowDateRangeDropdown(!showDateRangeDropdown)
+            }
           />
         </div>
 

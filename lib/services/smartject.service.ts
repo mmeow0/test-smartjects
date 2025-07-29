@@ -48,6 +48,8 @@ export const smartjectService = {
       audience?: string[];
       businessFunctions?: string[];
       teams?: string[];
+      startDate?: string;
+      endDate?: string;
     },
     sortBy:
       | "recent"
@@ -169,8 +171,8 @@ export const smartjectService = {
           .select("*")
           .in("team_name", filters.teams);
 
-          console.log(teamsData);
-          
+        console.log(teamsData);
+
         if (teamsError) {
           console.error("Error fetching teams filtered IDs:", teamsError);
           return [];
@@ -237,6 +239,14 @@ export const smartjectService = {
           `title.ilike.${searchTerm},mission.ilike.${searchTerm},problematics.ilike.${searchTerm},scope.ilike.${searchTerm}`,
         );
       }
+    }
+
+    // Apply date filters
+    if (filters?.startDate && filters.startDate.trim() !== "") {
+      query = query.gte("created_at", filters.startDate);
+    }
+    if (filters?.endDate && filters.endDate.trim() !== "") {
+      query = query.lte("created_at", filters.endDate);
     }
 
     let data: any[] = [];

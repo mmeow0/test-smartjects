@@ -9,6 +9,8 @@ type Filters = {
   audience?: string[];
   businessFunctions?: string[];
   teams?: string[];
+  startDate?: string;
+  endDate?: string;
 };
 
 type SortOption = "recent" | "most-needed" | "most-provided" | "most-believed";
@@ -76,6 +78,8 @@ export function useInfiniteSmartjects(
       filters.audience?.join(","),
       filters.businessFunctions?.join(","),
       filters.teams?.join(","),
+      filters.startDate,
+      filters.endDate,
     ],
   );
 

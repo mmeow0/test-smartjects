@@ -7,6 +7,9 @@ import { Functions } from "@/components/icons/Functions";
 import { Industries } from "@/components/icons/Industries";
 import { Team } from "@/components/icons/Team";
 import { FilterBadge } from "./filter-badge";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
 
 interface SearchFiltersProps {
   query: string;
@@ -53,6 +56,10 @@ interface SearchFiltersProps {
   filteredAudience: string[];
   filteredFunctions: string[];
   filteredTeams: string[];
+  dateRange?: DateRange;
+  onDateRangeChange: (dateRange?: DateRange) => void;
+  showDateRangeDropdown: boolean;
+  onToggleDateRangeDropdown: () => void;
 }
 
 const sortOptions = [
@@ -101,6 +108,10 @@ export const SearchFilters = memo(
     filteredAudience,
     filteredFunctions,
     filteredTeams,
+    dateRange,
+    onDateRangeChange,
+    showDateRangeDropdown,
+    onToggleDateRangeDropdown,
   }: SearchFiltersProps) => {
     const [showMobileFilters, setShowMobileFilters] = useState(false);
     const [showMobileSortDropdown, setShowMobileSortDropdown] = useState(false);
@@ -111,6 +122,7 @@ export const SearchFilters = memo(
     const functionsRef = useRef<HTMLDivElement>(null);
     const teamsRef = useRef<HTMLDivElement>(null);
     const sortRef = useRef<HTMLDivElement>(null);
+    const dateRangeRef = useRef<HTMLDivElement>(null);
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -151,6 +163,13 @@ export const SearchFilters = memo(
           onToggleSortDropdown();
         }
         if (
+          showDateRangeDropdown &&
+          dateRangeRef.current &&
+          !dateRangeRef.current.contains(event.target as Node)
+        ) {
+          onToggleDateRangeDropdown();
+        }
+        if (
           showMobileSortDropdown &&
           event.target &&
           event.target instanceof Element &&
@@ -180,12 +199,13 @@ export const SearchFilters = memo(
       showFunctionsDropdown,
       showTeamsDropdown,
       showSortDropdown,
-      showMobileSortDropdown,
+      showDateRangeDropdown,
       onToggleIndustriesDropdown,
       onToggleAudienceDropdown,
       onToggleFunctionsDropdown,
       onToggleTeamsDropdown,
       onToggleSortDropdown,
+      onToggleDateRangeDropdown,
     ]);
 
     return (
@@ -545,6 +565,16 @@ export const SearchFilters = memo(
                 </div>
               )}
             </div>
+
+            {/* Date Range Filter */}
+            <div className="relative" ref={dateRangeRef}>
+              <DateRangePicker
+                date={dateRange}
+                onSelect={onDateRangeChange}
+                placeholder="Select date range"
+                className="h-11"
+              />
+            </div>
           </div>
 
           {/* Mobile Filters - Collapsible */}
@@ -822,6 +852,16 @@ export const SearchFilters = memo(
                     </div>
                   )}
                 </div>
+
+                {/* Mobile Date Range Filter */}
+                <div className="relative" ref={dateRangeRef}>
+                  <DateRangePicker
+                    date={dateRange}
+                    onSelect={onDateRangeChange}
+                    placeholder="Select date range"
+                    className="w-full"
+                  />
+                </div>
               </div>
 
               {/* Clear All Filters */}
@@ -880,6 +920,18 @@ export const SearchFilters = memo(
                 onRemove={onToggleTeams}
               />
             ))}
+            {dateRange?.from && (
+              <FilterBadge
+                key="date-range"
+                type="date"
+                value={
+                  dateRange.to
+                    ? `${format(dateRange.from, "MMM d")} - ${format(dateRange.to, "MMM d, y")}`
+                    : format(dateRange.from, "MMM d, y")
+                }
+                onRemove={() => onDateRangeChange(undefined)}
+              />
+            )}
             <Button
               variant="ghost"
               size="sm"

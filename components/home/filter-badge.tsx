@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 
 interface FilterBadgeProps {
-  type: "industry" | "technology" | "function" | "team";
+  type: "industry" | "technology" | "function" | "team" | "date";
   value: string;
   onRemove: (value: string) => void;
 }
@@ -17,6 +17,7 @@ export const FilterBadge = memo(
       technology: "bg-green-100 text-green-800 hover:bg-green-200",
       function: "bg-blue-100 text-blue-800 hover:bg-blue-200",
       team: "bg-purple-100 text-purple-800 hover:bg-purple-200",
+      date: "bg-amber-100 text-amber-800 hover:bg-amber-200",
     };
 
     const bgColor = colorConfig[type];
