@@ -1,4 +1,5 @@
 import { memo } from "react";
+import Link from "next/link";
 import { Discover } from "@/components/icons/Discover";
 import { Connect } from "@/components/icons/Connect";
 import { Execute } from "@/components/icons/Execute";
@@ -25,7 +26,8 @@ export const HowItWorksSection = memo(() => (
             Discover
           </h3>
           <p className="font-normal text-[#020817] text-sm sm:text-base leading-normal max-w-xs sm:max-w-sm lg:max-w-[309px]">
-            Browse innovations transformed into potential implementation projects for business
+            Browse innovations transformed into potential implementation
+            projects for business
           </p>
         </div>
       </div>
@@ -38,7 +40,8 @@ export const HowItWorksSection = memo(() => (
             Connect
           </h3>
           <p className="font-normal text-[#020817] text-sm sm:text-base leading-normal max-w-xs sm:max-w-sm lg:max-w-[371px]">
-            Participate in discussions, vote on smartjects, find partners, and help shape the future of innovations in business
+            Participate in discussions, vote on smartjects, find partners, and
+            help shape the future of innovations in business
           </p>
         </div>
       </div>
@@ -58,13 +61,15 @@ export const HowItWorksSection = memo(() => (
     </div>
 
     {/* CTA Button */}
-    <button className="flex w-full sm:w-[200px] h-[52px] items-center justify-center gap-1.5 p-1.5 bg-yellow-300 rounded-xl hover:bg-yellow-400 transition-colors max-w-xs mx-auto">
-      <div className="inline-flex items-center">
-        <div className="font-medium text-black text-sm text-center leading-5 whitespace-nowrap">
-          Learn more
+    <Link href="/how-it-works">
+      <button className="flex w-full sm:w-[200px] h-[52px] items-center justify-center gap-1.5 p-1.5 bg-yellow-300 rounded-xl hover:bg-yellow-400 transition-colors max-w-xs mx-auto">
+        <div className="inline-flex items-center">
+          <div className="font-medium text-black text-sm text-center leading-5 whitespace-nowrap">
+            Learn more
+          </div>
         </div>
-      </div>
-    </button>
+      </button>
+    </Link>
   </div>
 ));
 
