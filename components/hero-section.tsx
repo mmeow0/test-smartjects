@@ -5,7 +5,7 @@ export function HeroSection() {
   return (
     <div className="relative w-full min-h-[600px] md:min-h-[700px] lg:min-h-[822px] bg-[#060000] rounded-[0px_0px_25px_25px] md:rounded-[0px_0px_50px_50px] overflow-hidden">
       {/* Background Image and Overlays */}
-      <div className="absolute inset-0 overflow-hidden -top-60">
+      <div className="absolute inset-0 overflow-hidden -top-56">
         <div className="relative w-full h-full">
           {/* Background Image */}
           <img
@@ -79,7 +79,7 @@ export function HeroSection() {
           {/* Desktop Layout - Grid positioning */}
           {/* Side Description - Top Right */}
           <div className="hidden lg:flex lg:col-span-8 lg:col-start-8 lg:row-span-2 lg:row-start-1 items-start justify-end pt-8">
-            <div className="max-w-xl xl:max-w-2xl">
+            <div className="max-w-lg xl:max-w-lg">
               <p className="font-archivo font-normal text-white text-xl lg:text-2xl xl:text-[25px] leading-relaxed xl:leading-[35px] text-right">
                 smartjects platform transforms scientific research insights into
                 business projects and provides an environment to discover,
