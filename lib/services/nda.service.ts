@@ -1,6 +1,19 @@
 import { getSupabaseBrowserClient } from "../supabase";
 import type { NDASignature, NDARequest, NDARequestFile } from "../types";
 import { notificationService } from "./notification.service";
+import { fileService } from "./file.service";
+
+export type NDATemplate = {
+  id: string;
+  proposalId: string;
+  templateName: string;
+  filePath: string;
+  fileType: string;
+  fileSize: number;
+  uploadedBy: string;
+  uploadedAt: string;
+  updatedAt: string;
+};
 
 export const ndaService = {
   // Submit NDA request for a proposal (with optional files and message)
@@ -8,7 +21,7 @@ export const ndaService = {
     proposalId: string,
     userId: string,
     requestMessage?: string,
-    files?: File[]
+    files?: File[],
   ): Promise<NDARequest | null> {
     const supabase = getSupabaseBrowserClient();
 
@@ -28,7 +41,7 @@ export const ndaService = {
       const existingRequest = await this.getUserNDARequest(proposalId, userId);
       if (existingRequest) {
         throw new Error(
-          "User has already submitted NDA request for this proposal"
+          "User has already submitted NDA request for this proposal",
         );
       }
 
@@ -50,7 +63,7 @@ export const ndaService = {
         ndaError?.message?.includes('column "status"')
       ) {
         throw new Error(
-          "Database migration required: status column missing from proposal_nda_signatures table"
+          "Database migration required: status column missing from proposal_nda_signatures table",
         );
       }
 
@@ -124,7 +137,7 @@ export const ndaService = {
           proposalResult.data.user_id as string,
           userResult.data.id as string,
           userResult.data.name as string,
-          requestMessage
+          requestMessage,
         );
       }
 
@@ -150,7 +163,7 @@ export const ndaService = {
   // Legacy method for backward compatibility
   async signNDA(
     proposalId: string,
-    userId: string
+    userId: string,
   ): Promise<NDASignature | null> {
     const request = await this.submitNDARequest(proposalId, userId);
     if (!request) return null;
@@ -196,7 +209,7 @@ export const ndaService = {
   // Check if a specific user has signed NDA for a proposal (approved only)
   async getUserSignature(
     proposalId: string,
-    userId: string
+    userId: string,
   ): Promise<NDASignature | null> {
     const supabase = getSupabaseBrowserClient();
 
@@ -220,14 +233,14 @@ export const ndaService = {
       // STRICT CHECK: Only allow access if status column exists and is 'approved'
       if (!data.hasOwnProperty("status")) {
         console.log(
-          "NDA access denied: status column not found, migration required"
+          "NDA access denied: status column not found, migration required",
         );
         return null;
       }
 
       if (data.status !== "approved") {
         console.log(
-          `NDA access denied: status is '${data.status}', not 'approved'`
+          `NDA access denied: status is '${data.status}', not 'approved'`,
         );
         return null;
       }
@@ -250,7 +263,7 @@ export const ndaService = {
   // Get user's NDA request (any status)
   async getUserNDARequest(
     proposalId: string,
-    userId: string
+    userId: string,
   ): Promise<NDARequest | null> {
     const supabase = getSupabaseBrowserClient();
 
@@ -313,7 +326,7 @@ export const ndaService = {
   async canViewPrivateFields(
     proposalId: string,
     userId: string,
-    proposalOwnerId: string
+    proposalOwnerId: string,
   ): Promise<boolean> {
     // If user is the proposal owner, they can always view private fields
     if (userId === proposalOwnerId) {
@@ -327,7 +340,7 @@ export const ndaService = {
 
   // Get approved signatures with user details
   async getProposalSignaturesWithUsers(
-    proposalId: string
+    proposalId: string,
   ): Promise<
     Array<NDASignature & { signerName?: string; signerAvatar?: string }>
   > {
@@ -352,7 +365,7 @@ export const ndaService = {
             file_path,
             uploaded_at
           )
-        `
+        `,
         )
         .eq("proposal_id", proposalId)
         .eq("status", "approved")
@@ -368,7 +381,7 @@ export const ndaService = {
         .filter(
           (signature: any) =>
             signature.hasOwnProperty("status") &&
-            signature.status === "approved"
+            signature.status === "approved",
         )
         .map((signature: any) => ({
           id: signature.id as string,
@@ -400,7 +413,7 @@ export const ndaService = {
             email,
             avatar_url
           )
-        `
+        `,
         )
         .eq("proposal_id", proposalId)
         .eq("status", "approved")
@@ -469,7 +482,7 @@ export const ndaService = {
             email,
             avatar_url
           )
-        `
+        `,
         )
         .eq("proposal_id", proposalId)
         .eq("status", "pending")
@@ -526,7 +539,7 @@ export const ndaService = {
   // Approve NDA request
   async approveNDARequest(
     requestId: string,
-    approverId: string
+    approverId: string,
   ): Promise<boolean> {
     const supabase = getSupabaseBrowserClient();
 
@@ -586,7 +599,7 @@ export const ndaService = {
             proposalResult.data.title as string,
             (request as any).signer_user_id,
             approverResult.data.id as string,
-            approverResult.data.name as string
+            approverResult.data.name as string,
           );
         }
       }
@@ -604,7 +617,7 @@ export const ndaService = {
   async rejectNDARequest(
     requestId: string,
     approverId: string,
-    reason?: string
+    reason?: string,
   ): Promise<boolean> {
     const supabase = getSupabaseBrowserClient();
 
@@ -667,7 +680,7 @@ export const ndaService = {
             (request as any).signer_user_id,
             approverResult.data.id as string,
             approverResult.data.name as string,
-            reason
+            reason,
           );
         }
       }
@@ -771,11 +784,322 @@ export const ndaService = {
 
       const privateFields = data.private_fields;
       return Object.values(privateFields).some(
-        (value: any) => typeof value === "string" && value.trim().length > 0
+        (value: any) => typeof value === "string" && value.trim().length > 0,
       );
     } catch (error) {
       console.error("Error in proposalHasPrivateFields:", error);
       return false;
+    }
+  },
+
+  // Upload NDA template for a proposal
+  async uploadNDATemplate(
+    proposalId: string,
+    templateFile: File,
+    userId?: string,
+  ): Promise<NDATemplate | null> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Handle draft proposals - cannot upload templates for drafts
+      if (proposalId.startsWith("draft")) {
+        throw new Error(
+          "Cannot upload NDA template for draft proposals. Please save the proposal first.",
+        );
+      }
+
+      // Get current user if userId not provided
+      if (!userId) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+        userId = user.id;
+      }
+
+      // Verify user owns the proposal
+      const { data: proposal, error: proposalError } = await supabase
+        .from("proposals")
+        .select("user_id")
+        .eq("id", proposalId)
+        .single();
+
+      if (proposalError) {
+        throw new Error("Failed to verify proposal ownership");
+      }
+
+      if (proposal.user_id !== userId) {
+        throw new Error("Only proposal owner can upload NDA template");
+      }
+
+      // Upload file to storage
+      const fileExtension = templateFile.name.split(".").pop();
+      const fileName = `nda-template-${proposalId}-${Date.now()}.${fileExtension}`;
+      const filePath = `nda-templates/${proposalId}/${fileName}`;
+
+      const { data: fileData, error: fileError } = await supabase.storage
+        .from("proposals")
+        .upload(filePath, templateFile);
+
+      if (fileError) {
+        throw new Error(`Failed to upload template file: ${fileError.message}`);
+      }
+
+      // Remove existing template if any (since we have unique constraint)
+      await supabase
+        .from("proposal_nda_templates")
+        .delete()
+        .eq("proposal_id", proposalId);
+
+      // Save template metadata to database
+      const { data: templateData, error: templateError } = await supabase
+        .from("proposal_nda_templates")
+        .insert({
+          proposal_id: proposalId,
+          template_name: templateFile.name,
+          file_path: filePath,
+          file_type: templateFile.type,
+          file_size: templateFile.size,
+          uploaded_by: userId,
+        })
+        .select()
+        .single();
+
+      if (templateError) {
+        // If database insert fails, clean up uploaded file
+        await supabase.storage.from("proposals").remove([filePath]);
+        throw new Error(
+          `Failed to save template metadata: ${templateError.message}`,
+        );
+      }
+
+      return {
+        id: templateData.id,
+        proposalId: templateData.proposal_id,
+        templateName: templateData.template_name,
+        filePath: templateData.file_path,
+        fileType: templateData.file_type,
+        fileSize: templateData.file_size,
+        uploadedBy: templateData.uploaded_by,
+        uploadedAt: templateData.uploaded_at,
+        updatedAt: templateData.updated_at,
+      };
+    } catch (error) {
+      console.error("Error uploading NDA template:", error);
+      throw error;
+    }
+  },
+
+  // Get NDA template for a proposal
+  async getNDATemplate(proposalId: string): Promise<NDATemplate | null> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Handle draft proposals - no templates exist for drafts
+      if (proposalId.startsWith("draft")) {
+        return null;
+      }
+
+      const { data, error } = await supabase
+        .from("proposal_nda_templates")
+        .select("*")
+        .eq("proposal_id", proposalId)
+        .single();
+
+      if (error) {
+        if (error.code === "PGRST116") {
+          // No template found
+          return null;
+        }
+        throw error;
+      }
+
+      return {
+        id: data.id,
+        proposalId: data.proposal_id,
+        templateName: data.template_name,
+        filePath: data.file_path,
+        fileType: data.file_type,
+        fileSize: data.file_size,
+        uploadedBy: data.uploaded_by,
+        uploadedAt: data.uploaded_at,
+        updatedAt: data.updated_at,
+      };
+    } catch (error) {
+      console.error("Error fetching NDA template:", error);
+      throw error;
+    }
+  },
+
+  // Download NDA template file
+  async downloadNDATemplate(proposalId: string): Promise<Blob | null> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Handle draft proposals - no templates exist for drafts
+      if (proposalId.startsWith("draft")) {
+        throw new Error("NDA template not available for draft proposals");
+      }
+
+      // Get template metadata
+      const template = await this.getNDATemplate(proposalId);
+      if (!template) {
+        throw new Error("NDA template not found");
+      }
+
+      // Download file from storage
+      const { data, error } = await supabase.storage
+        .from("proposals")
+        .download(template.filePath);
+
+      if (error) {
+        throw new Error(`Failed to download template: ${error.message}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error downloading NDA template:", error);
+      throw error;
+    }
+  },
+
+  // Delete NDA template
+  async deleteNDATemplate(
+    proposalId: string,
+    userId?: string,
+  ): Promise<boolean> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Handle draft proposals - no templates exist for drafts
+      if (proposalId.startsWith("draft")) {
+        return false; // Nothing to delete for draft proposals
+      }
+
+      // Get current user if userId not provided
+      if (!userId) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+        userId = user.id;
+      }
+
+      // Verify user owns the proposal
+      const { data: proposal, error: proposalError } = await supabase
+        .from("proposals")
+        .select("user_id")
+        .eq("id", proposalId)
+        .single();
+
+      if (proposalError) {
+        throw new Error("Failed to verify proposal ownership");
+      }
+
+      if (proposal.user_id !== userId) {
+        throw new Error("Only proposal owner can delete NDA template");
+      }
+
+      // Get template to get file path
+      const template = await this.getNDATemplate(proposalId);
+      if (!template) {
+        return false; // Already deleted or doesn't exist
+      }
+
+      // Delete from database
+      const { error: deleteError } = await supabase
+        .from("proposal_nda_templates")
+        .delete()
+        .eq("proposal_id", proposalId);
+
+      if (deleteError) {
+        throw new Error(
+          `Failed to delete template metadata: ${deleteError.message}`,
+        );
+      }
+
+      // Delete file from storage
+      const { error: storageError } = await supabase.storage
+        .from("proposals")
+        .remove([template.filePath]);
+
+      if (storageError) {
+        console.error(
+          "Failed to delete template file from storage:",
+          storageError,
+        );
+        // Don't throw error here as the database record is already deleted
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error deleting NDA template:", error);
+      throw error;
+    }
+  },
+
+  // Check if proposal has NDA template
+  async hasNDATemplate(proposalId: string): Promise<boolean> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Handle draft proposals - no templates exist for drafts
+      if (proposalId.startsWith("draft")) {
+        return false;
+      }
+
+      const { data, error } = await supabase
+        .from("proposal_nda_templates")
+        .select("id")
+        .eq("proposal_id", proposalId)
+        .single();
+
+      if (error) {
+        if (error.code === "PGRST116") {
+          // No template found
+          return false;
+        }
+        throw error;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error("Error checking NDA template existence:", error);
+      return false;
+    }
+  },
+
+  // Generate download URL for NDA template (for direct downloads)
+  async getNDATemplateDownloadUrl(proposalId: string): Promise<string | null> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Handle draft proposals - no templates exist for drafts
+      if (proposalId.startsWith("draft")) {
+        return null;
+      }
+
+      const template = await this.getNDATemplate(proposalId);
+      if (!template) {
+        return null;
+      }
+
+      const { data, error } = await supabase.storage
+        .from("proposals")
+        .createSignedUrl(template.filePath, 3600); // 1 hour expiry
+
+      if (error) {
+        throw new Error(`Failed to create download URL: ${error.message}`);
+      }
+
+      return data.signedUrl;
+    } catch (error) {
+      console.error("Error creating NDA template download URL:", error);
+      throw error;
     }
   },
 };

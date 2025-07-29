@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,10 +22,11 @@ import {
   AlertTriangle,
   CheckCircle,
   Loader2,
+  Download,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
-import { ndaService } from "@/lib/services/nda.service";
+import { ndaService, type NDATemplate } from "@/lib/services/nda.service";
 
 interface NDARequestFormProps {
   proposalId: string;
@@ -47,7 +48,57 @@ export function NDARequestForm({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [ndaTemplate, setNdaTemplate] = useState<NDATemplate | null>(null);
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
   const { toast } = useToast();
+
+  // Fetch NDA template on component mount
+  useEffect(() => {
+    if (isOpen) {
+      fetchNDATemplate();
+    }
+  }, [isOpen, proposalId]);
+
+  const fetchNDATemplate = async () => {
+    setIsLoadingTemplate(true);
+    try {
+      const template = await ndaService.getNDATemplate(proposalId);
+      setNdaTemplate(template);
+    } catch (error) {
+      console.error("Error fetching NDA template:", error);
+    } finally {
+      setIsLoadingTemplate(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    if (!ndaTemplate) return;
+
+    try {
+      const blob = await ndaService.downloadNDATemplate(proposalId);
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = ndaTemplate.templateName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        toast({
+          title: "Download started",
+          description: "NDA template download has started.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Download failed",
+        description: error.message || "Failed to download NDA template.",
+        variant: "destructive",
+      });
+    }
+  };
   const { user } = useAuth();
 
   const maxFiles = 5;
@@ -236,6 +287,56 @@ export function NDARequestForm({
               </p>
             </div>
           </div>
+
+          {/* NDA Template Section */}
+          {isLoadingTemplate ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <span className="text-sm text-muted-foreground">
+                Loading NDA template...
+              </span>
+            </div>
+          ) : ndaTemplate ? (
+            <div className="space-y-3">
+              <Label>NDA Template</Label>
+              <div className="p-4 border rounded-lg bg-blue-50 border-blue-200">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <FileText className="h-6 w-6 text-blue-600 mt-1" />
+                    <div>
+                      <h4 className="font-medium text-blue-900">
+                        {ndaTemplate.templateName}
+                      </h4>
+                      <p className="text-sm text-blue-700 mt-1">
+                        Download, fill out, and include this template with your
+                        request
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">
+                        Size: {Math.round(ndaTemplate.fileSize / 1024)} KB •
+                        Uploaded:{" "}
+                        {new Date(ndaTemplate.uploadedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadTemplate}
+                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-sm text-muted-foreground text-center">
+                No NDA template provided for this proposal
+              </p>
+            </div>
+          )}
 
           {/* Request Message */}
           <div className="space-y-2">

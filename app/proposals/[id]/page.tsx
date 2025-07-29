@@ -20,6 +20,7 @@ import { ProposalDocumentPreview } from "@/components/proposal-document-preview"
 import { ProposalNegotiations } from "@/components/proposal-negotiations";
 import { NDARequestForm } from "@/components/nda-request-form";
 import { NDARequestsManager } from "@/components/nda-requests-manager";
+import { NDATemplateManager } from "@/components/nda-template-manager";
 import {
   ArrowLeft,
   Calendar,
@@ -978,6 +979,24 @@ export default function ProposalDetailPage({
                             </div>
                           )}
                         </div>
+                      </div>
+                    )}
+
+                    {/* NDA Template Management - Only for owners */}
+                    {isProposalOwner && (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          NDA Template
+                        </h4>
+                        <NDATemplateManager
+                          proposalId={id}
+                          isProposalOwner={isProposalOwner}
+                          onTemplateChange={() => {
+                            // Template change callback - could trigger refetch if needed
+                            console.log("NDA template changed");
+                          }}
+                        />
                       </div>
                     )}
 

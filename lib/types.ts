@@ -94,6 +94,18 @@ export type NDARequestFile = {
   uploadedAt: string;
 };
 
+export type NDATemplate = {
+  id: string;
+  proposalId: string;
+  templateName: string;
+  filePath: string;
+  fileType: string;
+  fileSize: number;
+  uploadedBy: string;
+  uploadedAt: string;
+  updatedAt: string;
+};
+
 export type NDARequest = {
   id: string;
   proposalId: string;

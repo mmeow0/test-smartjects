@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   AlertCircle,
+  AlertTriangle,
   Plus,
   Trash2,
   ListChecks,
@@ -58,6 +59,7 @@ import {
 import { proposalService } from "@/lib/services/proposal.service";
 import { fileService } from "@/lib/services/file.service";
 import { PrivateFieldManager } from "@/components/private-field-manager/private-field-manager";
+import { NDATemplateManager } from "@/components/nda-template-manager";
 import type { ProposalPrivateFields } from "@/lib/types";
 
 // Define deliverable type
@@ -1224,6 +1226,41 @@ export default function EditProposalPage({
                 </li>
               ))}
             </div>
+
+            {/* NDA Template Management - Only show if there are private fields */}
+            {Object.values(enabledPrivateFields).some((enabled) => enabled) && (
+              <div className="space-y-2">
+                <Label>NDA Template (Optional)</Label>
+                <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 mb-4">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
+                    <div className="text-sm text-amber-700">
+                      <p className="font-medium">
+                        Private Information Detected
+                      </p>
+                      <p>
+                        Your proposal contains private fields. You can upload an
+                        NDA template that users will need to download, fill out,
+                        and submit when requesting access to this confidential
+                        information.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <NDATemplateManager
+                  proposalId={id}
+                  isProposalOwner={true}
+                  onTemplateChange={() => {
+                    // Template change callback - can be used for future functionality
+                    console.log("NDA template changed");
+                  }}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Upload an NDA template that users must complete before
+                  accessing private information in your proposal.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-4 mt-8">
               <h3 className="text-lg font-medium">Proposal Summary</h3>
