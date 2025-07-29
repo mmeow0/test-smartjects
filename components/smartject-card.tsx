@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Audience } from "@/components/icons/Audience";
 import { Functions } from "@/components/icons/Functions";
 import { Industries } from "@/components/icons/Industries";
+import { Team } from "@/components/icons/Team";
 import { Provide } from "./icons/Provide";
 
 interface SmartjectCardProps {
@@ -50,6 +51,7 @@ export function SmartjectCard({
   // Constants for limiting displayed items
   const MAX_INDUSTRIES = 2;
   const MAX_BUSINESS_FUNCTIONS = 2;
+  const MAX_TEAMS = 2;
 
   const handleVote = async (type: "believe" | "need" | "provide") => {
     if (!isAuthenticated || !user) {
@@ -104,6 +106,10 @@ export function SmartjectCard({
     smartject.businessFunctions?.slice(0, MAX_BUSINESS_FUNCTIONS) || [];
   const hiddenBusinessFunctionsCount =
     (smartject.businessFunctions?.length || 0) - MAX_BUSINESS_FUNCTIONS;
+
+  // Determine which teams to show directly
+  const visibleTeams = smartject.teams?.slice(0, MAX_TEAMS) || [];
+  const hiddenTeamsCount = (smartject.teams?.length || 0) - MAX_TEAMS;
 
   const renderGradientSection = (label: string, text: string) => {
     const textRef = useRef<HTMLParagraphElement>(null);
@@ -343,6 +349,55 @@ export function SmartjectCard({
                                   className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
                                 >
                                   {func}
+                                </span>
+                              ))}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Teams */}
+            {smartject.teams?.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Team className="h-[25px]" />
+                  <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                    Teams
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {visibleTeams.map((team, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
+                    >
+                      {team}
+                    </span>
+                  ))}
+
+                  {hiddenTeamsCount > 0 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs cursor-pointer flex items-center">
+                            <Plus className="h-3 w-3 mr-1" />
+                            {hiddenTeamsCount} more
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="p-2 max-w-xs">
+                          <div className="flex flex-wrap gap-1">
+                            {smartject.teams
+                              ?.slice(MAX_TEAMS)
+                              .map((team, i) => (
+                                <span
+                                  key={i}
+                                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs"
+                                >
+                                  {team}
                                 </span>
                               ))}
                           </div>
