@@ -1,11 +1,12 @@
 import { getSupabaseBrowserClient } from "../supabase";
 import type { NDASignature, NDARequest, NDARequestFile } from "../types";
+import { notificationService } from "./notification.service";
 
 export const ndaService = {
   // Submit NDA request for a proposal (with optional files and message)
   async submitNDARequest(
-    proposalId: string, 
-    userId: string, 
+    proposalId: string,
+    userId: string,
     requestMessage?: string,
     files?: File[]
   ): Promise<NDARequest | null> {
@@ -14,7 +15,9 @@ export const ndaService = {
     try {
       // Get current user if userId not provided
       if (!userId) {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
           throw new Error("User not authenticated");
         }
@@ -24,7 +27,9 @@ export const ndaService = {
       // Check if user has already submitted NDA request for this proposal
       const existingRequest = await this.getUserNDARequest(proposalId, userId);
       if (existingRequest) {
-        throw new Error("User has already submitted NDA request for this proposal");
+        throw new Error(
+          "User has already submitted NDA request for this proposal"
+        );
       }
 
       const { data: ndaData, error: ndaError } = await supabase
@@ -32,16 +37,21 @@ export const ndaService = {
         .insert({
           proposal_id: proposalId,
           signer_user_id: userId,
-          status: 'pending',
+          status: "pending",
           request_message: requestMessage,
           pending_at: new Date().toISOString(),
         })
         .select()
         .single();
-      
+
       // If status column doesn't exist, throw error requiring migration
-      if (ndaError?.code === '42703' || ndaError?.message?.includes('column "status"')) {
-        throw new Error('Database migration required: status column missing from proposal_nda_signatures table');
+      if (
+        ndaError?.code === "42703" ||
+        ndaError?.message?.includes('column "status"')
+      ) {
+        throw new Error(
+          "Database migration required: status column missing from proposal_nda_signatures table"
+        );
       }
 
       if (ndaError) {
@@ -53,13 +63,12 @@ export const ndaService = {
       const uploadedFiles: NDARequestFile[] = [];
       if (files && files.length > 0) {
         for (const file of files) {
-          const fileExtension = file.name.split('.').pop();
+          const fileExtension = file.name.split(".").pop();
           const fileName = `${userId}/${ndaData.id}/${Date.now()}-${file.name}`;
-          
+
           // Upload file to storage
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('nda-files')
-            .upload(fileName, file);
+          const { data: uploadData, error: uploadError } =
+            await supabase.storage.from("nda-files").upload(fileName, file);
 
           if (uploadError) {
             console.error("Error uploading file:", uploadError);
@@ -93,11 +102,37 @@ export const ndaService = {
         }
       }
 
+      // Get proposal and user information for notification
+      const [proposalResult, userResult] = await Promise.all([
+        supabase
+          .from("proposals")
+          .select("id, title, user_id")
+          .eq("id", proposalId)
+          .single(),
+        supabase.from("users").select("id, name").eq("id", userId).single(),
+      ]);
+
+      // Send notification to proposal owner
+      if (
+        proposalResult.data &&
+        userResult.data &&
+        proposalResult.data.user_id !== userId
+      ) {
+        await notificationService.createNDARequestNotification(
+          proposalResult.data.id as string,
+          proposalResult.data.title as string,
+          proposalResult.data.user_id as string,
+          userResult.data.id as string,
+          userResult.data.name as string,
+          requestMessage
+        );
+      }
+
       return {
         id: ndaData.id as string,
         proposalId: ndaData.proposal_id as string,
         signerUserId: ndaData.signer_user_id as string,
-        status: ndaData.status as 'pending' | 'approved' | 'rejected',
+        status: ndaData.status as "pending" | "approved" | "rejected",
         requestMessage: ndaData.request_message as string | undefined,
         pendingAt: ndaData.pending_at as string,
         approvedAt: ndaData.approved_at as string | undefined,
@@ -113,10 +148,13 @@ export const ndaService = {
   },
 
   // Legacy method for backward compatibility
-  async signNDA(proposalId: string, userId: string): Promise<NDASignature | null> {
+  async signNDA(
+    proposalId: string,
+    userId: string
+  ): Promise<NDASignature | null> {
     const request = await this.submitNDARequest(proposalId, userId);
     if (!request) return null;
-    
+
     return {
       id: request.id,
       proposalId: request.proposalId,
@@ -156,7 +194,10 @@ export const ndaService = {
   },
 
   // Check if a specific user has signed NDA for a proposal (approved only)
-  async getUserSignature(proposalId: string, userId: string): Promise<NDASignature | null> {
+  async getUserSignature(
+    proposalId: string,
+    userId: string
+  ): Promise<NDASignature | null> {
     const supabase = getSupabaseBrowserClient();
 
     try {
@@ -177,17 +218,21 @@ export const ndaService = {
       }
 
       // STRICT CHECK: Only allow access if status column exists and is 'approved'
-      if (!data.hasOwnProperty('status')) {
-        console.log('NDA access denied: status column not found, migration required');
+      if (!data.hasOwnProperty("status")) {
+        console.log(
+          "NDA access denied: status column not found, migration required"
+        );
         return null;
       }
 
-      if (data.status !== 'approved') {
-        console.log(`NDA access denied: status is '${data.status}', not 'approved'`);
+      if (data.status !== "approved") {
+        console.log(
+          `NDA access denied: status is '${data.status}', not 'approved'`
+        );
         return null;
       }
 
-      console.log('NDA access granted: status is approved');
+      console.log("NDA access granted: status is approved");
 
       return {
         id: data.id as string,
@@ -203,7 +248,10 @@ export const ndaService = {
   },
 
   // Get user's NDA request (any status)
-  async getUserNDARequest(proposalId: string, userId: string): Promise<NDARequest | null> {
+  async getUserNDARequest(
+    proposalId: string,
+    userId: string
+  ): Promise<NDARequest | null> {
     const supabase = getSupabaseBrowserClient();
 
     try {
@@ -245,7 +293,7 @@ export const ndaService = {
         id: data.id as string,
         proposalId: data.proposal_id as string,
         signerUserId: data.signer_user_id as string,
-        status: data.status as 'pending' | 'approved' | 'rejected',
+        status: data.status as "pending" | "approved" | "rejected",
         requestMessage: data.request_message as string | undefined,
         pendingAt: data.pending_at as string,
         approvedAt: data.approved_at as string | undefined,
@@ -262,7 +310,11 @@ export const ndaService = {
 
   // Check if user has access to private fields (either owner or signed NDA)
   // Check if a specific user can view private fields (must have approved NDA)
-  async canViewPrivateFields(proposalId: string, userId: string, proposalOwnerId: string): Promise<boolean> {
+  async canViewPrivateFields(
+    proposalId: string,
+    userId: string,
+    proposalOwnerId: string
+  ): Promise<boolean> {
     // If user is the proposal owner, they can always view private fields
     if (userId === proposalOwnerId) {
       return true;
@@ -274,13 +326,18 @@ export const ndaService = {
   },
 
   // Get approved signatures with user details
-  async getProposalSignaturesWithUsers(proposalId: string): Promise<Array<NDASignature & { signerName?: string, signerAvatar?: string }>> {
+  async getProposalSignaturesWithUsers(
+    proposalId: string
+  ): Promise<
+    Array<NDASignature & { signerName?: string; signerAvatar?: string }>
+  > {
     const supabase = getSupabaseBrowserClient();
 
     try {
       const { data, error } = await supabase
         .from("proposal_nda_signatures")
-        .select(`
+        .select(
+          `
           *,
           users:signer_user_id (
             name,
@@ -295,7 +352,8 @@ export const ndaService = {
             file_path,
             uploaded_at
           )
-        `)
+        `
+        )
         .eq("proposal_id", proposalId)
         .eq("status", "approved")
         .order("approved_at", { ascending: false });
@@ -307,7 +365,11 @@ export const ndaService = {
 
       // Only include signatures that have status column and are explicitly approved
       return data
-        .filter((signature: any) => signature.hasOwnProperty('status') && signature.status === 'approved')
+        .filter(
+          (signature: any) =>
+            signature.hasOwnProperty("status") &&
+            signature.status === "approved"
+        )
         .map((signature: any) => ({
           id: signature.id as string,
           proposalId: signature.proposal_id as string,
@@ -330,14 +392,16 @@ export const ndaService = {
     try {
       const { data, error } = await supabase
         .from("proposal_nda_signatures")
-        .select(`
+        .select(
+          `
           *,
           users:signer_user_id (
             name,
             email,
             avatar_url
           )
-        `)
+        `
+        )
         .eq("proposal_id", proposalId)
         .eq("status", "approved")
         .order("approved_at", { ascending: false });
@@ -348,15 +412,17 @@ export const ndaService = {
       }
 
       // Get files for all requests
-      const requestIds = data.map(request => request.id);
+      const requestIds = data.map((request) => request.id);
       const { data: filesData } = await supabase
         .from("nda_request_files")
         .select("*")
         .in("nda_signature_id", requestIds);
 
       return data.map((request: any) => {
-        const requestFiles = filesData?.filter(file => file.nda_signature_id === request.id) || [];
-        
+        const requestFiles =
+          filesData?.filter((file) => file.nda_signature_id === request.id) ||
+          [];
+
         return {
           id: request.id,
           proposalId: request.proposal_id,
@@ -395,14 +461,16 @@ export const ndaService = {
     try {
       const { data, error } = await supabase
         .from("proposal_nda_signatures")
-        .select(`
+        .select(
+          `
           *,
           users:signer_user_id (
             name,
             email,
             avatar_url
           )
-        `)
+        `
+        )
         .eq("proposal_id", proposalId)
         .eq("status", "pending")
         .order("pending_at", { ascending: false });
@@ -413,15 +481,17 @@ export const ndaService = {
       }
 
       // Get files for all requests
-      const requestIds = data.map(request => request.id);
+      const requestIds = data.map((request) => request.id);
       const { data: filesData } = await supabase
         .from("nda_request_files")
         .select("*")
         .in("nda_signature_id", requestIds);
 
       return data.map((request: any) => {
-        const requestFiles = filesData?.filter(file => file.nda_signature_id === request.id) || [];
-        
+        const requestFiles =
+          filesData?.filter((file) => file.nda_signature_id === request.id) ||
+          [];
+
         return {
           id: request.id,
           proposalId: request.proposal_id,
@@ -454,28 +524,33 @@ export const ndaService = {
   },
 
   // Approve NDA request
-  async approveNDARequest(requestId: string, approverId: string): Promise<boolean> {
+  async approveNDARequest(
+    requestId: string,
+    approverId: string
+  ): Promise<boolean> {
     const supabase = getSupabaseBrowserClient();
 
     try {
-      console.log('=== Approving NDA Request ===');
-      console.log('Request ID:', requestId);
-      console.log('Approver ID:', approverId);
+      console.log("=== Approving NDA Request ===");
+      console.log("Request ID:", requestId);
+      console.log("Approver ID:", approverId);
 
       // Get current user if approverId not provided
       if (!approverId) {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
           throw new Error("User not authenticated");
         }
         approverId = user.id;
-        console.log('Using authenticated user ID:', approverId);
+        console.log("Using authenticated user ID:", approverId);
       }
 
       const { data, error } = await supabase
         .from("proposal_nda_signatures")
         .update({
-          status: 'approved',
+          status: "approved",
           approved_by_user_id: approverId,
           approved_at: new Date().toISOString(),
         })
@@ -488,8 +563,36 @@ export const ndaService = {
         return false;
       }
 
-      console.log('NDA request approved successfully:', data);
-      console.log('============================');
+      // Get request and proposal information for notification
+      if (data && data.length > 0) {
+        const request = data[0] as any;
+        const [proposalResult, approverResult] = await Promise.all([
+          supabase
+            .from("proposals")
+            .select("id, title")
+            .eq("id", (request as any).proposal_id)
+            .single(),
+          supabase
+            .from("users")
+            .select("id, name")
+            .eq("id", approverId)
+            .single(),
+        ]);
+
+        // Send notification to requester
+        if (proposalResult.data && approverResult.data) {
+          await notificationService.createNDAApprovedNotification(
+            proposalResult.data.id as string,
+            proposalResult.data.title as string,
+            (request as any).signer_user_id,
+            approverResult.data.id as string,
+            approverResult.data.name as string
+          );
+        }
+      }
+
+      console.log("NDA request approved successfully:", data);
+      console.log("============================");
       return true;
     } catch (error) {
       console.error("Error in approveNDARequest:", error);
@@ -498,29 +601,35 @@ export const ndaService = {
   },
 
   // Reject NDA request
-  async rejectNDARequest(requestId: string, approverId: string, reason?: string): Promise<boolean> {
+  async rejectNDARequest(
+    requestId: string,
+    approverId: string,
+    reason?: string
+  ): Promise<boolean> {
     const supabase = getSupabaseBrowserClient();
 
     try {
-      console.log('=== Rejecting NDA Request ===');
-      console.log('Request ID:', requestId);
-      console.log('Approver ID:', approverId);
-      console.log('Rejection reason:', reason);
+      console.log("=== Rejecting NDA Request ===");
+      console.log("Request ID:", requestId);
+      console.log("Approver ID:", approverId);
+      console.log("Rejection reason:", reason);
 
       // Get current user if approverId not provided
       if (!approverId) {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
           throw new Error("User not authenticated");
         }
         approverId = user.id;
-        console.log('Using authenticated user ID:', approverId);
+        console.log("Using authenticated user ID:", approverId);
       }
 
       const { data, error } = await supabase
         .from("proposal_nda_signatures")
         .update({
-          status: 'rejected',
+          status: "rejected",
           approved_by_user_id: approverId,
           rejected_at: new Date().toISOString(),
           rejection_reason: reason,
@@ -534,8 +643,37 @@ export const ndaService = {
         return false;
       }
 
-      console.log('NDA request rejected successfully:', data);
-      console.log('============================');
+      // Get request and proposal information for notification
+      if (data && data.length > 0) {
+        const request = data[0] as any;
+        const [proposalResult, approverResult] = await Promise.all([
+          supabase
+            .from("proposals")
+            .select("id, title")
+            .eq("id", (request as any).proposal_id)
+            .single(),
+          supabase
+            .from("users")
+            .select("id, name")
+            .eq("id", approverId)
+            .single(),
+        ]);
+
+        // Send notification to requester
+        if (proposalResult.data && approverResult.data) {
+          await notificationService.createNDARejectNotification(
+            proposalResult.data.id as string,
+            proposalResult.data.title as string,
+            (request as any).signer_user_id,
+            approverResult.data.id as string,
+            approverResult.data.name as string,
+            reason
+          );
+        }
+      }
+
+      console.log("NDA request rejected successfully:", data);
+      console.log("============================");
       return true;
     } catch (error) {
       console.error("Error in rejectNDARequest:", error);
@@ -549,7 +687,7 @@ export const ndaService = {
 
     try {
       const { data, error } = await supabase.storage
-        .from('nda-files')
+        .from("nda-files")
         .download(filePath);
 
       if (error) {
@@ -632,8 +770,8 @@ export const ndaService = {
       }
 
       const privateFields = data.private_fields;
-      return Object.values(privateFields).some((value: any) => 
-        typeof value === "string" && value.trim().length > 0
+      return Object.values(privateFields).some(
+        (value: any) => typeof value === "string" && value.trim().length > 0
       );
     } catch (error) {
       console.error("Error in proposalHasPrivateFields:", error);

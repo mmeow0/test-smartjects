@@ -459,6 +459,79 @@ class NotificationService {
   }
 
   /**
+   * Create notification for NDA request
+   */
+  async createNDARequestNotification(
+    proposalId: string,
+    proposalTitle: string,
+    proposalOwnerId: string,
+    requesterId: string,
+    requesterName: string,
+    requestMessage?: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    const message = requestMessage
+      ? `${requesterName} has requested access to private fields in "${proposalTitle}" with message: ${requestMessage.substring(0, 100)}${requestMessage.length > 100 ? "..." : ""}`
+      : `${requesterName} has requested access to private fields in "${proposalTitle}"`;
+
+    return this.createNotification({
+      recipientUserId: proposalOwnerId,
+      senderUserId: requesterId,
+      type: "nda_request",
+      title: "NDA Access Request",
+      message: message,
+      link: `/proposals/${proposalId}`,
+      relatedProposalId: proposalId,
+    });
+  }
+
+  /**
+   * Create notification for NDA approval
+   */
+  async createNDAApprovedNotification(
+    proposalId: string,
+    proposalTitle: string,
+    requesterId: string,
+    approverId: string,
+    approverName: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    return this.createNotification({
+      recipientUserId: requesterId,
+      senderUserId: approverId,
+      type: "nda_approved",
+      title: "NDA Access Approved",
+      message: `${approverName} has approved your request to access private fields in "${proposalTitle}"`,
+      link: `/proposals/${proposalId}`,
+      relatedProposalId: proposalId,
+    });
+  }
+
+  /**
+   * Create notification for NDA rejection
+   */
+  async createNDARejectNotification(
+    proposalId: string,
+    proposalTitle: string,
+    requesterId: string,
+    approverId: string,
+    approverName: string,
+    rejectionReason?: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    const message = rejectionReason
+      ? `${approverName} has rejected your request to access private fields in "${proposalTitle}". Reason: ${rejectionReason}`
+      : `${approverName} has rejected your request to access private fields in "${proposalTitle}"`;
+
+    return this.createNotification({
+      recipientUserId: requesterId,
+      senderUserId: approverId,
+      type: "nda_rejected",
+      title: "NDA Access Rejected",
+      message: message,
+      link: `/proposals/${proposalId}`,
+      relatedProposalId: proposalId,
+    });
+  }
+
+  /**
    * Subscribe to real-time notifications for a user
    */
   subscribeToNotifications(
