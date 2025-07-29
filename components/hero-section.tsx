@@ -23,7 +23,7 @@ export function HeroSection() {
       </div>
 
       {/* Content Container */}
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
+      <div className="relative z-10 mx-auto px-8 sm:px-6 lg:px-16 pt-20 pb-16">
         <div className="min-h-[500px] md:min-h-[600px] lg:min-h-[700px] flex flex-col lg:grid lg:grid-cols-12 lg:grid-rows-3 gap-8 lg:gap-12">
           {/* Mobile Layout - Stack vertically */}
           <div className="lg:hidden flex flex-col space-y-8 md:space-y-12 text-center justify-center min-h-full">
@@ -52,9 +52,9 @@ export function HeroSection() {
             {/* Description */}
             <div className="max-w-md mx-auto">
               <p className="font-archivo font-normal text-white text-lg sm:text-xl leading-relaxed text-center">
-                smartjects platform transforms research insights into business
-                projects and provides interactive environment where companies
-                discover innovations and execute smart contracts
+                smartjects platform transforms scientific research insights into
+                business projects and provides an environment to discover,
+                collaborate and execute implementation-focused smart contracts
               </p>
             </div>
 
@@ -78,18 +78,18 @@ export function HeroSection() {
 
           {/* Desktop Layout - Grid positioning */}
           {/* Side Description - Top Right */}
-          <div className="hidden lg:flex lg:col-span-8 lg:col-start-8 lg:row-span-2 lg:row-start-1 items-start justify-end pt-16">
+          <div className="hidden lg:flex lg:col-span-8 lg:col-start-8 lg:row-span-2 lg:row-start-1 items-start justify-end pt-8">
             <div className="max-w-xl xl:max-w-2xl">
               <p className="font-archivo font-normal text-white text-xl lg:text-2xl xl:text-[25px] leading-relaxed xl:leading-[35px] text-right">
-                smartjects platform transforms research insights into business
-                projects and provides interactive environment where companies
-                discover innovations and execute smart contracts
+                smartjects platform transforms scientific research insights into
+                business projects and provides an environment to discover,
+                collaborate and execute implementation-focused smart contracts
               </p>
             </div>
           </div>
 
           {/* Main Content - Bottom Left */}
-          <div className="hidden lg:flex lg:col-span-7 lg:col-start-1 lg:row-span-2 lg:row-start-2 flex-col justify-center space-y-12 pt-28">
+          <div className="hidden lg:flex lg:col-span-7 lg:col-start-1 lg:row-span-2 lg:row-start-2 flex-col justify-center space-y-12 pt-28 pl-6">
             {/* Headline */}
             <div className="space-y-4">
               <h1 className="text-white leading-tight">

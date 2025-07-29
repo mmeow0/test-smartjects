@@ -53,7 +53,7 @@ export default function HowItWorksPage() {
                   </h2>
                 </div>
                 <p className="font-normal text-slate-600 text-lg sm:text-xl leading-relaxed mb-8">
-                  Browse innovations transformed into potential implementation projects for business
+                  Browse scientific data transformed into potential implementation projects for business called smartjects
                 </p>
 
                 <div className="space-y-6">
@@ -122,7 +122,7 @@ export default function HowItWorksPage() {
                   </h2>
                 </div>
                 <p className="font-normal text-slate-600 text-lg sm:text-xl leading-relaxed mb-8">
-                  Participate in discussions, vote on smartjects, find partners, and help shape the future of innovations in business
+                  Participate in discussions, vote on smartjects, find partners and drive innovations into business
                 </p>
 
                 <div className="space-y-6">
@@ -183,7 +183,7 @@ export default function HowItWorksPage() {
                   </h2>
                 </div>
                 <p className="font-normal text-slate-600 text-lg sm:text-xl leading-relaxed mb-8">
-                  Create proposals, negotiate and agree with smart contracts
+                  Create proposals, negotiate and secure with smart contracts
                 </p>
 
                 <div className="space-y-6">

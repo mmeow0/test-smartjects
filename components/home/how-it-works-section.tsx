@@ -26,8 +26,7 @@ export const HowItWorksSection = memo(() => (
             Discover
           </h3>
           <p className="font-normal text-[#020817] text-sm sm:text-base leading-normal max-w-xs sm:max-w-sm lg:max-w-[309px]">
-            Browse innovations transformed into potential implementation
-            projects for business
+            Browse scientific data transformed into potential implementation projects for business called smartjects
           </p>
         </div>
       </div>
@@ -40,8 +39,7 @@ export const HowItWorksSection = memo(() => (
             Connect
           </h3>
           <p className="font-normal text-[#020817] text-sm sm:text-base leading-normal max-w-xs sm:max-w-sm lg:max-w-[371px]">
-            Participate in discussions, vote on smartjects, find partners, and
-            help shape the future of innovations in business
+            Participate in discussions, vote on smartjects, find partners and drive innovations into business
           </p>
         </div>
       </div>
@@ -54,7 +52,7 @@ export const HowItWorksSection = memo(() => (
             Execute
           </h3>
           <p className="font-normal text-[#020817] text-sm sm:text-base leading-normal max-w-xs sm:max-w-sm lg:max-w-[277px]">
-            Create proposals, negotiate and agree with smart contracts
+            Create proposals, negotiate and secure with smart contracts
           </p>
         </div>
       </div>

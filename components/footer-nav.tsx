@@ -39,7 +39,7 @@ export function FooterNav() {
 
   return (
     <footer className="bg-white border-t border-gray-100">
-      <div className="max-w-[1340px] mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <div className="flex items-center">
