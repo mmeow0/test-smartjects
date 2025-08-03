@@ -1,13 +1,19 @@
-"use client"
+"use client";
 
-import { use, useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
-import { useRequirePaidAccount } from "@/hooks/use-auth-guard"
-import { useToast } from "@/hooks/use-toast"
+import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
+import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Calendar,
@@ -18,99 +24,113 @@ import {
   Loader2,
   User,
   XCircle,
-} from "lucide-react"
-import { contractService } from "@/lib/services/contract.service"
+} from "lucide-react";
+import { contractService } from "@/lib/services/contract.service";
 
-export default function ContractReviewPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ContractReviewPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id: contractId } = use(params);
-  
-  const router = useRouter()
-  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(true)
-  const [contract, setContract] = useState<any>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [reviewComments, setReviewComments] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const router = useRouter();
+  const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [contract, setContract] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [reviewComments, setReviewComments] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load contract data
   useEffect(() => {
     const loadContract = async () => {
       if (authLoading || !canAccess) {
-        return
+        return;
       }
 
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
 
       try {
-        const contractData = await contractService.getContractById(contractId)
-        
+        const contractData = await contractService.getContractById(contractId);
+
         if (!contractData) {
-          setError("Contract not found or access denied")
-          setIsLoading(false)
-          return
+          setError("Contract not found or access denied");
+          setIsLoading(false);
+          return;
         }
 
         // Check if user is needer and contract is submitted for review
-        const isNeeder = contractData.needer?.id === user?.id
+        const isNeeder = contractData.needer?.id === user?.id;
 
         if (!isNeeder) {
-          setError("Only clients can review contracts")
-          setIsLoading(false)
-          return
+          setError("Only clients can review contracts");
+          setIsLoading(false);
+          return;
         }
 
         if (contractData.status !== "pending_review") {
-          setError("Contract must be submitted for review")
-          setIsLoading(false)
-          return
+          setError("Contract must be submitted for review");
+          setIsLoading(false);
+          return;
         }
 
-        setContract(contractData)
-        setIsLoading(false)
-        
+        setContract(contractData);
+        setIsLoading(false);
       } catch (error) {
-        console.error("Error loading contract:", error)
-        setError("Failed to load contract data")
-        setIsLoading(false)
+        console.error("Error loading contract:", error);
+        setError("Failed to load contract data");
+        setIsLoading(false);
       }
-    }
+    };
 
-    loadContract()
-  }, [authLoading, canAccess, contractId, user?.id])
+    loadContract();
+  }, [authLoading, canAccess, contractId, user?.id]);
 
   const handleReview = async (approved: boolean) => {
-    if (!contract) return
+    if (!contract) return;
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
-      await contractService.reviewContract(contractId, approved, reviewComments.trim() || undefined)
-      
+      await contractService.reviewContract(
+        contractId,
+        approved,
+        reviewComments.trim() || undefined
+      );
+
       toast({
         title: approved ? "Contract approved" : "Contract rejected",
-        description: approved 
+        description: approved
           ? "Contract has been approved and marked as completed."
           : "Contract has been rejected and returned for revision.",
-      })
+      });
 
       // Redirect back to contract details
-      router.push(`/contracts/${contractId}`)
-    } catch (error) {
-      console.error("Error reviewing contract:", error)
+      router.push(`/contracts/${contractId}`);
+    } catch (error: any) {
+      console.error("Error reviewing contract:", error);
+
+      // Check if error is related to wallet connection
+      const isWalletError =
+        error.message?.includes("Wallet not connected") ||
+        error.message?.includes("wallet") ||
+        error.message?.includes("connect your wallet");
+
       toast({
-        title: "Error",
-        description: "Failed to review contract. Please try again.",
+        title: isWalletError ? "Wallet Required" : "Error",
+        description: isWalletError
+          ? "Please connect your wallet to complete the contract and release escrow funds."
+          : "Failed to review contract. Please try again.",
         variant: "destructive",
-      })
-    } finally {
-      setIsSubmitting(false)
+      });
     }
-  }
+  };
 
   // Redirect if not authenticated or not paid
   if (authLoading || !canAccess) {
-    return null
+    return null;
   }
 
   // Loading state
@@ -124,7 +144,7 @@ export default function ContractReviewPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   // Error state
@@ -133,14 +153,14 @@ export default function ContractReviewPage({ params }: { params: Promise<{ id: s
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <p className="text-destructive mb-4">{error || "Contract not found"}</p>
-            <Button onClick={() => router.back()}>
-              Go Back
-            </Button>
+            <p className="text-destructive mb-4">
+              {error || "Contract not found"}
+            </p>
+            <Button onClick={() => router.back()}>Go Back</Button>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -152,9 +172,7 @@ export default function ContractReviewPage({ params }: { params: Promise<{ id: s
         </Button>
         <div>
           <h1 className="text-2xl font-bold">Review Contract</h1>
-          <p className="text-muted-foreground">
-            {contract.title}
-          </p>
+          <p className="text-muted-foreground">{contract.title}</p>
         </div>
       </div>
 
@@ -213,12 +231,14 @@ export default function ContractReviewPage({ params }: { params: Promise<{ id: s
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-primary">
-                  {contract.provider?.name?.charAt(0) || 'P'}
+                  {contract.provider?.name?.charAt(0) || "P"}
                 </span>
               </div>
               <div>
                 <p className="font-medium">{contract.provider?.name}</p>
-                <p className="text-sm text-muted-foreground">{contract.provider?.email}</p>
+                <p className="text-sm text-muted-foreground">
+                  {contract.provider?.email}
+                </p>
               </div>
             </div>
             {contract.submitted_at && (
@@ -246,20 +266,24 @@ export default function ContractReviewPage({ params }: { params: Promise<{ id: s
             <CardContent>
               <div className="space-y-3">
                 {contract.documents.map((doc: any) => (
-                  <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
                     <div className="flex items-center gap-3">
                       <FileText className="h-5 w-5 text-blue-600" />
                       <div>
                         <p className="font-medium">{doc.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {doc.type} • {new Date(doc.created_at).toLocaleDateString()}
+                          {doc.type} •{" "}
+                          {new Date(doc.created_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(doc.url, '_blank')}
+                      onClick={() => window.open(doc.url, "_blank")}
                     >
                       View
                     </Button>
@@ -293,16 +317,24 @@ export default function ContractReviewPage({ params }: { params: Promise<{ id: s
                   disabled={isSubmitting}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Your comments will be shared with the provider regardless of your decision.
+                  Your comments will be shared with the provider regardless of
+                  your decision.
                 </p>
               </div>
 
               <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
-                <h4 className="font-medium text-amber-800 mb-2">Review Guidelines</h4>
+                <h4 className="font-medium text-amber-800 mb-2">
+                  Review Guidelines
+                </h4>
                 <ul className="text-sm text-amber-700 space-y-1">
-                  <li>• Verify that all deliverables meet the agreed specifications</li>
+                  <li>
+                    • Verify that all deliverables meet the agreed
+                    specifications
+                  </li>
                   <li>• Check that the work quality meets your expectations</li>
-                  <li>• Ensure all contract requirements have been fulfilled</li>
+                  <li>
+                    • Ensure all contract requirements have been fulfilled
+                  </li>
                   <li>• Provide constructive feedback for any issues</li>
                 </ul>
               </div>
@@ -336,12 +368,13 @@ export default function ContractReviewPage({ params }: { params: Promise<{ id: s
               </div>
 
               <p className="text-xs text-muted-foreground text-center">
-                Once you approve this contract, it will be marked as completed and payment will be processed according to your contract terms.
+                Once you approve this contract, it will be marked as completed
+                and payment will be processed according to your contract terms.
               </p>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
-  )
+  );
 }

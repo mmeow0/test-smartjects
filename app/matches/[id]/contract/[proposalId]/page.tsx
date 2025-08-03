@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/components/auth-provider";
 import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 import { useToast } from "@/hooks/use-toast";
+import { WalletConnect } from "@/components/blockchain/wallet-connect";
 import { contractService } from "@/lib/services/contract.service";
 import {
   ArrowLeft,
@@ -51,15 +52,18 @@ export default function ContractPage({
     const fetchContractData = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
-        const contractData = await contractService.getContractData(id, proposalId);
-        
+        const contractData = await contractService.getContractData(
+          id,
+          proposalId,
+        );
+
         if (!contractData) {
           setError("Contract not found");
           return;
         }
-        
+
         setContract(contractData);
       } catch (error) {
         console.error("Error fetching contract:", error);
@@ -133,21 +137,32 @@ export default function ContractPage({
 
     try {
       const isProvider = user.id === contract.provider.id;
-      const success = await contractService.signContract(contract.id, user.id, isProvider);
+      const success = await contractService.signContract(
+        contract.id,
+        user.id,
+        isProvider,
+      );
 
       if (success) {
         toast({
           title: "Contract signed",
-          description: "You have successfully signed the contract. A copy has been sent to your email.",
+          description:
+            "You have successfully signed the contract. A copy has been sent to your email.",
         });
 
         // Reload contract data to get updated signing status
-        const updatedContractData = await contractService.getContractData(id, proposalId);
+        const updatedContractData = await contractService.getContractData(
+          id,
+          proposalId,
+        );
         if (updatedContractData) {
           setContract(updatedContractData);
-          
+
           // If both parties have signed, redirect to contracts page
-          if (updatedContractData.status.providerSigned && updatedContractData.status.neederSigned) {
+          if (
+            updatedContractData.status.providerSigned &&
+            updatedContractData.status.neederSigned
+          ) {
             setTimeout(() => {
               router.push("/contracts");
             }, 2000);
@@ -265,7 +280,9 @@ export default function ContractPage({
                   <div>
                     <h3 className="text-lg font-medium mb-2">Requirements</h3>
                     <div className="p-4 border rounded-md">
-                      <p className="whitespace-pre-wrap">{contract.terms.requirements}</p>
+                      <p className="whitespace-pre-wrap">
+                        {contract.terms.requirements}
+                      </p>
                     </div>
                   </div>
 
@@ -278,7 +295,9 @@ export default function ContractPage({
                   <div>
                     <h3 className="text-lg font-medium mb-2">Expertise</h3>
                     <div className="p-4 border rounded-md">
-                      <p className="whitespace-pre-wrap">{contract.terms.expertise}</p>
+                      <p className="whitespace-pre-wrap">
+                        {contract.terms.expertise}
+                      </p>
                     </div>
                   </div>
 
@@ -291,7 +310,9 @@ export default function ContractPage({
                   <div>
                     <h3 className="text-lg font-medium mb-2">Approach</h3>
                     <div className="p-4 border rounded-md">
-                      <p className="whitespace-pre-wrap">{contract.terms.approach}</p>
+                      <p className="whitespace-pre-wrap">
+                        {contract.terms.approach}
+                      </p>
                     </div>
                   </div>
 
@@ -304,7 +325,9 @@ export default function ContractPage({
                   <div>
                     <h3 className="text-lg font-medium mb-2">Team</h3>
                     <div className="p-4 border rounded-md">
-                      <p className="whitespace-pre-wrap">{contract.terms.team}</p>
+                      <p className="whitespace-pre-wrap">
+                        {contract.terms.team}
+                      </p>
                     </div>
                   </div>
 
@@ -315,9 +338,13 @@ export default function ContractPage({
               {contract.terms.additionalInfo && (
                 <>
                   <div>
-                    <h3 className="text-lg font-medium mb-2">Additional Information</h3>
+                    <h3 className="text-lg font-medium mb-2">
+                      Additional Information
+                    </h3>
                     <div className="p-4 border rounded-md">
-                      <p className="whitespace-pre-wrap">{contract.terms.additionalInfo}</p>
+                      <p className="whitespace-pre-wrap">
+                        {contract.terms.additionalInfo}
+                      </p>
                     </div>
                   </div>
 
@@ -334,23 +361,23 @@ export default function ContractPage({
                         <th className="p-3 text-left">Milestone</th>
                         <th className="p-3 text-right">Percentage</th>
                         <th className="p-3 text-right">Amount</th>
-    
                       </tr>
                     </thead>
                     <tbody>
-                      {contract.terms.paymentSchedule.map((payment: any, index: number) => (
-                        <tr
-                          key={index}
-                          className={index % 2 === 0 ? "bg-muted/50" : ""}
-                        >
-                          <td className="p-3">{payment.milestone}</td>
-                          <td className="p-3 text-right">
-                            {payment.percentage}%
-                          </td>
-                          <td className="p-3 text-right">{payment.amount}</td>
-                        
-                        </tr>
-                      ))}
+                      {contract.terms.paymentSchedule.map(
+                        (payment: any, index: number) => (
+                          <tr
+                            key={index}
+                            className={index % 2 === 0 ? "bg-muted/50" : ""}
+                          >
+                            <td className="p-3">{payment.milestone}</td>
+                            <td className="p-3 text-right">
+                              {payment.percentage}%
+                            </td>
+                            <td className="p-3 text-right">{payment.amount}</td>
+                          </tr>
+                        ),
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -373,9 +400,11 @@ export default function ContractPage({
                     Deliverables
                   </p>
                   <ul className="list-disc pl-5">
-                    {contract.terms.deliverables.map((item: string, index: number) => (
-                      <li key={index}>{item}</li>
-                    ))}
+                    {contract.terms.deliverables.map(
+                      (item: string, index: number) => (
+                        <li key={index}>{item}</li>
+                      ),
+                    )}
                   </ul>
                 </div>
               </div>
@@ -400,6 +429,11 @@ export default function ContractPage({
         </div>
 
         <div>
+          {/* Wallet Connection */}
+          <div className="mb-6">
+            <WalletConnect />
+          </div>
+
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Contract Status</CardTitle>
@@ -490,18 +524,25 @@ export default function ContractPage({
               {user && contract && (
                 <div className="text-sm text-muted-foreground mt-2">
                   {user.id === contract.provider.id && (
-                    <p>You are signing as the <strong>Provider</strong></p>
+                    <p>
+                      You are signing as the <strong>Provider</strong>
+                    </p>
                   )}
                   {user.id === contract.needer.id && (
-                    <p>You are signing as the <strong>Needer</strong></p>
+                    <p>
+                      You are signing as the <strong>Needer</strong>
+                    </p>
                   )}
                 </div>
               )}
             </CardContent>
             <CardFooter className="flex flex-col gap-2">
-              {user && contract && (
-                ((user.id === contract.provider.id && contract.status.providerSigned) ||
-                 (user.id === contract.needer.id && contract.status.neederSigned)) ? (
+              {user &&
+                contract &&
+                ((user.id === contract.provider.id &&
+                  contract.status.providerSigned) ||
+                (user.id === contract.needer.id &&
+                  contract.status.neederSigned) ? (
                   <Button className="w-full" disabled>
                     <Signature className="h-4 w-4 mr-2" />
                     Already Signed
@@ -515,8 +556,7 @@ export default function ContractPage({
                     <Signature className="h-4 w-4 mr-2" />
                     {isSigning ? "Signing..." : "Sign Contract"}
                   </Button>
-                )
-              )}
+                ))}
               <Button
                 variant="outline"
                 className="w-full"

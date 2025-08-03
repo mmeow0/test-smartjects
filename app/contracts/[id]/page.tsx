@@ -18,6 +18,8 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
+import { WalletConnect } from "@/components/blockchain/wallet-connect";
+import { BlockchainStatus } from "@/components/blockchain/blockchain-status";
 import {
   ArrowLeft,
   Calendar,
@@ -59,9 +61,12 @@ export default function ContractDetailsPage({
     null,
   );
   const [isCheckingSigningStatus, setIsCheckingSigningStatus] = useState(true);
+  const [isSignTrue, setIsSignTrue] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [contract, setContract] = useState<any>(null);
 
+  console.log(contract);
+  
   // Load contract data
   const loadContract = async () => {
     // Don't load while auth is still loading or access is denied
@@ -76,6 +81,8 @@ export default function ContractDetailsPage({
       // Check if contract is fully signed using contractId
       const { isSigned, matchId, proposalId } =
         await contractService.isContractFullySigned(id);
+
+      setIsSignTrue(isSigned)
 
       if (!isSigned) {
         // Contract not fully signed - redirect to signing page if we have match/proposal IDs
@@ -592,6 +599,29 @@ export default function ContractDetailsPage({
               )} */}
             </CardContent>
           </Card>
+
+          {/* Wallet Connection */}
+          <WalletConnect compact={false} />
+
+          {/* Blockchain Status */}
+          <BlockchainStatus
+            contractId={id}
+            blockchainAddress={contract?.blockchain_address}
+            blockchainStatus={contract?.blockchain_status}
+            escrowFunded={contract?.escrow_funded}
+            escrowAmount={contract?.budget?.toString()}
+            isClient={!isProvider}
+            isProvider={isProvider}
+            isFullySigned={isSignTrue}
+            onFunded={() => {
+              // Reload contract data
+              loadContract();
+            }}
+            onDeploymentRetried={() => {
+              // Reload contract data after deployment retry
+              loadContract();
+            }}
+          />
         </div>
       </div>
 

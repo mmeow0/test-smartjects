@@ -1,6 +1,11 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { blockchainService } from "@/lib/services/blockchain.service";
 import { notificationService } from "./notification.service";
 import type { ContractListType } from "../types";
+import {
+  BLOCKCHAIN_RECORDS_ONLY,
+  getDeploymentAmount,
+} from "@/lib/config/blockchain-features.config";
 
 export const contractService = {
   // Get contract data by match ID and proposal ID
@@ -542,6 +547,73 @@ export const contractService = {
       console.log(
         `Contract ${contractId} signed by user ${userId} as ${isProvider ? "provider" : "needer"}`,
       );
+
+      // Check if both parties have signed
+      const bothSigned = data.provider_signed && data.needer_signed;
+
+      if (bothSigned && !data.blockchain_address) {
+        console.log("Both parties signed, deploying smart contract...");
+
+        try {
+          // Get user wallet addresses
+          const { data: providerWallet } = await supabase
+            .from("users")
+            .select("wallet_address")
+            .eq("id", contractData.provider_id)
+            .single();
+
+          const { data: neederWallet } = await supabase
+            .from("users")
+            .select("wallet_address")
+            .eq("id", contractData.needer_id)
+            .single();
+
+          if (providerWallet?.wallet_address && neederWallet?.wallet_address) {
+            // Deploy escrow smart contract
+            const deploymentAmount = getDeploymentAmount(
+              contractData.budget || 0,
+            );
+
+            const escrowAddress = await blockchainService.deployEscrowContract({
+              contractId: contractId,
+              clientAddress: neederWallet.wallet_address,
+              providerAddress: providerWallet.wallet_address,
+              amount: deploymentAmount,
+            });
+
+            if (escrowAddress) {
+              // Update contract with blockchain address
+              await supabase
+                .from("contracts")
+                .update({
+                  blockchain_address: escrowAddress,
+                  blockchain_deployed_at: new Date().toISOString(),
+                  blockchain_status: "deployed",
+                })
+                .eq("id", contractId);
+
+              console.log("Smart contract deployed at:", escrowAddress);
+
+              // Send notification about smart contract deployment
+              const deploymentMessage = `Smart contract has been deployed. The contract is now secured on the blockchain at address: ${escrowAddress}`;
+              await this.sendContractMessage(contractId, deploymentMessage);
+            }
+          } else {
+            console.log(
+              "Wallet addresses not found for users, skipping blockchain deployment",
+            );
+          }
+        } catch (blockchainError) {
+          console.error("Error deploying smart contract:", blockchainError);
+          // Don't fail the signing process if blockchain deployment fails
+          // Send notification about the error
+          await this.sendContractMessage(
+            contractId,
+            "Contract signed successfully, but smart contract deployment failed. Please contact support.",
+          );
+        }
+      }
+
       return true;
     } catch (error) {
       console.error("Error in signContract:", error);
@@ -778,6 +850,12 @@ export const contractService = {
         createdAt: contractData.created_at,
         startDate: contractData.start_date,
         endDate: contractData.end_date,
+        blockchain_address: contractData.blockchain_address,
+        blockchain_status: contractData.blockchain_status,
+        blockchain_deployed_at: contractData.blockchain_deployed_at,
+        escrow_funded: contractData.escrow_funded,
+        escrow_funded_at: contractData.escrow_funded_at,
+        escrow_amount: contractData.escrow_amount,
         exclusivityEnds: contractData.exclusivity_ends,
         budget: contractData.budget,
         provider: {
@@ -2465,6 +2543,20 @@ export const contractService = {
 
       const newStatus = approved ? "completed" : "active";
 
+      // If approving and blockchain is enabled, check wallet connection first
+      if (
+        approved &&
+        contractData.blockchain_address &&
+        !BLOCKCHAIN_RECORDS_ONLY
+      ) {
+        const isWalletConnected = await blockchainService.isWalletConnected();
+        if (!isWalletConnected) {
+          throw new Error(
+            "Wallet not connected. Please connect your wallet to complete the contract and release escrow funds.",
+          );
+        }
+      }
+
       // Update contract
       const { error: updateError } = await supabase
         .from("contracts")
@@ -3227,9 +3319,49 @@ This milestone is now ready for review and approval.`;
         throw updateError;
       }
 
+      // If approved and blockchain is enabled, release escrow funds
+      if (
+        approved &&
+        contractData.blockchain_address &&
+        !BLOCKCHAIN_RECORDS_ONLY
+      ) {
+        // Check if wallet is connected before attempting blockchain interaction
+        const isWalletConnected = await blockchainService.isWalletConnected();
+        if (!isWalletConnected) {
+          throw new Error(
+            "Wallet not connected. Please connect your wallet to complete the contract and release escrow funds.",
+          );
+        }
+
+        try {
+          console.log("Releasing escrow funds for contract:", contractId);
+
+          const released = await blockchainService.releaseEscrowFunds(
+            contractId,
+            true, // approved
+          );
+
+          if (released) {
+            // Update blockchain status
+            await supabase
+              .from("contracts")
+              .update({
+                blockchain_completed_at: new Date().toISOString(),
+                blockchain_status: "completed",
+              })
+              .eq("id", contractId);
+
+            console.log("Escrow funds released successfully");
+          }
+        } catch (blockchainError) {
+          console.error("Error releasing escrow funds:", blockchainError);
+          // Continue with the review process even if blockchain fails
+        }
+      }
+
       // Send notification message
       const message = approved
-        ? `Contract has been approved and marked as completed.${reviewComments ? "\n\nClient comments: " + reviewComments : ""}`
+        ? `Contract has been approved and marked as completed.${reviewComments ? "\n\nClient comments: " + reviewComments : ""}${contractData.blockchain_address && !BLOCKCHAIN_RECORDS_ONLY ? "\n\nEscrow funds have been released to the provider." : contractData.blockchain_address ? "\n\nContract completion recorded on blockchain." : ""}`
         : `Contract has been rejected and returned for revision.${reviewComments ? "\n\nClient comments: " + reviewComments : ""}`;
 
       await this.sendContractMessage(contractId, message);
@@ -3462,6 +3594,155 @@ This milestone is now ready for review and approval.`;
     } catch (error) {
       console.error("Error in getUserContractsForSmartject:", error);
       return { activeContracts: [], completedContracts: [] };
+    }
+  },
+
+  // Retry blockchain deployment for fully signed contracts
+  async retryBlockchainDeployment(contractId: string): Promise<boolean> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      console.log(
+        "🔄 Retrying blockchain deployment for contract:",
+        contractId,
+      );
+
+      // Get contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        console.error("Contract not found:", contractError);
+        return false;
+      }
+
+      // Check if contract is fully signed
+      if (!contractData.provider_signed || !contractData.needer_signed) {
+        console.error("Contract is not fully signed yet");
+        return false;
+      }
+
+      // Check if contract already has blockchain address
+      if (contractData.blockchain_address) {
+        console.log(
+          "Contract already has blockchain address:",
+          contractData.blockchain_address,
+        );
+        return true;
+      }
+
+      // Get user wallet addresses
+      const { data: providerWallet } = await supabase
+        .from("users")
+        .select("wallet_address")
+        .eq("id", contractData.provider_id)
+        .single();
+
+      const { data: neederWallet } = await supabase
+        .from("users")
+        .select("wallet_address")
+        .eq("id", contractData.needer_id)
+        .single();
+
+      if (!providerWallet?.wallet_address || !neederWallet?.wallet_address) {
+        console.error("Wallet addresses not found for users");
+        await this.sendContractMessage(
+          contractId,
+          "Unable to deploy smart contract: wallet addresses not found for both parties. Please ensure both parties have connected their wallets.",
+        );
+        return false;
+      }
+
+      console.log("contractData.budget", contractData.budget);
+      console.log("contractData.budget", {
+        contractId: contractId,
+        clientAddress: neederWallet.wallet_address,
+        providerAddress: providerWallet.wallet_address,
+        amount: contractData.budget.toString(),
+      });
+
+      // Deploy escrow smart contract
+      const deploymentAmount = getDeploymentAmount(contractData.budget || 0);
+
+      const escrowAddress = await blockchainService.deployEscrowContract({
+        contractId: contractId,
+        clientAddress: neederWallet.wallet_address,
+        providerAddress: providerWallet.wallet_address,
+        amount: deploymentAmount,
+      });
+
+      console.log("escrowAddress", escrowAddress);
+
+      if (escrowAddress) {
+        // Update contract with blockchain address
+        await supabase
+          .from("contracts")
+          .update({
+            blockchain_address: escrowAddress,
+            blockchain_deployed_at: new Date().toISOString(),
+            blockchain_status: "deployed",
+          })
+          .eq("id", contractId);
+
+        console.log("✅ Smart contract deployed at:", escrowAddress);
+
+        // Send notification about smart contract deployment
+        const deploymentMessage = `Smart contract has been successfully deployed! The contract is now secured on the blockchain at address: ${escrowAddress}`;
+        await this.sendContractMessage(contractId, deploymentMessage);
+
+        return true;
+      } else {
+        console.error("Failed to deploy smart contract");
+        await this.sendContractMessage(
+          contractId,
+          "Smart contract deployment failed. Please try again or contact support if the issue persists.",
+        );
+        return false;
+      }
+    } catch (error) {
+      console.error("Error in retryBlockchainDeployment:", error);
+      await this.sendContractMessage(
+        contractId,
+        "Smart contract deployment failed due to an error. Please try again or contact support.",
+      );
+      return false;
+    }
+  },
+
+  // Update contract funding status after successful blockchain funding
+  async updateContractFundingStatus(contractId: string): Promise<boolean> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { error } = await supabase
+        .from("contracts")
+        .update({
+          escrow_funded: true,
+          blockchain_status: "funded",
+          escrow_funded_at: new Date().toISOString(),
+        })
+        .eq("id", contractId);
+
+      if (error) {
+        console.error("Error updating funding status:", error);
+        return false;
+      }
+
+      console.log("✅ Contract funding status updated:", contractId);
+
+      // Send notification about funding
+      await this.sendContractMessage(
+        contractId,
+        "💰 Escrow contract has been funded! The funds are now securely held and work can begin.",
+      );
+
+      return true;
+    } catch (error) {
+      console.error("Error in updateContractFundingStatus:", error);
+      return false;
     }
   },
 };
