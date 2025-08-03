@@ -43,12 +43,6 @@ export function checkBlockchainConfig(): BlockchainConfigStatus {
   const secretKey = process.env.THIRDWEB_SECRET_KEY;
   const hasSecretKey = !!secretKey && secretKey.length > 0;
 
-  if (!hasSecretKey) {
-    warnings.push(
-      'THIRDWEB_SECRET_KEY is not set. Some server-side blockchain operations may not work.'
-    );
-  }
-
   // Check factory address
   const factoryAddress = process.env.NEXT_PUBLIC_ESCROW_FACTORY_ADDRESS;
   const hasFactoryAddress = !!factoryAddress && factoryAddress.length > 0;
