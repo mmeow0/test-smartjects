@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/components/auth-provider";
 import { ClientLayout } from "./client-layout";
 import { ThirdwebProvider } from "thirdweb/react";
+import { WalletProvider } from "@/contexts/wallet-context";
 
 const inter = Inter({ subsets: ["latin"] });
 const archivo = Archivo({
@@ -65,10 +66,12 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ThirdwebProvider>
-            <AuthProvider>
-              <ClientLayout>{children}</ClientLayout>
-              <Toaster />
-            </AuthProvider>
+            <WalletProvider>
+              <AuthProvider>
+                <ClientLayout>{children}</ClientLayout>
+                <Toaster />
+              </AuthProvider>
+            </WalletProvider>
           </ThirdwebProvider>
         </ThemeProvider>
       </body>

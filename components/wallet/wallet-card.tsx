@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { useActiveAccount, useActiveWallet, useWalletBalance } from "thirdweb/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,10 +15,9 @@ import {
   Zap,
   Settings,
   WifiOff,
-  Loader2
+  Loader2,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { client } from "@/app/thirdweb/client";
+import { useWallet } from "@/contexts/wallet-context";
 import { cn } from "@/lib/utils";
 
 interface WalletCardProps {
@@ -37,48 +35,31 @@ export function WalletCard({
   showNetwork = true,
   compact = false,
   onConnectClick,
-  onSettingsClick
+  onSettingsClick,
 }: WalletCardProps) {
-  const account = useActiveAccount();
-  const wallet = useActiveWallet();
-  const chain = wallet?.getChain();
-  const { data: balance, isLoading: balanceLoading } = useWalletBalance({
-    client,
+  const {
+    address,
+    isConnected,
+    isConnecting,
+    balance,
     chain,
-    address: account?.address,
-  });
-  const { toast } = useToast();
+    connectWallet,
+    disconnectWallet,
+    copyAddress,
+    truncateAddress,
+    openExplorer,
+  } = useWallet();
 
-  const isConnected = !!account;
-  const isConnecting = wallet && !account;
-
-  const copyAddress = async () => {
-    if (account?.address) {
-      try {
-        await navigator.clipboard.writeText(account.address);
-        toast({
-          title: "Address copied!",
-          description: "Wallet address has been copied to clipboard.",
-        });
-      } catch (err) {
-        toast({
-          title: "Failed to copy",
-          description: "Could not copy address to clipboard.",
-          variant: "destructive",
-        });
-      }
+  const handleConnect = async () => {
+    if (onConnectClick) {
+      onConnectClick();
+    } else {
+      await connectWallet();
     }
   };
 
-  const truncateAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
-  const openExplorer = () => {
-    if (account?.address && chain) {
-      const explorerUrl = `https://etherscan.io/address/${account.address}`;
-      window.open(explorerUrl, '_blank');
-    }
+  const handleDisconnect = async () => {
+    await disconnectWallet();
   };
 
   const getStatusIcon = () => {
@@ -97,14 +78,10 @@ export function WalletCard({
     return "Disconnected";
   };
 
-  const getStatusColor = () => {
-    if (isConnecting) return "blue";
-    if (isConnected) return "green";
-    return "gray";
-  };
-
   return (
-    <Card className={cn("transition-all duration-200 hover:shadow-md", className)}>
+    <Card
+      className={cn("transition-all duration-200 hover:shadow-md", className)}
+    >
       <CardHeader className={cn("pb-3", compact && "pb-2")}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -119,9 +96,13 @@ export function WalletCard({
               variant="secondary"
               className={cn(
                 "text-xs",
-                isConnected && "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800",
-                isConnecting && "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800",
-                !isConnected && !isConnecting && "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-800"
+                isConnected &&
+                  "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800",
+                isConnecting &&
+                  "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800",
+                !isConnected &&
+                  !isConnecting &&
+                  "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-800",
               )}
             >
               {getStatusText()}
@@ -142,7 +123,7 @@ export function WalletCard({
                     Address
                   </p>
                   <p className="font-mono text-sm font-medium">
-                    {truncateAddress(account.address)}
+                    {truncateAddress(address!)}
                   </p>
                 </div>
                 <div className="flex gap-1">
@@ -172,12 +153,10 @@ export function WalletCard({
                     <Coins className="h-4 w-4" />
                     Balance
                   </p>
-                  {balanceLoading ? (
-                    <Skeleton className="h-4 w-24" />
+                  {balance ? (
+                    <p className="font-semibold text-sm">{balance}</p>
                   ) : (
-                    <p className="font-semibold text-sm">
-                      {balance?.displayValue || "0"} {balance?.symbol || "ETH"}
-                    </p>
+                    <Skeleton className="h-4 w-24" />
                   )}
                 </div>
               </div>
@@ -217,7 +196,7 @@ export function WalletCard({
                   variant="outline"
                   size="sm"
                   className="flex-1 gap-2"
-                  onClick={() => wallet?.disconnect()}
+                  onClick={handleDisconnect}
                 >
                   <WifiOff className="h-4 w-4" />
                   Disconnect
@@ -239,12 +218,22 @@ export function WalletCard({
             </div>
             {showActions && (
               <Button
-                onClick={onConnectClick}
+                onClick={handleConnect}
                 className="w-full gap-2"
                 variant="default"
+                disabled={isConnecting}
               >
-                <Wallet className="h-4 w-4" />
-                Connect Wallet
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="h-4 w-4" />
+                    Connect Wallet
+                  </>
+                )}
               </Button>
             )}
             <div className="flex flex-wrap gap-2 justify-center text-xs text-muted-foreground">

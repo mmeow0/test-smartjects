@@ -1,8 +1,13 @@
 "use client";
 
 import React from "react";
-import { ConnectButton, useActiveAccount, useActiveWallet, useWalletBalance } from "thirdweb/react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -15,55 +20,27 @@ import {
   AlertCircle,
   Coins,
   Shield,
-  Zap
+  Zap,
+  Loader2,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { client } from "@/app/thirdweb/client";
+import { useWallet } from "@/contexts/wallet-context";
 
 interface WalletConnectionProps {
   className?: string;
 }
 
 export function WalletConnection({ className }: WalletConnectionProps) {
-  const account = useActiveAccount();
-  const wallet = useActiveWallet();
-  const chain = wallet?.getChain();
-  const { data: balance, isLoading: balanceLoading } = useWalletBalance({
-    client,
+  const {
+    address,
+    isConnected,
+    isConnecting,
+    balance,
     chain,
-    address: account?.address,
-  });
-  const { toast } = useToast();
-
-  const copyAddress = async () => {
-    if (account?.address) {
-      try {
-        await navigator.clipboard.writeText(account.address);
-        toast({
-          title: "Address copied!",
-          description: "Wallet address has been copied to clipboard.",
-        });
-      } catch (err) {
-        toast({
-          title: "Failed to copy",
-          description: "Could not copy address to clipboard.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const truncateAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
-  const openExplorer = () => {
-    if (account?.address && chain) {
-      // You can customize this URL based on the chain
-      const explorerUrl = `https://etherscan.io/address/${account.address}`;
-      window.open(explorerUrl, '_blank');
-    }
-  };
+    connectWallet,
+    copyAddress,
+    truncateAddress,
+    openExplorer,
+  } = useWallet();
 
   return (
     <div className={className}>
@@ -74,7 +51,7 @@ export function WalletConnection({ className }: WalletConnectionProps) {
               <Wallet className="h-5 w-5 text-primary" />
               <CardTitle className="text-lg">Web3 Wallet</CardTitle>
             </div>
-            {account && (
+            {isConnected && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3" />
                 Connected
@@ -82,43 +59,37 @@ export function WalletConnection({ className }: WalletConnectionProps) {
             )}
           </div>
           <CardDescription>
-            {account
+            {isConnected
               ? "Your wallet is connected and ready to use"
-              : "Connect your wallet to access Web3 features"
-            }
+              : "Connect your wallet to access Web3 features"}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Connection Status */}
-          <div className="flex justify-center">
-            <ConnectButton
-              client={client}
-              theme="light"
-              connectButton={{
-                label: "Connect Wallet",
-                style: {
-                  background: "hsl(var(--primary))",
-                  color: "hsl(var(--primary-foreground))",
-                  border: "none",
-                  borderRadius: "6px",
-                  padding: "12px 24px",
-                  fontSize: "14px",
-                  fontWeight: "500",
-                },
-              }}
-              detailsButton={{
-                style: {
-                  background: "hsl(var(--secondary))",
-                  color: "hsl(var(--secondary-foreground))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "6px",
-                },
-              }}
-            />
-          </div>
+          {/* Connection Button */}
+          {!isConnected && (
+            <div className="flex justify-center">
+              <Button
+                onClick={connectWallet}
+                disabled={isConnecting}
+                className="min-w-[200px]"
+              >
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="mr-2 h-4 w-4" />
+                    Connect Wallet
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
 
-          {account && (
+          {isConnected && address && (
             <>
               <Separator />
 
@@ -134,7 +105,7 @@ export function WalletConnection({ className }: WalletConnectionProps) {
                             Wallet Address
                           </p>
                           <p className="font-mono text-sm">
-                            {truncateAddress(account.address)}
+                            {truncateAddress(address)}
                           </p>
                         </div>
                         <div className="flex gap-1">
@@ -168,12 +139,10 @@ export function WalletConnection({ className }: WalletConnectionProps) {
                             <Coins className="h-4 w-4" />
                             Balance
                           </p>
-                          {balanceLoading ? (
-                            <Skeleton className="h-4 w-20" />
+                          {balance ? (
+                            <p className="font-semibold">{balance}</p>
                           ) : (
-                            <p className="font-semibold">
-                              {balance?.displayValue || "0"} {balance?.symbol || "ETH"}
-                            </p>
+                            <Skeleton className="h-4 w-20" />
                           )}
                         </div>
                       </div>
@@ -211,7 +180,8 @@ export function WalletConnection({ className }: WalletConnectionProps) {
                       Security Reminder
                     </p>
                     <p className="text-xs text-orange-700 dark:text-orange-300">
-                      Never share your private keys or seed phrase. Always verify transaction details before signing.
+                      Never share your private keys or seed phrase. Always
+                      verify transaction details before signing.
                     </p>
                   </div>
                 </div>
@@ -220,7 +190,7 @@ export function WalletConnection({ className }: WalletConnectionProps) {
           )}
 
           {/* No Wallet Connected State */}
-          {!account && (
+          {!isConnected && (
             <div className="text-center py-8 space-y-4">
               <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center">
                 <Wallet className="h-8 w-8 text-muted-foreground" />
@@ -228,7 +198,8 @@ export function WalletConnection({ className }: WalletConnectionProps) {
               <div className="space-y-2">
                 <h3 className="font-semibold">No Wallet Connected</h3>
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                  Connect your wallet to access Web3 features, view your balance, and interact with blockchain applications.
+                  Connect your wallet to access Web3 features, view your
+                  balance, and interact with blockchain applications.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2 justify-center text-xs text-muted-foreground">
