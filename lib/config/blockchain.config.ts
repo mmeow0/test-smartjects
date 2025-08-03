@@ -6,7 +6,8 @@ const isDevelopment = process.env.NODE_ENV === "development";
 const isProduction = process.env.NODE_ENV === "production";
 
 // Chain configuration
-export const activeChain = isDevelopment ? polygonAmoy : polygon;
+// Always use testnet for now (change to polygon for mainnet deployment)
+export const activeChain = polygonAmoy;
 
 // Contract addresses (update after deployment)
 export const CONTRACT_ADDRESSES = {
@@ -50,9 +51,18 @@ export const BLOCK_EXPLORER_URLS = {
 
 // RPC URLs (fallback if Thirdweb RPC fails)
 export const RPC_URLS = {
-  [polygon.id]: process.env.NEXT_PUBLIC_POLYGON_RPC_URL || "https://polygon-rpc.com",
-  [polygonAmoy.id]: process.env.NEXT_PUBLIC_POLYGON_AMOY_RPC_URL || "https://rpc-amoy.polygon.technology",
+  [polygon.id]:
+    process.env.NEXT_PUBLIC_POLYGON_RPC_URL || "https://polygon-rpc.com",
+  [polygonAmoy.id]:
+    process.env.NEXT_PUBLIC_POLYGON_AMOY_RPC_URL ||
+    "https://rpc-amoy.polygon.technology",
 } as const;
+
+// Configure chain with custom RPC
+export const configuredChain = defineChain({
+  ...activeChain,
+  rpc: RPC_URLS[activeChain.id],
+});
 
 // Validation helpers
 export const validateAddress = (address: string): boolean => {

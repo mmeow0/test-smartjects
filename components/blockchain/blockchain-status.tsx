@@ -72,10 +72,12 @@ export function BlockchainStatus({
   console.log(isFullySigned);
 
   useEffect(() => {
-    console.log("meow");
+    console.log("🔄 BlockchainStatus component mounted/updated");
+    console.log("📍 Blockchain address:", blockchainAddress);
+    console.log("📊 Blockchain status:", blockchainStatus);
+    console.log("✍️ Is fully signed:", isFullySigned);
 
     checkWalletConnection();
-    console.log("meow", blockchainAddress);
     if (blockchainAddress) {
       loadEscrowDetails();
     }
@@ -104,7 +106,10 @@ export function BlockchainStatus({
   };
 
   const handleFundContract = async () => {
+    console.log("💰 Attempting to fund contract");
+
     if (!walletConnected) {
+      console.error("❌ Wallet not connected");
       toast({
         title: "Wallet not connected",
         description: "Please connect your wallet first",
@@ -143,6 +148,7 @@ export function BlockchainStatus({
       );
 
       if (success) {
+        console.log("✅ Contract funded successfully");
         toast({
           title: "Contract funded",
           description: "Escrow contract has been funded successfully",
@@ -170,12 +176,33 @@ export function BlockchainStatus({
   };
 
   const handleRetryDeployment = async () => {
+    // Check if required environment variables are set
+    const clientId = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+    const factoryAddress = process.env.NEXT_PUBLIC_ESCROW_FACTORY_ADDRESS;
+
+    console.log("🔍 Environment check before deployment:");
+    console.log("Client ID available:", !!clientId);
+    console.log("Factory address available:", !!factoryAddress);
+
+    if (!clientId) {
+      toast({
+        title: "Configuration Error",
+        description:
+          "Blockchain client ID is not configured. Please contact support.",
+        variant: "destructive",
+      });
+      console.error("❌ NEXT_PUBLIC_THIRDWEB_CLIENT_ID is not set");
+      return;
+    }
+
     setIsRetryingDeployment(true);
     try {
+      console.log("🚀 Attempting to deploy contract:", contractId);
       const success =
         await contractService.retryBlockchainDeployment(contractId);
 
       if (success) {
+        console.log("✅ Deployment initiated successfully");
         toast({
           title: "Deployment initiated",
           description:
@@ -183,13 +210,33 @@ export function BlockchainStatus({
         });
         onDeploymentRetried?.();
       } else {
+        console.error("❌ Deployment returned false");
         throw new Error("Failed to initiate deployment");
       }
     } catch (error: any) {
-      console.error("Error retrying deployment:", error);
+      console.error("❌ Error retrying deployment:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause,
+      });
+
+      let errorMessage = "Failed to deploy the smart contract";
+
+      // Provide more specific error messages
+      if (error.message?.includes("client not initialized")) {
+        errorMessage =
+          "Blockchain service not initialized. Please refresh the page and try again.";
+      } else if (error.message?.includes("wallet")) {
+        errorMessage =
+          "Wallet connection issue. Please ensure your wallet is connected.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: "Deployment failed",
-        description: error.message || "Failed to deploy the smart contract",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

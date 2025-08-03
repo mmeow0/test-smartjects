@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRequirePaidAccount } from "@/hooks/use-auth-guard";
 import { useToast } from "@/hooks/use-toast";
+import { useWallet } from "@/hooks/use-wallet";
 import {
   AlertCircle,
   ArrowLeft,
@@ -38,6 +39,7 @@ import {
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { WalletConnectionAlert } from "@/components/blockchain/wallet-connection-alert";
 import { useProposal } from "@/hooks/use-proposal";
 import { useInterest } from "@/hooks/use-interest";
 import { negotiationService } from "@/lib/services/negotiation.service";
@@ -119,6 +121,7 @@ export default function NegotiatePage({
   const router = useRouter();
   const { isLoading: authLoading, user, canAccess } = useRequirePaidAccount();
   const { toast } = useToast();
+  const { isConnected, connect } = useWallet();
 
   // Interest functionality
   const { hasExpressedInterest, isExpressingInterest, expressInterest } =
@@ -492,6 +495,21 @@ export default function NegotiatePage({
   };
 
   const handleAcceptTerms = async () => {
+    // Check if wallet is connected
+    if (!isConnected) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet to create a contract",
+        variant: "destructive",
+      });
+
+      // Try to connect wallet
+      const address = await connect();
+      if (!address) {
+        return; // Exit if wallet connection failed
+      }
+    }
+
     // Validate milestones if they're being used
     if (useMilestones) {
       if (milestones.length === 0) {
@@ -814,6 +832,15 @@ export default function NegotiatePage({
           </p>
         </div>
       </div>
+
+      {/* Show wallet connection alert for needer (who can accept terms) */}
+      {user?.id === negotiation?.needer?.id && !isConnected && (
+        <WalletConnectionAlert
+          title="Wallet Required for Contract Creation"
+          description="To accept terms and create a smart contract, you need to connect your wallet first."
+          className="mb-6"
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">

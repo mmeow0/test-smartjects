@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/sheet";
 // import { ThemeToggle } from "@/components/theme-toggle"; // временно скрыто
 import { NotificationBadge } from "@/components/notification-badge";
-// import { WalletModal } from "@/components/wallet";
+import { WalletConnect } from "@/components/blockchain/wallet-connect";
 import { Logo } from "./icons/Logo";
 import { LogoWhite } from "./icons/LogoWhite";
 
@@ -102,13 +102,17 @@ export function TopNav({ isDarkNav: isHomePage = false }: TopNavProps) {
                     key={item.href}
                     href={item.href}
                     className={`flex items-center gap-1 text-sm font-medium transition-colors ${
-                     isHomePage
-                    ? `hover:text-[#FFD900] ${
-                        pathname === item.href ? "text-white" : "text-gray-500"
-                      }`
-                    : `hover:text-[#FFD900] ${
-                        pathname === item.href ? "text-black" : "text-gray-500"
-                      }`
+                      isHomePage
+                        ? `hover:text-[#FFD900] ${
+                            pathname === item.href
+                              ? "text-white"
+                              : "text-gray-500"
+                          }`
+                        : `hover:text-[#FFD900] ${
+                            pathname === item.href
+                              ? "text-black"
+                              : "text-gray-500"
+                          }`
                     }`}
                   >
                     {item.label}
@@ -142,16 +146,12 @@ export function TopNav({ isDarkNav: isHomePage = false }: TopNavProps) {
               </div>
             )}
 
-            {/* Wallet Modal (for authenticated users) */}
-            {/* {isAuthenticated && (
-              <WalletModal
-                className={`ml-4 ${
-                  isHomePage
-                    ? "[&_button]:text-white [&_button]:border-white/20 [&_button:hover]:text-[#FFD900] [&_button:hover]:border-[#FFD900]"
-                    : "[&_button]:text-black [&_button]:border-gray-300 [&_button:hover]:text-[#FFD900] [&_button:hover]:border-[#FFD900]"
-                }`}
-              />
-            )} */}
+            {/* Wallet Connect (for authenticated users) */}
+            {isAuthenticated && (
+              <div className="ml-2">
+                <WalletConnect compact />
+              </div>
+            )}
 
             {/* User Menu or Auth Buttons */}
             {isAuthenticated ? (
