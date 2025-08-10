@@ -213,12 +213,12 @@ export const SearchFilters = memo(
         <div className="flex flex-col lg:flex-row w-full gap-4 sm:gap-6 items-start lg:items-center bg-gray-50 rounded-2xl p-3">
           {/* Search Bar - Always Visible */}
           <div className="relative w-full">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 z-10" />
             <Input
               placeholder="Search smartjects..."
               value={query}
+              icon={<Search size={16} />} 
               onChange={onQueryChange}
-              className="pl-12 pr-4 py-3 sm:py-4 h-12 sm:h-14 border-0 rounded-2xl text-base focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="pl-12 pr-4 py-3 sm:py-4 h-12 sm:h-14 border-0 rounded-2xl text-base focus:bg-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
             />
           </div>
 

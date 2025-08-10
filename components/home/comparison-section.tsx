@@ -30,16 +30,15 @@ export const ComparisonSection = memo(() => (
                 </span>
                 <span className="text-slate-50"> are</span>
                 <br className="hidden sm:block" />
-                <span className="text-slate-50"> better for innovations</span>
+                <span className="text-slate-50"> ideal for innovations</span>
               </h2>
             </div>
             <div className="text-center lg:text-left">
               <p className="text-white text-sm sm:text-base lg:text-lg leading-6 lg:leading-7 max-w-2xl mx-auto lg:mx-0">
-                Traditional implementation projects are not focused on
-                innovation. Long processes like gathering requirements, writing
-                specs, and running tenders can’t keep up with fast-moving
-                technologies - so results often end up outdated, average, and
-                uncompetitive.
+                Traditional implementation projects are not focused on innovation.
+                Long processes like gathering requirements, writing specs and running 
+                tenders can’t keep up with fast-moving technologies - so results often 
+                end up outdated, average, and uncompetitive.
               </p>
             </div>
           </div>
@@ -67,8 +66,7 @@ export const ComparisonSection = memo(() => (
                       Not Built for Innovation
                     </h4>
                     <p className="text-white text-xs sm:text-sm leading-4 sm:leading-5">
-                      Often start from internal assumptions or top-down
-                      mandates, leading to weak competitive market position.
+                      Often start from internal assumptions or top-down mandates, leading to weak competitive market position.
                     </p>
                   </div>
 
@@ -77,8 +75,7 @@ export const ComparisonSection = memo(() => (
                       Weak Business Cases
                     </h4>
                     <p className="text-white text-xs sm:text-sm leading-4 sm:leading-5">
-                      Market validation comes too late - only after pilots or
-                      expensive market research.
+                      Market validation comes too late - only after pilots or expensive market research.
                     </p>
                   </div>
                 </div>
@@ -88,8 +85,7 @@ export const ComparisonSection = memo(() => (
                     Always late
                   </h4>
                   <p className="text-white text-xs sm:text-sm leading-4 sm:leading-5">
-                    Require long lead times, RFP processes, and vendor
-                    evaluations.
+                    Require long lead times, RFP processes, and vendor evaluations.
                   </p>
                 </div>
               </div>
@@ -104,7 +100,7 @@ export const ComparisonSection = memo(() => (
                   </span>
                 </div>
                 <h3 className="font-semibold text-black text-base sm:text-lg leading-5 sm:leading-6">
-                  Smartjects approach
+                  Smartjects
                 </h3>
               </div>
 
@@ -112,11 +108,10 @@ export const ComparisonSection = memo(() => (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="bg-white rounded-xl sm:rounded-2xl border border-[#eaeaea] p-4 sm:p-6 space-y-3 sm:space-y-4 lg:space-y-[25px]">
                     <h4 className="font-semibold text-black text-sm sm:text-base lg:text-lg leading-5 sm:leading-6">
-                      Immediate relevance through research-driven origin
+                      Immediate relevance through research origin
                     </h4>
                     <p className="text-slate-900 text-xs sm:text-sm leading-4 sm:leading-5">
-                      Begin with scientific research, ensuring ideas are
-                      grounded in recent innovations and cutting-edge findings.
+                      Begin with scientific research data and ensure that ideas are grounded in recent innovations.
                     </p>
                   </div>
 
@@ -125,8 +120,7 @@ export const ComparisonSection = memo(() => (
                       Market validation is built-In
                     </h4>
                     <p className="text-slate-900 text-xs sm:text-sm leading-4 sm:leading-5">
-                      Use live voting mechanisms to community-validate
-                      relevance, demand, and supply before implementation.
+                      Use live voting mechanisms to validate relevance, demand, and supply with community before implementation.
                     </p>
                   </div>
                 </div>
@@ -136,8 +130,7 @@ export const ComparisonSection = memo(() => (
                     Shorter time to value
                   </h4>
                   <p className="text-slate-900 text-xs sm:text-sm leading-4 sm:leading-5">
-                    Allow fast, peer-to-peer matching of needs and providers,
-                    leading directly to automated smart contract creation.
+                    Allow fast matching of demand and delivery leading directly to proposals and smart contracts creation.
                   </p>
                 </div>
               </div>
@@ -162,9 +155,7 @@ export const ComparisonSection = memo(() => (
             </div>
             <div className="text-center lg:text-left">
               <p className="text-white text-sm sm:text-base lg:text-lg leading-6 lg:leading-7 max-w-2xl mx-auto lg:mx-0">
-                Startups cannot keep up with the pace of innovation.
-                Technologies quickly become obsolete, and most startups lose
-                their reason for existence.
+                Startups cannot keep up with the pace of innovation. Technologies quickly become obsolete and most startups lose their reason for existence.
               </p>
             </div>
           </div>
@@ -185,25 +176,23 @@ export const ComparisonSection = memo(() => (
               </div>
 
               <div className="space-y-3 sm:space-y-4">
-                <div className="bg-[#ffffff0d] rounded-xl sm:rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-6">
+                <div className=" space-y-2">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    <div className="space-y-3">
+                    <div className="space-y-3 bg-[#ffffff0d] rounded-xl sm:rounded-2xl p-4 sm:p-6 sm:space-y-6">
                       <h4 className="font-semibold text-slate-50 text-sm sm:text-base lg:text-lg leading-5 sm:leading-6">
                         Fundraising bottlenecks
                       </h4>
                       <p className="text-white text-xs sm:text-sm leading-4 sm:leading-5">
-                        Require initial capital, pitching, and often months of
-                        pre-revenue development.
+                        Require initial capital, pitching, and often months of pre-revenue development.
                       </p>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-3 bg-[#ffffff0d] rounded-xl sm:rounded-2xl p-4 sm:p-6 sm:space-y-6">
                       <h4 className="font-semibold text-slate-50 text-sm sm:text-base lg:text-lg leading-5 sm:leading-6">
-                        Legal & bureaucratic overhead
+                        Bureaucratic overheads
                       </h4>
                       <p className="text-white text-xs sm:text-sm leading-4 sm:leading-5">
-                        Need incorporation, legal setup, bank accounts, and tax
-                        compliance.
+                        Need incorporation, legal setup, bank accounts and tax compliance.
                       </p>
                     </div>
                   </div>
@@ -211,11 +200,10 @@ export const ComparisonSection = memo(() => (
 
                 <div className="bg-[#ffffff0d] rounded-xl sm:rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 lg:space-y-[25px]">
                   <h4 className="font-semibold text-slate-50 text-sm sm:text-base lg:text-lg leading-5 sm:leading-6">
-                    High-risk, monolithic efforts
+                    High-risk, all-out efforts
                   </h4>
                   <p className="text-white text-xs sm:text-sm leading-4 sm:leading-5">
-                    Require full-time dedication, co-founder alignment, and
-                    investor trust.
+                    Require full-time dedication, co-founder <br/> alignment, and investor trust.
                   </p>
                 </div>
               </div>
@@ -230,7 +218,7 @@ export const ComparisonSection = memo(() => (
                   </span>
                 </div>
                 <h3 className="font-semibold text-black text-base sm:text-lg leading-5 sm:leading-6">
-                  Smartjects Model
+                  Smartjects
                 </h3>
               </div>
 
@@ -241,31 +229,26 @@ export const ComparisonSection = memo(() => (
                       No need for fundraising
                     </h4>
                     <p className="text-slate-900 text-xs sm:text-sm leading-4 sm:leading-5">
-                      Enable individuals and teams to monetize implementation
-                      expertise immediately by responding to existing demand.
+                      Enable individuals and teams to commercialize expertise immediately by responding to existing demand without intermediaries.
                     </p>
                   </div>
 
                   <div className="bg-white rounded-xl sm:rounded-2xl border border-[#eaeaea] p-4 sm:p-6 space-y-3 sm:space-y-4 lg:space-y-[25px]">
                     <h4 className="font-semibold text-black text-sm sm:text-base lg:text-lg leading-5 sm:leading-6">
-                      No legal entity required
+                      No legal entity require
                     </h4>
                     <p className="text-slate-900 text-xs sm:text-sm leading-4 sm:leading-5">
-                      Use smart contracts to formalize collaboration, making it
-                      possible for any expert to work project-by-project without
-                      overhead.
+                      Use smart contracts to secure collaboration, making it possible for any expert to work project-by-project without overheads.
                     </p>
                   </div>
                 </div>
 
                 <div className="bg-white rounded-xl sm:rounded-2xl border border-[#eaeaea] p-4 sm:p-6 space-y-3 sm:space-y-4 lg:space-y-[25px]">
                   <h4 className="font-semibold text-black text-sm sm:text-base lg:text-lg leading-5 sm:leading-6">
-                    Distributed collaboration over monolithic venture
+                    Distributed collaboration over joint ventures
                   </h4>
                   <p className="text-slate-900 text-xs sm:text-sm leading-4 sm:leading-5">
-                    Allow modular contributions from individuals, small teams,
-                    or companies who want to build without quitting their jobs
-                    or taking massive risks.
+                    Allow researchers, developers, small teams and enterprises all over the world contribute and drive innovations together.
                   </p>
                 </div>
               </div>

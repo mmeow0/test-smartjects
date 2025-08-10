@@ -209,7 +209,7 @@ export default function ProfilePage() {
                     <div className="space-y-2">
                       <label
                         htmlFor="name"
-                        className="text-sm font-medium block"
+                        className="text-sm font-medium block pb-1"
                       >
                         Name
                       </label>
@@ -218,7 +218,6 @@ export default function ProfilePage() {
                         name="name"
                         value={profileData.name}
                         onChange={handleInputChange}
-                        className="text-base font-bold"
                         placeholder="Enter your name"
                       />
                     </div>
@@ -228,7 +227,7 @@ export default function ProfilePage() {
                     </CardTitle>
                   )}
                   <CardDescription>
-                    <p className="capitalize border-none text-gray-400 pl-1">
+                    <p className="capitalize border-none text-gray-400 pl-1 pt-1">
                       {user?.accountType} Account
                     </p>
                   </CardDescription>

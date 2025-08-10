@@ -28,7 +28,7 @@ export function HeroSection() {
           {/* Mobile Layout - Stack vertically */}
           <div className="lg:hidden flex flex-col space-y-8 md:space-y-12 text-center justify-center min-h-full">
             {/* Headline */}
-            <div className="space-y-4">
+            <div className="space-y-4 pt-20">
               <h1 className="text-white leading-tight">
                 <span className="block font-archivo font-normal text-3xl sm:text-4xl md:text-5xl">
                   Innovations direct
@@ -36,9 +36,9 @@ export function HeroSection() {
 
                 <span className="inline-flex items-end gap-2">
                   <span className="font-archivo font-normal text-3xl sm:text-4xl md:text-5xl">
-                    delivery:&nbsp;&nbsp;
+                    delivery:&nbsp;
                   </span>
-                  <span className="font-dynalight text-4xl sm:text-5xl md:text-6xl text-white leading-none">
+                  <span className="font-dynalight text-5xl text-white leading-none">
                     from research
                   </span>
                 </span>
@@ -52,9 +52,7 @@ export function HeroSection() {
             {/* Description */}
             <div className="max-w-md mx-auto">
               <p className="font-archivo font-normal text-white text-lg sm:text-xl leading-relaxed text-center">
-                smartjects platform transforms scientific research insights into
-                business projects and provides an environment to discover,
-                collaborate and execute implementation-focused smart contracts
+                smartjects platform transforms scientific research insights into business projects and provides an environment to discover, collaborate and execute implementation-focused smart contracts
               </p>
             </div>
 

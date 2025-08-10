@@ -580,7 +580,7 @@ export default function SmartjectsHubPage() {
                 </div>
                 <div className="inline-flex items-center justify-center gap-2.5 pl-0.5 pr-0 py-0 relative flex-[0_0_auto]">
                   <p className="relative max-w-7xl mt-[-1.00px] text-base font-normal text-gray-600">
-                    Explore potential implementation projects for business
+                    Explore innovations marketplace
                   </p>
                 </div>
               </div>
