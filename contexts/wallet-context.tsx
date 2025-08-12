@@ -170,11 +170,30 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   // Helper function to check if wallet is available
   const isWalletAvailable = async (walletId: WalletType): Promise<boolean> => {
     try {
-      if (walletId === "io.metamask") {
-        return typeof window !== "undefined" && window.ethereum?.isMetaMask;
+      if (typeof window === "undefined") return false;
+
+      switch (walletId) {
+        case "io.metamask":
+          return !!window.ethereum?.isMetaMask;
+
+        case "com.coinbase.wallet":
+          return !!(
+            window.ethereum?.isCoinbaseWallet || window.coinbaseWalletExtension
+          );
+
+        case "io.rabby":
+          return !!window.ethereum?.isRabby;
+
+        case "com.trustwallet.app":
+          return !!window.ethereum?.isTrust;
+
+        case "walletConnect":
+          // WalletConnect doesn't require browser extension
+          return true;
+
+        default:
+          return false;
       }
-      // For other wallets, we'll try to create them and see if they're available
-      return true;
     } catch {
       return false;
     }
@@ -195,16 +214,46 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           throw new Error(`Unsupported wallet: ${selectedWalletId}`);
         }
 
+        // Check if wallet is available
+        const isAvailable = await isWalletAvailable(selectedWalletId);
+        if (!isAvailable) {
+          let walletName = selectedWalletId;
+          switch (selectedWalletId) {
+            case "io.metamask":
+              walletName = "MetaMask";
+              break;
+            case "com.coinbase.wallet":
+              walletName = "Coinbase Wallet";
+              break;
+            case "io.rabby":
+              walletName = "Rabby";
+              break;
+            case "com.trustwallet.app":
+              walletName = "Trust Wallet";
+              break;
+          }
+          throw new Error(
+            `${walletName} is not installed or available. Please install it first.`,
+          );
+        }
+
         // Create wallet instance
         const wallet = createWallet(selectedWalletId);
 
-        // Connect wallet
-        await connect(async () => {
+        // Add timeout to prevent infinite loading
+        const connectPromise = connect(async () => {
           await wallet.connect({
             client,
           });
           return wallet;
         });
+
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Connection timeout")), 30000);
+        });
+
+        // Race between connection and timeout
+        await Promise.race([connectPromise, timeoutPromise]);
 
         // Save connection state
         localStorage.setItem(WALLET_STORAGE_KEY, "true");
@@ -218,10 +267,21 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         console.error("Error connecting wallet:", error);
 
         let errorMessage = "Failed to connect wallet. Please try again.";
-        if (error.message?.includes("User rejected")) {
+        if (
+          error.message?.includes("User rejected") ||
+          error.message?.includes("rejected")
+        ) {
           errorMessage = "Connection cancelled by user.";
-        } else if (error.message?.includes("not installed")) {
-          errorMessage = "Wallet not installed. Please install it first.";
+        } else if (
+          error.message?.includes("not installed") ||
+          error.message?.includes("not available")
+        ) {
+          errorMessage = error.message;
+        } else if (error.message?.includes("timeout")) {
+          errorMessage = "Connection timed out. Please try again.";
+        } else if (error.message?.includes("Network Error")) {
+          errorMessage =
+            "Network error. Please check your connection and try again.";
         }
 
         toast({
