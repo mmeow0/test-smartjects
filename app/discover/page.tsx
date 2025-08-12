@@ -746,7 +746,7 @@ export default function SmartjectsHubPage() {
                         >
                           <Functions className="w-4 h-4" />
                           <span className="text-sm font-medium text-gray-700">
-                            Needs groups
+                            Functions
                           </span>
                           <ChevronDown className="w-4 h-4 text-gray-500" />
                         </div>
@@ -754,7 +754,7 @@ export default function SmartjectsHubPage() {
                           <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48 max-h-60 overflow-hidden">
                             <div className="p-2 border-b border-gray-100">
                               <Input
-                                placeholder="Search needs groups..."
+                                placeholder="Search functions..."
                                 value={functionsSearchTerm}
                                 onChange={(e) =>
                                   setFunctionsSearchTerm(e.target.value)
@@ -784,7 +784,7 @@ export default function SmartjectsHubPage() {
                                 ))
                               ) : (
                                 <div className="px-3 py-2 text-sm text-gray-500">
-                                  No needs groups found
+                                  No functions found
                                 </div>
                               )}
                             </div>
@@ -1065,7 +1065,7 @@ export default function SmartjectsHubPage() {
                         <div className="flex items-center gap-2">
                           <Functions className="w-4 h-4" />
                           <span className="text-sm font-medium text-gray-700">
-                            Needs Groups
+                            Functions
                           </span>
                           {selectedFunctions.length > 0 && (
                             <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
@@ -1079,7 +1079,7 @@ export default function SmartjectsHubPage() {
                         <div className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-48 overflow-hidden">
                           <div className="p-2 border-b border-gray-100">
                             <Input
-                              placeholder="Search needs groups..."
+                              placeholder="Search functions..."
                               value={functionsSearchTerm}
                               onChange={(e) =>
                                 setFunctionsSearchTerm(e.target.value)

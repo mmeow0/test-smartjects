@@ -268,7 +268,7 @@ export function SmartjectCard({
                 <div className="flex items-center gap-2">
                   <Audience className="h-[25px]" />
                   <span className="text-sm font-medium text-gray-500 uppercase tracking-wide">
-                    Audience
+                    Users
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">

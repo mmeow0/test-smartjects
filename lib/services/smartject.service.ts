@@ -558,6 +558,12 @@ export const smartjectService = {
           .filter(Boolean)
       : [];
 
+    const teams = Array.isArray(data.smartject_teams)
+      ? data.smartject_teams
+          .map((aud: any) => aud.teams?.name)
+          .filter(Boolean)
+      : [];
+
     return {
       id: data.id as string,
       title: data.title as string,
@@ -574,6 +580,7 @@ export const smartjectService = {
       useCase: (data.use_case || "") as string,
       industries,
       businessFunctions,
+      teams,
       audience,
       researchPapers: (data.research_papers || []) as {
         title: string;

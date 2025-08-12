@@ -37,6 +37,7 @@ interface Smartject {
   useCase: string;
   industries?: string[];
   businessFunctions?: string[];
+  team?: string[];
   audience?: string[];
   researchPapers?: Array<{
     title: string;

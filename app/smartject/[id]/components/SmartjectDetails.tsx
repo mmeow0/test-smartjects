@@ -24,6 +24,7 @@ import { UseCases } from "@/components/icons/UseCases";
 import { Industries } from "@/components/icons/Industries";
 import { Functions } from "@/components/icons/Functions";
 import { Link } from "@/components/icons/Link";
+import { Team } from "@/components/icons/Team";
 
 interface SmartjectDetailsProps {
   smartject: {
@@ -39,6 +40,7 @@ interface SmartjectDetailsProps {
     industries?: string[];
     businessFunctions?: string[];
     audience?: string[];
+    teams?: string[];
     researchPapers?: Array<{
       title: string;
       url: string;
@@ -185,12 +187,11 @@ export function SmartjectDetails({ smartject }: SmartjectDetailsProps) {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Audience className="h-5 w-5 text-blue-500" />
-                  Audience
+                  Users
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                {smartject.audience &&
-                smartject.audience?.length > 0 ? (
+                {smartject.audience && smartject.audience?.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {smartject.audience.map((tech, index) => (
                       <Badge
@@ -199,6 +200,35 @@ export function SmartjectDetails({ smartject }: SmartjectDetailsProps) {
                         className="text-xs"
                       >
                         {tech}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Not specified</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>,
+          // Teams
+          <div key="teams" className="relative px-4 py-2">
+            <div className="absolute left-4 right-4 top-0 h-px bg-border" />
+            <Card className="h-full border-none shadow-none">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Team className="h-5 w-5 text-green-500" />
+                  Teams
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {smartject.teams && smartject.teams?.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {smartject.teams.map((team, index) => (
+                      <Badge
+                        key={index}
+                        variant="secondary"
+                        className="text-xs"
+                      >
+                        {team}
                       </Badge>
                     ))}
                   </div>
