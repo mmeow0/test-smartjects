@@ -114,6 +114,7 @@ export function SmartjectCard({
   const renderGradientSection = (label: string, text: string) => {
     const textRef = useRef<HTMLParagraphElement>(null);
     const [isClamped, setIsClamped] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
       const el = textRef.current;
@@ -127,18 +128,29 @@ export function SmartjectCard({
       }
     }, [text]);
 
+    const handleClick = () => {
+      if (isClamped) {
+        setIsExpanded(!isExpanded);
+      }
+    };
+
     const content = (
       <p
         ref={textRef}
-        className={`text-sm text-gray-700 leading-relaxed line-clamp-2 ${
-          isClamped ? "cursor-help" : ""
-        }`}
-        style={{
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }}
+        className={`text-sm text-gray-700 leading-relaxed ${
+          isExpanded ? "" : "line-clamp-2"
+        } ${isClamped ? "cursor-pointer" : ""}`}
+        style={
+          isExpanded
+            ? {}
+            : {
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }
+        }
+        onClick={handleClick}
       >
         {text}
       </p>
@@ -150,7 +162,7 @@ export function SmartjectCard({
           {label}
         </h4>
         <TooltipProvider delayDuration={500}>
-          {isClamped ? (
+          {isClamped && !isExpanded ? (
             <Tooltip>
               <TooltipTrigger asChild>{content}</TooltipTrigger>
               <TooltipContent className="max-w-xs p-2">{text}</TooltipContent>
