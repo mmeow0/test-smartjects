@@ -131,7 +131,7 @@ export function useInfiniteSmartjects(
           smartjects: reset ? data : [...prev.smartjects, ...data],
           isLoading: false,
           isLoadingMore: false,
-          hasMore: data.length === pageSize,
+          hasMore: data.length >= pageSize, // Changed to >= to handle edge cases
           page: page,
           error: null,
         }));

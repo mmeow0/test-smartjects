@@ -1,5 +1,6 @@
 import { getSupabaseBrowserClient } from "../supabase";
 import type { SmartjectType } from "../types";
+import { BatchProcessor } from "../utils/batch-processor";
 
 export const smartjectService = {
   // Get user votes mapping
@@ -61,10 +62,7 @@ export const smartjectService = {
 
     const userVotesMap = userId ? await this.getUserVotes(userId) : {};
 
-    // Step 1: Get smartject IDs that match the filters from related tables
-    let filteredSmartjectIds: string[] | null = null;
-
-    // Check if we have any related table filters that need special handling
+    // Check if we have any related filters
     const hasRelatedFilters =
       (filters?.industries && filters.industries.length > 0) ||
       (filters?.audience && filters.audience.length > 0) ||
@@ -72,142 +70,192 @@ export const smartjectService = {
       (filters?.teams && filters.teams.length > 0);
 
     if (hasRelatedFilters) {
-      const smartjectIds = new Set<string>();
+      // Smart approach: Use incremental loading with client-side filtering
+      // This avoids large IN clauses and provides better performance
 
-      // Get IDs from industry filter
-      if (filters?.industries && filters.industries.length > 0) {
-        const { data: industryData, error: industryError } = await supabase
-          .from("smartject_industries")
-          .select("smartject_id, industries!inner(name)")
-          .in("industries.name", filters.industries);
+      let results: any[] = [];
+      let currentPage = 0;
+      const maxAttempts = 5; // Limit attempts to prevent infinite loops
+      const batchSize = 50; // Fetch in reasonable batches
 
-        if (industryError) {
-          console.error("Error fetching industry filtered IDs:", industryError);
-          return [];
+      while (results.length < pageSize && currentPage < maxAttempts) {
+        const offset = page * pageSize + currentPage * batchSize;
+
+        // Start with all smartjects, apply basic filters first
+        let query = supabase.from("smartjects").select(
+          `
+            *,
+            smartject_industries (
+              industries (name)
+            ),
+            smartject_business_functions (
+              business_functions (name)
+            ),
+            smartject_audience (
+              audience (name)
+            ),
+            smartject_teams (
+              teams (name)
+            ),
+            votes (vote_type),
+            comments(count)
+          `,
+        );
+
+        // Apply text search filter
+        if (filters?.query && filters.query.trim()) {
+          const searchTerm = `%${filters.query.toLowerCase()}%`;
+          query = query.or(
+            `title.ilike.${searchTerm},mission.ilike.${searchTerm},problematics.ilike.${searchTerm},scope.ilike.${searchTerm}`,
+          );
         }
 
-        if (industryData && industryData.length > 0) {
-          industryData.forEach((item: any) =>
-            smartjectIds.add(item.smartject_id),
-          );
-        } else {
-          return []; // No matches found
+        // Apply date filters
+        if (filters?.startDate && filters.startDate.trim() !== "") {
+          query = query.gte("created_at", filters.startDate);
+        }
+        if (filters?.endDate && filters.endDate.trim() !== "") {
+          query = query.lte("created_at", filters.endDate);
+        }
+
+        // Apply initial sorting and pagination
+        query = query.order("created_at", { ascending: false });
+        query = query.range(offset, offset + batchSize - 1);
+
+        const { data, error } = await query;
+
+        if (error || !data) {
+          console.error("Error fetching smartjects:", error);
+          break;
+        }
+
+        // If no more data, stop
+        if (data.length === 0) {
+          break;
+        }
+
+        // Apply filters using BatchProcessor for efficiency
+        const filterConditions: Array<(item: any) => boolean> = [];
+
+        // Add industry filter
+        if (filters?.industries && filters.industries.length > 0) {
+          filterConditions.push((item: any) => {
+            if (!item.smartject_industries?.length) return false;
+            const itemIndustries = item.smartject_industries
+              .map((si: any) => si.industries?.name)
+              .filter(Boolean);
+            return filters.industries.some((ind) =>
+              itemIndustries.includes(ind),
+            );
+          });
+        }
+
+        // Add audience filter
+        if (filters?.audience && filters.audience.length > 0) {
+          filterConditions.push((item: any) => {
+            if (!item.smartject_audience?.length) return false;
+            const itemAudience = item.smartject_audience
+              .map((sa: any) => sa.audience?.name)
+              .filter(Boolean);
+            return filters.audience.some((aud) => itemAudience.includes(aud));
+          });
+        }
+
+        // Add business functions filter
+        if (
+          filters?.businessFunctions &&
+          filters.businessFunctions.length > 0
+        ) {
+          filterConditions.push((item: any) => {
+            if (!item.smartject_business_functions?.length) return false;
+            const itemFunctions = item.smartject_business_functions
+              .map((sbf: any) => sbf.business_functions?.name)
+              .filter(Boolean);
+            return filters.businessFunctions.some((func) =>
+              itemFunctions.includes(func),
+            );
+          });
+        }
+
+        // Add teams filter
+        if (filters?.teams && filters.teams.length > 0) {
+          filterConditions.push((item: any) => {
+            if (!item.smartject_teams?.length) return false;
+            const itemTeams = item.smartject_teams
+              .map((st: any) => st.teams?.name)
+              .filter(Boolean);
+            return filters.teams.some((team) => itemTeams.includes(team));
+          });
+        }
+
+        // Apply all filters efficiently
+        const filteredBatch = BatchProcessor.multiFilter(
+          data,
+          filterConditions,
+        );
+
+        // Add filtered results to our collection
+        results.push(...filteredBatch);
+
+        // Move to next batch
+        currentPage++;
+
+        // If we have enough results, stop
+        if (results.length >= pageSize) {
+          break;
         }
       }
 
-      // Get IDs from audience filter
-      if (filters?.audience && filters.audience.length > 0) {
-        const { data: audienceData, error: audienceError } = await supabase
-          .from("smartject_audience")
-          .select("smartject_id, audience!inner(name)")
-          .in("audience.name", filters.audience);
+      // Trim results to requested page size
+      let filteredData = results.slice(0, pageSize);
 
-        if (audienceError) {
-          console.error("Error fetching audience filtered IDs:", audienceError);
-          return [];
-        }
+      // Apply vote-based sorting if needed
+      if (sortBy !== "recent") {
+        const formattedData = filteredData.map((item: any) => {
+          const voteCount = {
+            believe: 0,
+            need: 0,
+            provide: 0,
+          };
 
-        if (audienceData && audienceData.length > 0) {
-          const audienceIds = new Set(
-            audienceData.map((item: any) => item.smartject_id),
-          );
-          if (smartjectIds.size > 0) {
-            // Intersect with existing IDs
-            const intersection = new Set(
-              [...smartjectIds].filter((id) => audienceIds.has(id)),
-            );
-            smartjectIds.clear();
-            intersection.forEach((id) => smartjectIds.add(id));
-          } else {
-            audienceData.forEach((item: any) =>
-              smartjectIds.add(item.smartject_id),
-            );
+          if (Array.isArray(item.votes)) {
+            item.votes.forEach((vote: any) => {
+              if (vote.vote_type && voteCount.hasOwnProperty(vote.vote_type)) {
+                voteCount[vote.vote_type as keyof typeof voteCount]++;
+              }
+            });
           }
-        } else {
-          return []; // No matches found
+
+          return { ...item, voteCount };
+        });
+
+        // Sort based on vote type
+        switch (sortBy) {
+          case "most-needed":
+            filteredData = formattedData.sort(
+              (a, b) => b.voteCount.need - a.voteCount.need,
+            );
+            break;
+          case "most-provided":
+            filteredData = formattedData.sort(
+              (a, b) => b.voteCount.provide - a.voteCount.provide,
+            );
+            break;
+          case "most-believed":
+            filteredData = formattedData.sort(
+              (a, b) => b.voteCount.believe - a.voteCount.believe,
+            );
+            break;
         }
       }
 
-      // Get IDs from business functions filter
-      if (filters?.businessFunctions && filters.businessFunctions.length > 0) {
-        const { data: functionsData, error: functionsError } = await supabase
-          .from("smartject_business_functions")
-          .select("smartject_id, business_functions!inner(name)")
-          .in("business_functions.name", filters.businessFunctions);
+      // Take only the needed page size
+      const paginatedData = filteredData.slice(0, pageSize);
 
-        if (functionsError) {
-          console.error(
-            "Error fetching business functions filtered IDs:",
-            functionsError,
-          );
-          return [];
-        }
-
-        if (functionsData && functionsData.length > 0) {
-          const functionIds = new Set(
-            functionsData.map((item: any) => item.smartject_id),
-          );
-          if (smartjectIds.size > 0) {
-            // Intersect with existing IDs
-            const intersection = new Set(
-              [...smartjectIds].filter((id) => functionIds.has(id)),
-            );
-            smartjectIds.clear();
-            intersection.forEach((id) => smartjectIds.add(id));
-          } else {
-            functionsData.forEach((item: any) =>
-              smartjectIds.add(item.smartject_id),
-            );
-          }
-        } else {
-          return []; // No matches found
-        }
-      }
-
-      // Get IDs from teams filter
-      if (filters?.teams && filters.teams.length > 0) {
-        const { data: teamsData, error: teamsError } = await supabase
-          .from("smartjects_with_team_names")
-          .select("*")
-          .in("team_name", filters.teams);
-
-        console.log(teamsData);
-
-        if (teamsError) {
-          console.error("Error fetching teams filtered IDs:", teamsError);
-          return [];
-        }
-
-        if (teamsData && teamsData.length > 0) {
-          const teamIds = new Set(
-            teamsData.map((item: any) => item.smartject_id),
-          );
-          if (smartjectIds.size > 0) {
-            // Intersect with existing IDs
-            const intersection = new Set(
-              [...smartjectIds].filter((id) => teamIds.has(id)),
-            );
-            smartjectIds.clear();
-            intersection.forEach((id) => smartjectIds.add(id));
-          } else {
-            teamsData.forEach((item: any) =>
-              smartjectIds.add(item.smartject_id),
-            );
-          }
-        } else {
-          return []; // No matches found
-        }
-      }
-
-      filteredSmartjectIds = Array.from(smartjectIds);
-
-      // If no smartjects match the filters, return empty array
-      if (filteredSmartjectIds.length === 0) {
-        return [];
-      }
+      return this.formatSmartjects(paginatedData, userVotesMap, userId);
     }
 
-    // Step 2: Get full smartject data
+    // For queries without related filters, use the standard approach
     let query = supabase.from("smartjects").select(
       `
       *,
@@ -228,17 +276,12 @@ export const smartjectService = {
     `,
     );
 
-    // If we have filtered IDs, only get those smartjects
-    if (filteredSmartjectIds) {
-      query = query.in("id", filteredSmartjectIds);
-    } else {
-      // Apply text search filter only if no related filters were applied
-      if (filters?.query && filters.query.trim()) {
-        const searchTerm = `%${filters.query.toLowerCase()}%`;
-        query = query.or(
-          `title.ilike.${searchTerm},mission.ilike.${searchTerm},problematics.ilike.${searchTerm},scope.ilike.${searchTerm}`,
-        );
-      }
+    // Apply text search filter
+    if (filters?.query && filters.query.trim()) {
+      const searchTerm = `%${filters.query.toLowerCase()}%`;
+      query = query.or(
+        `title.ilike.${searchTerm},mission.ilike.${searchTerm},problematics.ilike.${searchTerm},scope.ilike.${searchTerm}`,
+      );
     }
 
     // Apply date filters
@@ -262,10 +305,9 @@ export const smartjectService = {
       error = dbError;
     } else {
       // For vote-based sorting, fetch all matching records and sort in memory
-      const { data: allData, error: allError } = await query.order(
-        "created_at",
-        { ascending: false },
-      );
+      const { data: allData, error: allError } = await query
+        .order("created_at", { ascending: false })
+        .range(page * pageSize * 3, (page + 1) * pageSize * 3 - 1); // Fetch more to account for sorting
 
       if (allError || !allData) {
         data = [];
@@ -312,8 +354,8 @@ export const smartjectService = {
             sortedData = formattedData;
         }
 
-        // Apply pagination after sorting
-        data = sortedData.slice(page * pageSize, (page + 1) * pageSize);
+        // Take only the needed page size after sorting
+        data = sortedData.slice(0, pageSize);
       }
     }
 
@@ -559,9 +601,7 @@ export const smartjectService = {
       : [];
 
     const teams = Array.isArray(data.smartject_teams)
-      ? data.smartject_teams
-          .map((aud: any) => aud.teams?.name)
-          .filter(Boolean)
+      ? data.smartject_teams.map((aud: any) => aud.teams?.name).filter(Boolean)
       : [];
 
     return {
