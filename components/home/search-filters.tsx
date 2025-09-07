@@ -216,7 +216,7 @@ export const SearchFilters = memo(
             <Input
               placeholder="Search smartjects..."
               value={query}
-              icon={<Search size={16} />} 
+              icon={<Search size={16} />}
               onChange={onQueryChange}
               className="pl-12 pr-4 py-3 sm:py-4 h-12 sm:h-14 border-0 rounded-2xl text-base focus:bg-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
             />
@@ -375,7 +375,7 @@ export const SearchFilters = memo(
                         autoFocus
                       />
                     </div>
-                    <div className="max-h-48 overflow-y-auto">
+                    <div className="max-h-48 max-w-48 overflow-y-auto">
                       {filteredAudience.length > 0 ? (
                         filteredAudience.map((tech) => (
                           <div
@@ -438,7 +438,7 @@ export const SearchFilters = memo(
                         autoFocus
                       />
                     </div>
-                    <div className="max-h-48 overflow-y-auto">
+                    <div className="max-h-48 min-w-56 overflow-y-auto">
                       {filteredFunctions.length > 0 ? (
                         filteredFunctions.map((func) => (
                           <div
@@ -499,7 +499,7 @@ export const SearchFilters = memo(
                         autoFocus
                       />
                     </div>
-                    <div className="max-h-48 overflow-y-auto">
+                    <div className="max-h-48 max-w-48 overflow-y-auto">
                       {filteredTeams.length > 0 ? (
                         filteredTeams.map((team) => (
                           <div
@@ -692,7 +692,7 @@ export const SearchFilters = memo(
                           autoFocus
                         />
                       </div>
-                      <div className="max-h-36 overflow-y-auto">
+                      <div className="max-h-36  max-w-48 overflow-y-auto">
                         {filteredAudience.length > 0 ? (
                           filteredAudience.map((tech) => (
                             <div
@@ -820,7 +820,7 @@ export const SearchFilters = memo(
                           autoFocus
                         />
                       </div>
-                      <div className="max-h-36 overflow-y-auto">
+                      <div className="max-h-36 max-w-48 overflow-y-auto">
                         {filteredTeams.length > 0 ? (
                           filteredTeams.map((team) => (
                             <div
