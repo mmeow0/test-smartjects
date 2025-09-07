@@ -29,6 +29,7 @@ interface InfiniteSmartjectsState {
   hasMore: boolean;
   page: number;
   error: string | null;
+  consecutiveEmptyLoads: number;
 }
 
 export function useInfiniteSmartjects(
@@ -45,6 +46,7 @@ export function useInfiniteSmartjects(
     hasMore: true,
     page: 0,
     error: null,
+    consecutiveEmptyLoads: 0,
   });
 
   const [filters, setFilters] = useState<Filters>({
@@ -83,18 +85,21 @@ export function useInfiniteSmartjects(
     ],
   );
 
-  // Load available filters only once
-  useEffect(() => {
-    const loadFilters = async () => {
-      try {
-        const filterData = await smartjectService.getAvailableFilters();
-        setAvailableFilters(filterData);
-      } catch (error) {
-        console.error("Error fetching available filters:", error);
-      }
-    };
-    loadFilters();
+  // Load available filters
+  const loadFilters = useCallback(async (forceRefresh: boolean = false) => {
+    try {
+      const filterData =
+        await smartjectService.getAvailableFilters(forceRefresh);
+      setAvailableFilters(filterData);
+    } catch (error) {
+      console.error("Error fetching available filters:", error);
+    }
   }, []);
+
+  // Load available filters only once on mount
+  useEffect(() => {
+    loadFilters();
+  }, [loadFilters]);
 
   // Main loading function
   const loadData = useCallback(
@@ -113,6 +118,7 @@ export function useInfiniteSmartjects(
             smartjects: [],
             page: 0,
             hasMore: true,
+            consecutiveEmptyLoads: 0,
           }));
         } else {
           setState((prev) => ({ ...prev, isLoadingMore: true, error: null }));
@@ -126,14 +132,22 @@ export function useInfiniteSmartjects(
           currentSort,
         );
 
+        // Track consecutive empty loads to prevent infinite attempts
+        const newConsecutiveEmpty =
+          data.length === 0 ? (reset ? 0 : state.consecutiveEmptyLoads + 1) : 0;
+
+        // Stop trying if we've had too many consecutive empty loads
+        const shouldStopLoading = newConsecutiveEmpty >= 3;
+
         setState((prev) => ({
           ...prev,
           smartjects: reset ? data : [...prev.smartjects, ...data],
           isLoading: false,
           isLoadingMore: false,
-          hasMore: data.length >= pageSize, // Changed to >= to handle edge cases
+          hasMore: data.length === pageSize && !shouldStopLoading,
           page: page,
           error: null,
+          consecutiveEmptyLoads: newConsecutiveEmpty,
         }));
 
         return data;
@@ -146,6 +160,7 @@ export function useInfiniteSmartjects(
           isLoading: false,
           isLoadingMore: false,
           error: errorMessage,
+          consecutiveEmptyLoads: 0,
         }));
 
         toast({
@@ -181,7 +196,12 @@ export function useInfiniteSmartjects(
 
   // Load more data
   const loadMore = useCallback(() => {
-    if (!state.hasMore || state.isLoadingMore || state.isLoading) {
+    if (
+      !state.hasMore ||
+      state.isLoadingMore ||
+      state.isLoading ||
+      state.consecutiveEmptyLoads >= 3
+    ) {
       return;
     }
 
@@ -192,6 +212,7 @@ export function useInfiniteSmartjects(
     state.isLoadingMore,
     state.isLoading,
     state.page,
+    state.consecutiveEmptyLoads,
     memoizedFilters,
     sortBy,
     loadData,
@@ -228,6 +249,11 @@ export function useInfiniteSmartjects(
   const setSortOption = useCallback((newSort: SortOption) => {
     setSortBy(newSort);
   }, []);
+
+  // Force refresh available filters
+  const refreshFilters = useCallback(() => {
+    loadFilters(true);
+  }, [loadFilters]);
 
   // Memoized values
   const totalCount = useMemo(
@@ -268,5 +294,6 @@ export function useInfiniteSmartjects(
 
     // Actions
     refetch,
+    refreshFilters,
   };
 }

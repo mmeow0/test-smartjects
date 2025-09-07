@@ -2,6 +2,22 @@ import { getSupabaseBrowserClient } from "../supabase";
 import type { SmartjectType } from "../types";
 import { BatchProcessor } from "../utils/batch-processor";
 
+// Cache for available filters to improve performance
+const filtersCache: {
+  data: {
+    industries: string[];
+    audience: string[];
+    businessFunctions: string[];
+    teams: string[];
+  } | null;
+  timestamp: number;
+  ttl: number; // Time to live in milliseconds (30 minutes)
+} = {
+  data: null,
+  timestamp: 0,
+  ttl: 30 * 60 * 1000, // 30 minutes
+};
+
 export const smartjectService = {
   // Get user votes mapping
   async getUserVotes(
@@ -75,11 +91,13 @@ export const smartjectService = {
 
       let results: any[] = [];
       let currentPage = 0;
-      const maxAttempts = 5; // Limit attempts to prevent infinite loops
-      const batchSize = 50; // Fetch in reasonable batches
+      const maxAttempts = 50; // Increased limit to handle large datasets
+      const batchSize = 100; // Larger batch size for better performance
 
       while (results.length < pageSize && currentPage < maxAttempts) {
-        const offset = page * pageSize + currentPage * batchSize;
+        // Skip to the correct position for this page, then get the current batch
+        const baseOffset = page * pageSize;
+        const offset = baseOffset + currentPage * batchSize;
 
         // Start with all smartjects, apply basic filters first
         let query = supabase.from("smartjects").select(
@@ -118,8 +136,15 @@ export const smartjectService = {
           query = query.lte("created_at", filters.endDate);
         }
 
-        // Apply initial sorting and pagination
-        query = query.order("created_at", { ascending: false });
+        // For filtered queries, use a mixed approach to get better coverage
+        // Instead of strict date ordering, use a combination of strategies
+        if (currentPage % 2 === 0) {
+          // Even pages: Order by created_at (newest first)
+          query = query.order("created_at", { ascending: false });
+        } else {
+          // Odd pages: Order by id to get different distribution
+          query = query.order("id", { ascending: false });
+        }
         query = query.range(offset, offset + batchSize - 1);
 
         const { data, error } = await query;
@@ -134,6 +159,9 @@ export const smartjectService = {
           break;
         }
 
+        // If we got less than expected, we might be near the end
+        const isLastBatch = data.length < batchSize;
+
         // Apply filters using BatchProcessor for efficiency
         const filterConditions: Array<(item: any) => boolean> = [];
 
@@ -144,7 +172,7 @@ export const smartjectService = {
             const itemIndustries = item.smartject_industries
               .map((si: any) => si.industries?.name)
               .filter(Boolean);
-            return filters.industries.some((ind) =>
+            return filters.industries!.some((ind) =>
               itemIndustries.includes(ind),
             );
           });
@@ -157,7 +185,7 @@ export const smartjectService = {
             const itemAudience = item.smartject_audience
               .map((sa: any) => sa.audience?.name)
               .filter(Boolean);
-            return filters.audience.some((aud) => itemAudience.includes(aud));
+            return filters.audience!.some((aud) => itemAudience.includes(aud));
           });
         }
 
@@ -171,7 +199,7 @@ export const smartjectService = {
             const itemFunctions = item.smartject_business_functions
               .map((sbf: any) => sbf.business_functions?.name)
               .filter(Boolean);
-            return filters.businessFunctions.some((func) =>
+            return filters.businessFunctions!.some((func) =>
               itemFunctions.includes(func),
             );
           });
@@ -184,7 +212,7 @@ export const smartjectService = {
             const itemTeams = item.smartject_teams
               .map((st: any) => st.teams?.name)
               .filter(Boolean);
-            return filters.teams.some((team) => itemTeams.includes(team));
+            return filters.teams!.some((team) => itemTeams.includes(team));
           });
         }
 
@@ -202,6 +230,12 @@ export const smartjectService = {
 
         // If we have enough results, stop
         if (results.length >= pageSize) {
+          break;
+        }
+
+        // If this was the last batch and we still don't have enough results,
+        // we've reached the end of available data
+        if (isLastBatch) {
           break;
         }
       }
@@ -304,10 +338,15 @@ export const smartjectService = {
       data = dbData || [];
       error = dbError;
     } else {
-      // For vote-based sorting, fetch all matching records and sort in memory
+      // For vote-based sorting, fetch a larger batch to ensure we have enough data after sorting
+      const multiplier = Math.max(3, Math.ceil(50 / pageSize)); // Dynamic multiplier based on pageSize
+      const batchSize = pageSize * multiplier;
+      const startRange = page * batchSize;
+      const endRange = startRange + batchSize - 1;
+
       const { data: allData, error: allError } = await query
         .order("created_at", { ascending: false })
-        .range(page * pageSize * 3, (page + 1) * pageSize * 3 - 1); // Fetch more to account for sorting
+        .range(startRange, endRange);
 
       if (allError || !allData) {
         data = [];
@@ -355,7 +394,9 @@ export const smartjectService = {
         }
 
         // Take only the needed page size after sorting
-        data = sortedData.slice(0, pageSize);
+        // Skip to the correct position for this specific page within the sorted results
+        const startIndex = (page % multiplier) * pageSize;
+        data = sortedData.slice(startIndex, startIndex + pageSize);
       }
     }
 
@@ -703,48 +744,165 @@ export const smartjectService = {
     return this.formatSmartjects(data, userVotesMap, userId);
   },
 
-  // Get available filter options
-  async getAvailableFilters(): Promise<{
+  // Get available filter options from smartjects table to ensure all values are included
+  async getAvailableFilters(forceRefresh: boolean = false): Promise<{
     industries: string[];
     audience: string[];
     businessFunctions: string[];
     teams: string[];
   }> {
+    // Check cache first
+    const now = Date.now();
+    if (
+      !forceRefresh &&
+      filtersCache.data &&
+      now - filtersCache.timestamp < filtersCache.ttl
+    ) {
+      return filtersCache.data;
+    }
+
     const supabase = getSupabaseBrowserClient();
 
-    const [industriesRes, audienceRes, functionsRes, teamsRes] =
-      await Promise.all([
-        supabase.from("industries").select("name"),
-        supabase.from("audience").select("name"),
-        supabase.from("business_functions").select("name"),
-        supabase.from("teams").select("name"),
-      ]);
+    try {
+      // Get all smartjects with their related data in batches to avoid limits
+      const batchSize = 1000;
+      let allIndustries = new Set<string>();
+      let allAudience = new Set<string>();
+      let allBusinessFunctions = new Set<string>();
+      let allTeams = new Set<string>();
 
-    const industries =
-      industriesRes.error || !industriesRes.data
-        ? []
-        : industriesRes.data.map((i: any) => i.name);
+      let hasMore = true;
+      let offset = 0;
 
-    const audience =
-      audienceRes.error || !audienceRes.data
-        ? []
-        : audienceRes.data.map((a: any) => a.name);
+      while (hasMore) {
+        const { data: smartjects, error } = await supabase
+          .from("smartjects")
+          .select(
+            `
+            smartject_industries (
+              industries (name)
+            ),
+            smartject_business_functions (
+              business_functions (name)
+            ),
+            smartject_audience (
+              audience (name)
+            ),
+            smartject_teams (
+              teams (name)
+            )
+          `,
+          )
+          .range(offset, offset + batchSize - 1);
 
-    const businessFunctions =
-      functionsRes.error || !functionsRes.data
-        ? []
-        : functionsRes.data.map((f: any) => f.name);
+        if (error) {
+          console.error("Error fetching smartjects for filters:", error);
+          break;
+        }
 
-    const teams =
-      teamsRes.error || !teamsRes.data
-        ? []
-        : teamsRes.data.map((t: any) => t.name);
+        if (!smartjects || smartjects.length === 0) {
+          hasMore = false;
+          break;
+        }
 
-    return {
-      industries,
-      audience,
-      businessFunctions,
-      teams,
-    };
+        // Extract unique values
+        smartjects.forEach((smartject: any) => {
+          // Industries
+          smartject.smartject_industries?.forEach((si: any) => {
+            if (si.industries?.name) {
+              allIndustries.add(si.industries.name);
+            }
+          });
+
+          // Audience
+          smartject.smartject_audience?.forEach((sa: any) => {
+            if (sa.audience?.name) {
+              allAudience.add(sa.audience.name);
+            }
+          });
+
+          // Business Functions
+          smartject.smartject_business_functions?.forEach((sf: any) => {
+            if (sf.business_functions?.name) {
+              allBusinessFunctions.add(sf.business_functions.name);
+            }
+          });
+
+          // Teams
+          smartject.smartject_teams?.forEach((st: any) => {
+            if (st.teams?.name) {
+              allTeams.add(st.teams.name);
+            }
+          });
+        });
+
+        // Check if we got a full batch (indicating there might be more)
+        hasMore = smartjects.length === batchSize;
+        offset += batchSize;
+
+        // Safety limit to prevent infinite loops
+        if (offset > 50000) {
+          console.warn("Reached safety limit while fetching filter values");
+          break;
+        }
+      }
+
+      const result = {
+        industries: Array.from(allIndustries).sort(),
+        audience: Array.from(allAudience).sort(),
+        businessFunctions: Array.from(allBusinessFunctions).sort(),
+        teams: Array.from(allTeams).sort(),
+      };
+
+      // Cache the result
+      filtersCache.data = result;
+      filtersCache.timestamp = Date.now();
+
+      return result;
+    } catch (error) {
+      console.error("Error in getAvailableFilters:", error);
+
+      // Fallback to the original approach if the new method fails
+      const [industriesRes, audienceRes, functionsRes, teamsRes] =
+        await Promise.all([
+          supabase.from("industries").select("name").limit(10000),
+          supabase.from("audience").select("name").limit(10000),
+          supabase.from("business_functions").select("name").limit(10000),
+          supabase.from("teams").select("name").limit(10000),
+        ]);
+
+      const industries =
+        industriesRes.error || !industriesRes.data
+          ? []
+          : industriesRes.data.map((i: any) => i.name).sort();
+
+      const audience =
+        audienceRes.error || !audienceRes.data
+          ? []
+          : audienceRes.data.map((a: any) => a.name).sort();
+
+      const businessFunctions =
+        functionsRes.error || !functionsRes.data
+          ? []
+          : functionsRes.data.map((f: any) => f.name).sort();
+
+      const teams =
+        teamsRes.error || !teamsRes.data
+          ? []
+          : teamsRes.data.map((t: any) => t.name).sort();
+
+      const result = {
+        industries,
+        audience,
+        businessFunctions,
+        teams,
+      };
+
+      // Cache the fallback result too
+      filtersCache.data = result;
+      filtersCache.timestamp = Date.now();
+
+      return result;
+    }
   },
 };
