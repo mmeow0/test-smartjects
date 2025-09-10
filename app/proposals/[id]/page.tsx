@@ -400,12 +400,7 @@ export default function ProposalDetailPage({
                     {isExpressingInterest ? "Submitting..." : "Accept proposal"}
                   </Button>
                 ) : (
-                  <Button
-                    className="flex-1 bg-yellow-300 hover:bg-yellow-400 text-black"
-                    // onClick={() => handleNegotiate(proposal.id)}
-                  >
-                    Negotiate
-                  </Button>
+                 null
                 )}
               </div>
             )}
