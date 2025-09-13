@@ -1,29 +1,49 @@
 import { defineChain } from "thirdweb";
-import { polygon, polygonAmoy } from "thirdweb/chains";
 
-// Environment check
-const isDevelopment = process.env.NODE_ENV === "development";
-const isProduction = process.env.NODE_ENV === "production";
+// Hardhat local chain configuration - ONLY NETWORK SUPPORTED
+export const hardhatChain = defineChain({
+  id: 31337,
+  name: "Hardhat Local",
+  network: "hardhat",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  rpc: "http://127.0.0.1:8545",
+  testnet: true,
+  chain: "ETH",
+  shortName: "hardhat",
+  slug: "hardhat",
+  blockExplorers: {
+    default: {
+      name: "Hardhat",
+      url: "http://localhost:8545",
+    },
+  },
+});
 
-// Chain configuration
-// Always use testnet for now (change to polygon for mainnet deployment)
-export const activeChain = polygonAmoy;
+// Active chain - ONLY HARDHAT
+export const activeChain = hardhatChain;
 
-// Contract addresses (update after deployment)
+// Contract addresses - ONLY MARKETPLACE
 export const CONTRACT_ADDRESSES = {
-  escrowFactory: process.env.NEXT_PUBLIC_ESCROW_FACTORY_ADDRESS || "",
+  // SmartjectsMarketplace contract (deployed on hardhat)
+  smartjectsMarketplace:
+    process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS ||
+    "0x5FbDB2315678afecb367f032d93F642f64180aa3",
 } as const;
 
-// Thirdweb configuration
+// ThirdWeb configuration
 export const THIRDWEB_CONFIG = {
   clientId: process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || "",
   secretKey: process.env.THIRDWEB_SECRET_KEY || "", // Only for server-side
 } as const;
 
-// Gas configuration
+// Gas configuration (optimized for local Hardhat)
 export const GAS_CONFIG = {
-  maxPriorityFeePerGas: BigInt(30000000000), // 30 gwei
-  maxFeePerGas: BigInt(50000000000), // 50 gwei
+  maxPriorityFeePerGas: BigInt(1000000000), // 1 gwei for local
+  maxFeePerGas: BigInt(2000000000), // 2 gwei for local
 } as const;
 
 // Platform fee configuration (must match smart contract)
@@ -32,37 +52,30 @@ export const PLATFORM_FEE = {
   basisPoints: 250, // 250 basis points
 } as const;
 
-// Transaction timeouts and retries
+// Transaction timeouts and retries (faster for local)
 export const TX_CONFIG = {
-  confirmationBlocks: 3,
-  confirmationTimeout: 60000, // 60 seconds
+  confirmationBlocks: 1, // Just 1 block for local development
+  confirmationTimeout: 15000, // 15 seconds
   maxRetries: 3,
-  retryDelay: 2000, // 2 seconds
+  retryDelay: 1000, // 1 second
 } as const;
 
-// Supported networks for wallet connection
-export const SUPPORTED_CHAINS = [polygon, polygonAmoy] as const;
+// Supported networks - ONLY HARDHAT
+export const SUPPORTED_CHAINS = [hardhatChain] as const;
 
-// Block explorer URLs
-export const BLOCK_EXPLORER_URLS = {
-  [polygon.id]: "https://polygonscan.com",
-  [polygonAmoy.id]: "https://amoy.polygonscan.com",
-} as const;
-
-// RPC URLs (fallback if Thirdweb RPC fails)
+// RPC URLs
 export const RPC_URLS = {
-  [polygon.id]:
-    process.env.NEXT_PUBLIC_POLYGON_RPC_URL || "https://polygon-rpc.com",
-  [polygonAmoy.id]:
-    process.env.NEXT_PUBLIC_POLYGON_AMOY_RPC_URL ||
-    "https://rpc-amoy.polygon.technology",
+  [hardhatChain.id]:
+    process.env.NEXT_PUBLIC_HARDHAT_RPC_URL || "http://127.0.0.1:8545",
 } as const;
 
-// Configure chain with custom RPC
-export const configuredChain = defineChain({
+// Configure chain
+export const configuredChain = {
   ...activeChain,
+  id: 31337,
+  chainId: 31337,
   rpc: RPC_URLS[activeChain.id],
-});
+};
 
 // Validation helpers
 export const validateAddress = (address: string): boolean => {
@@ -70,30 +83,30 @@ export const validateAddress = (address: string): boolean => {
 };
 
 export const validateContractAddress = (): boolean => {
-  return validateAddress(CONTRACT_ADDRESSES.escrowFactory);
+  return validateAddress(CONTRACT_ADDRESSES.smartjectsMarketplace);
 };
 
 // Error messages
 export const BLOCKCHAIN_ERRORS = {
   WALLET_NOT_CONNECTED: "Please connect your wallet to continue",
-  WRONG_NETWORK: `Please switch to ${activeChain.name}`,
+  WRONG_NETWORK: `Please switch to ${activeChain.name} (Chain ID: ${activeChain.id})`,
   INSUFFICIENT_BALANCE: "Insufficient balance to complete this transaction",
   TRANSACTION_FAILED: "Transaction failed. Please try again",
-  CONTRACT_NOT_DEPLOYED: "Smart contract not deployed on this network",
+  CONTRACT_NOT_DEPLOYED:
+    "SmartjectsMarketplace contract not deployed on Hardhat",
   USER_REJECTED: "Transaction was rejected by user",
-  NETWORK_ERROR: "Network error. Please check your connection",
+  NETWORK_ERROR:
+    "Network error. Please check your connection and ensure Hardhat node is running",
 } as const;
 
-// Helper function to get transaction URL
+// Helper function to get transaction URL (no explorer for Hardhat)
 export const getTransactionUrl = (txHash: string): string => {
-  const baseUrl = BLOCK_EXPLORER_URLS[activeChain.id];
-  return `${baseUrl}/tx/${txHash}`;
+  return `http://localhost:8545/tx/${txHash}`;
 };
 
-// Helper function to get address URL
+// Helper function to get address URL (no explorer for Hardhat)
 export const getAddressUrl = (address: string): string => {
-  const baseUrl = BLOCK_EXPLORER_URLS[activeChain.id];
-  return `${baseUrl}/address/${address}`;
+  return `http://localhost:8545/address/${address}`;
 };
 
 // Export chain ID for easy access
@@ -101,7 +114,72 @@ export const ACTIVE_CHAIN_ID = activeChain.id;
 
 // Development helpers
 export const logTransaction = (action: string, txHash: string) => {
-  if (isDevelopment) {
-    console.log(`[Blockchain] ${action}:`, getTransactionUrl(txHash));
+  console.log(`[Blockchain] ${action}:`, txHash);
+};
+
+// Marketplace specific helpers
+export const isMarketplaceDeployed = (): boolean => {
+  return validateAddress(CONTRACT_ADDRESSES.smartjectsMarketplace);
+};
+
+export const getMarketplaceAddress = (): string => {
+  return CONTRACT_ADDRESSES.smartjectsMarketplace;
+};
+
+// Environment checks
+export const isHardhatNetwork = (): boolean => {
+  return activeChain.id === 31337;
+};
+
+export const isLocalDevelopment = (): boolean => {
+  return process.env.NODE_ENV === "development" && isHardhatNetwork();
+};
+
+// Hardhat network validation
+export const validateHardhatConnection = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(RPC_URLS[hardhatChain.id], {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_chainId",
+        params: [],
+        id: 1,
+      }),
+    });
+
+    const data = await response.json();
+    const chainId = parseInt(data.result, 16);
+
+    return chainId === 31337;
+  } catch (error) {
+    console.error("Failed to validate Hardhat connection:", error);
+    return false;
   }
 };
+
+// Setup instructions
+export const SETUP_INSTRUCTIONS = {
+  hardhat: [
+    "1. Start Hardhat node: npx hardhat node",
+    "2. Add network to MetaMask with Chain ID: 1337",
+    "3. Import test account private key to MetaMask",
+    "4. Set NEXT_PUBLIC_THIRDWEB_CLIENT_ID in .env.local",
+  ],
+  environment: [
+    "NEXT_PUBLIC_MARKETPLACE_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "NEXT_PUBLIC_HARDHAT_RPC_URL=http://127.0.0.1:8545",
+    "NEXT_PUBLIC_THIRDWEB_CLIENT_ID=your_client_id",
+    "THIRDWEB_SECRET_KEY=your_secret_key",
+  ],
+} as const;
+
+// Export configuration check helpers
+import {
+  checkBlockchainConfig,
+  logBlockchainConfig,
+} from "@/lib/utils/blockchain-config-check";
+export { checkBlockchainConfig, logBlockchainConfig };

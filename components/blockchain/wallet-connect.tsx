@@ -1,229 +1,329 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Wallet, LogOut, Copy, ExternalLink, Loader2 } from "lucide-react";
-import { useWallet } from "@/contexts/wallet-context";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { ConnectButton } from "thirdweb/react";
+import { client } from "@/app/thirdweb/client";
+import { createWallet } from "thirdweb/wallets";
+import { useEffect } from "react";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { sepolia, ethereum, polygon, bsc } from "thirdweb/chains";
+import { lightTheme } from "thirdweb/react";
+import { Chain } from "thirdweb/chains";
+
+
+const hardhatChain: Chain = {
+  id: 31337,
+  name: "Hardhat Local",
+  rpc: "http://127.0.0.1:8545",
+  nativeCurrency: {
+    name: "Ether",
+    symbol: "ETH",
+    decimals: 18,
+  },
+  blockExplorers: [
+    {
+      name: "Hardhat Explorer",
+      url: "http://127.0.0.1:8545",
+    },
+  ],
+  testnet: true,
+};
+
 
 interface WalletConnectProps {
   onConnect?: (address: string) => void;
   onDisconnect?: () => void;
   compact?: boolean;
+  showBalance?: boolean;
+  className?: string;
 }
 
 export function WalletConnect({
   onConnect,
   onDisconnect,
   compact = false,
+  showBalance = true,
+  className,
 }: WalletConnectProps) {
-  const {
-    address,
-    isConnected,
-    isConnecting,
-    balance,
-    chain,
-    connectWallet,
-    disconnectWallet,
-    copyAddress,
-    truncateAddress,
-    openExplorer,
-  } = useWallet();
+  const { toast } = useToast();
 
-  // Call onConnect when wallet connects
-  useEffect(() => {
-    if (isConnected && address) {
-      onConnect?.(address);
+  // Update database when wallet connects/disconnects
+  const updateUserWalletInDatabase = async (address: string | null) => {
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      if (address) {
+        // Update connected wallet
+        await supabase
+          .from("users")
+          .update({
+            wallet_address: address,
+            wallet_connected_at: new Date().toISOString(),
+          })
+          .eq("id", user.id);
+      } else {
+        // Clear wallet connection
+        await supabase
+          .from("users")
+          .update({
+            wallet_address: null,
+            wallet_connected_at: null,
+          })
+          .eq("id", user.id);
+      }
+    } catch (error) {
+      console.error("Error updating wallet in database:", error);
     }
-  }, [isConnected, address, onConnect]);
-
-  const handleConnect = async () => {
-    await connectWallet();
   };
 
-  const handleDisconnect = async () => {
-    await disconnectWallet();
-    onDisconnect?.();
+  const handleConnect = async (wallet: any) => {
+    try {
+      const account = wallet.getAccount();
+      if (account?.address) {
+        await updateUserWalletInDatabase(account.address);
+        onConnect?.(account.address);
+
+        toast({
+          title: "Wallet connected",
+          description: "Your wallet has been successfully connected.",
+        });
+      }
+    } catch (error) {
+      console.error("Error in onConnect handler:", error);
+    }
   };
 
-  // Compact view for navbar
-  if (compact && isConnected) {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2">
-            <Wallet className="h-4 w-4" />
-            {truncateAddress(address!)}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel className="font-normal">
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium">Connected Wallet</p>
-              <p className="text-xs text-muted-foreground">
-                {truncateAddress(address!)}
-              </p>
-            </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={copyAddress}>
-            <Copy className="mr-2 h-4 w-4" />
-            Copy address
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={openExplorer}>
-            <ExternalLink className="mr-2 h-4 w-4" />
-            View on explorer
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={handleDisconnect}
-            className="text-destructive"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Disconnect
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
+  const handleDisconnect = async (info: any) => {
+    try {
+      await updateUserWalletInDatabase(null);
+      onDisconnect?.();
+
+      toast({
+        title: "Wallet disconnected",
+        description: "Your wallet has been disconnected.",
+      });
+    } catch (error) {
+      console.error("Error in onDisconnect handler:", error);
+    }
+  };
+
+  const chains = [ethereum, polygon, bsc, sepolia];
+
+  if (process.env.NODE_ENV === "development") {
+    chains.push(hardhatChain);
   }
 
-  if (compact && !isConnected) {
+  // Compact mode configuration
+  if (compact) {
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleConnect}
-        disabled={isConnecting}
-      >
-        {isConnecting ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Wallet className="h-4 w-4" />
-        )}
-        <span className="ml-2">Connect Wallet</span>
-      </Button>
+      <ConnectButton
+        client={client}
+        // Supported chains
+        chains={chains}
+
+        // Wallet options - popular wallets
+        wallets={[
+          createWallet("io.metamask"),
+          createWallet("com.coinbase.wallet"),
+          createWallet("me.rainbow"),
+          createWallet("io.zerion.wallet"),
+          createWallet("io.rabby"),
+          createWallet("com.trustwallet.app"),
+        ]}
+
+        // Connect button customization for compact mode
+        connectButton={{
+          label: "Connect",
+          className: "h-9 px-4",
+        }}
+
+        // Details button customization for compact mode
+        detailsButton={{
+          className: "h-9 px-4",
+        }}
+
+        // Modal customization
+        connectModal={{
+          size: "compact",
+          title: "Connect to Smartjects",
+          titleIcon: "/favicon.svg",
+          showThirdwebBranding: false,
+        }}
+
+        // Details modal customization
+        detailsModal={{
+          assetTabs: ["token", "nft"],
+        }}
+
+        // Callbacks
+        onConnect={handleConnect}
+        onDisconnect={handleDisconnect}
+
+        // Auto connect
+        autoConnect={{ timeout: 15000 }}
+
+        // Theme
+        theme={lightTheme({
+          colors: {
+            primaryButtonBg: "hsl(var(--primary))",
+            primaryButtonText: "hsl(var(--primary-foreground))",
+            modalBg: "hsl(var(--background))",
+            borderColor: "hsl(var(--border))",
+            separatorLine: "hsl(var(--border))",
+            secondaryButtonBg: "hsl(var(--secondary))",
+            secondaryButtonText: "hsl(var(--secondary-foreground))",
+            secondaryButtonHoverBg: "hsl(var(--secondary))",
+            connectedButtonBg: "hsl(var(--secondary))",
+            connectedButtonBgHover: "hsl(var(--secondary))",
+            primaryText: "hsl(var(--foreground))",
+            secondaryText: "hsl(var(--muted-foreground))",
+            accentText: "hsl(var(--primary))",
+            accentButtonBg: "hsl(var(--primary))",
+            accentButtonText: "hsl(var(--primary-foreground))",
+            danger: "hsl(var(--destructive))",
+            success: "hsl(142.1 76.2% 36.3%)",
+            tertiaryBg: "hsl(var(--muted))",
+          },
+        })}
+      />
     );
   }
 
   // Full card view
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Wallet className="h-5 w-5" />
-          Wallet Connection
-        </CardTitle>
-        <CardDescription>
-          Connect your wallet to enable blockchain features
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isConnected ? (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Connected to</p>
-                <div className="flex items-center gap-2">
-                  <p className="font-mono text-sm">
-                    {truncateAddress(address!)}
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={copyAddress}
-                  >
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={openExplorer}
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-              <Badge
-                variant="outline"
-                className="bg-green-50 dark:bg-green-950/20"
-              >
-                Connected
-              </Badge>
-            </div>
+    <div className={className}>
+      <ConnectButton
+        client={client}
 
-            {balance && (
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Balance</p>
-                <p className="font-medium">{balance}</p>
-              </div>
-            )}
+        // Supported chains
+        chains={chains}
 
-            <div className="pt-2">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleDisconnect}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Disconnect Wallet
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="rounded-lg bg-muted p-4">
-              <h4 className="font-medium mb-2">Why connect your wallet?</h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Secure contract execution on blockchain</li>
-                <li>• Automated escrow payments</li>
-                <li>• Transparent transaction history</li>
-                <li>• Decentralized dispute resolution</li>
-              </ul>
-            </div>
+        // Wallet options - all popular wallets
+        wallets={[
+          createWallet("io.metamask"),
+          createWallet("com.coinbase.wallet"),
+          createWallet("me.rainbow"),
+          createWallet("io.zerion.wallet"),
+          createWallet("io.rabby"),
+          createWallet("com.trustwallet.app"),
+          createWallet("org.uniswap"),
+        ]}
 
-            <Button
-              className="w-full"
-              onClick={handleConnect}
-              disabled={isConnecting}
-            >
-              {isConnecting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  <Wallet className="mr-2 h-4 w-4" />
-                  Connect MetaMask
-                </>
-              )}
-            </Button>
+        // Show all wallets option
+        showAllWallets={true}
 
-            <p className="text-xs text-center text-muted-foreground">
-              {chain
-                ? `Connected to ${chain.name}`
-                : "We support multiple networks"}
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        // Connect button customization
+        connectButton={{
+          label: "Connect Your Wallet",
+          className: "w-full",
+        }}
+
+        // Details button customization
+        detailsButton={{
+          className: "w-full",
+        }}
+
+        // Modal customization
+        connectModal={{
+          size: "wide",
+          title: "Connect to Smartjects Platform",
+          titleIcon: "/favicon.svg",
+          showThirdwebBranding: false,
+          welcomeScreen: {
+            title: "Welcome to Smartjects",
+            subtitle: "Connect your wallet to access blockchain features",
+            img: {
+              src: "/logo.png",
+              width: 150,
+              height: 150,
+            },
+          },
+          termsOfServiceUrl: "/terms",
+          privacyPolicyUrl: "/privacy",
+        }}
+
+        // Details modal customization
+        detailsModal={{
+          assetTabs: ["token", "nft"],
+          onClose: (screen) => {
+            console.log("Modal closed on screen:", screen);
+          },
+        }}
+
+        // App metadata
+        appMetadata={{
+          name: "Smartjects Platform",
+          description: "Blockchain-powered smart contract platform",
+          url: "https://smartjects.com",
+          logoUrl: "/logo.png",
+        }}
+
+        // Callbacks
+        onConnect={handleConnect}
+        onDisconnect={handleDisconnect}
+
+        // Auto connect previously connected wallet
+        autoConnect={{ timeout: 15000 }}
+
+        // Theme customization
+        theme={lightTheme({
+          colors: {
+            primaryButtonBg: "hsl(var(--primary))",
+            primaryButtonText: "hsl(var(--primary-foreground))",
+            modalBg: "hsl(var(--background))",
+            borderColor: "hsl(var(--border))",
+            separatorLine: "hsl(var(--border))",
+            secondaryButtonBg: "hsl(var(--secondary))",
+            secondaryButtonText: "hsl(var(--secondary-foreground))",
+            secondaryButtonHoverBg: "hsl(var(--secondary))",
+            connectedButtonBg: "hsl(var(--secondary))",
+            connectedButtonBgHover: "hsl(var(--secondary))",
+            primaryText: "hsl(var(--foreground))",
+            secondaryText: "hsl(var(--muted-foreground))",
+            accentText: "hsl(var(--primary))",
+            accentButtonBg: "hsl(var(--primary))",
+            accentButtonText: "hsl(var(--primary-foreground))",
+            danger: "hsl(var(--destructive))",
+            success: "hsl(142.1 76.2% 36.3%)",
+            tertiaryBg: "hsl(var(--muted))",
+            tooltipBg: "hsl(var(--popover))",
+            tooltipText: "hsl(var(--popover-foreground))",
+            skeletonBg: "hsl(var(--muted))",
+          },
+          fontFamily: "Inter, system-ui, sans-serif",
+        })}
+
+        // Supported tokens (optional - for send/receive features)
+        supportedTokens={{
+          [ethereum.id]: [
+            {
+              address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
+              name: "USD Coin",
+              symbol: "USDC",
+              icon: "https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png",
+            },
+            {
+              address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT
+              name: "Tether USD",
+              symbol: "USDT",
+              icon: "https://assets.coingecko.com/coins/images/325/small/Tether.png",
+            },
+          ],
+          [polygon.id]: [
+            {
+              address: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174", // USDC on Polygon
+              name: "USD Coin",
+              symbol: "USDC",
+              icon: "https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png",
+            },
+          ],
+        }}
+      />
+    </div>
   );
 }

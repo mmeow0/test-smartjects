@@ -1,0 +1,23 @@
+{
+  "contractName": "SmartjectsMarketplace",
+  "abi": [
+    "event AgreementAccepted(bytes32 indexed,address indexed)",
+    "event AgreementCancelled(bytes32 indexed,address indexed)",
+    "event AgreementCompleted(bytes32 indexed,address indexed,address indexed)",
+    "event AgreementCreated(bytes32 indexed,address indexed,address indexed,uint256)",
+    "event EscrowWithdrawn(bytes32 indexed,address indexed,uint256)",
+    "function acceptAgreement(bytes32)",
+    "function cancelAgreement(bytes32)",
+    "function completeAgreement(bytes32)",
+    "function computeExternalId(string) pure returns (bytes32)",
+    "function createAgreement(string,address,address,string,string) payable",
+    "function exists(bytes32) view returns (bool)",
+    "function getAgreement(bytes32) view returns (bytes32,address,address,string,string,uint8,uint256,uint256)",
+    "function listAgreementIds() view returns (bytes32[])",
+    "function updateTermsAndRequirements(bytes32,string,string)",
+    "function withdrawEscrow(bytes32)"
+  ],
+  "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "network": "hardhat",
+  "chainId": 31337
+}

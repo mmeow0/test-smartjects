@@ -20,6 +20,9 @@ import {
   XCircle,
   Loader2,
   ExternalLink,
+  DollarSign,
+  Handshake,
+  Wallet,
 } from "lucide-react";
 import { contractService } from "@/lib/services/contract.service";
 import { useRouter } from "next/navigation";
@@ -37,6 +40,12 @@ interface WorkflowStatus {
   isCompleted: boolean;
   hasMilestones: boolean;
   userRole: "provider" | "needer" | null;
+  canFundContract: boolean;
+  canAcceptAgreement: boolean;
+  isFunded: boolean;
+  isAccepted: boolean;
+  canWithdrawEscrow: boolean;
+  escrowReleased: boolean;
 }
 
 export function ContractWorkflow({
@@ -53,6 +62,12 @@ export function ContractWorkflow({
     isCompleted: false,
     hasMilestones: false,
     userRole: null,
+    canFundContract: false,
+    canAcceptAgreement: false,
+    isFunded: false,
+    isAccepted: false,
+    canWithdrawEscrow: false,
+    escrowReleased: false,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,22 +75,99 @@ export function ContractWorkflow({
   const [reviewComments, setReviewComments] = useState("");
   const [showReviewForm, setShowReviewForm] = useState(false);
 
-  // Load workflow status
-  useEffect(() => {
-    const loadWorkflowStatus = async () => {
-      try {
-        const status =
-          await contractService.getContractWorkflowStatus(contractId);
-        setWorkflowStatus(status);
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error loading workflow status:", error);
-        setIsLoading(false);
+  // Handler functions
+  const handleFundContract = async () => {
+    setIsSubmitting(true);
+    try {
+      const result = await contractService.fundContract(contractId);
+      if (result.success) {
+        toast({
+          title: "Contract funded",
+          description:
+            result.message || "Contract has been funded successfully.",
+        });
+        onStatusChange?.();
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to fund contract.",
+          variant: "destructive",
+        });
       }
-    };
+    } catch (error: any) {
+      console.error("Error funding contract:", error);
+      toast({
+        title: "Error",
+        description:
+          error.message || "Failed to fund contract. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    loadWorkflowStatus();
-  }, [contractId, currentStatus]);
+  const handleAcceptAgreement = async () => {
+    setIsSubmitting(true);
+    try {
+      const result = await contractService.acceptAgreement(contractId);
+      if (result.success) {
+        toast({
+          title: "Agreement accepted",
+          description:
+            result.message || "Agreement has been accepted successfully.",
+        });
+        onStatusChange?.();
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to accept agreement.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error accepting agreement:", error);
+      toast({
+        title: "Error",
+        description:
+          error.message || "Failed to accept agreement. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleWithdrawEscrow = async () => {
+    setIsSubmitting(true);
+    try {
+      const result = await contractService.withdrawEscrow(contractId);
+      if (result.success) {
+        toast({
+          title: "Escrow withdrawn",
+          description:
+            result.message || "Escrow funds have been withdrawn successfully.",
+        });
+        onStatusChange?.();
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to withdraw escrow.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error withdrawing escrow:", error);
+      toast({
+        title: "Error",
+        description:
+          error.message || "Failed to withdraw escrow. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleStartWork = async () => {
     setIsSubmitting(true);
@@ -99,23 +191,42 @@ export function ContractWorkflow({
   };
 
   const handleSubmitForReview = async () => {
+    if (!submissionMessage.trim()) {
+      toast({
+        title: "Deliverables required",
+        description: "Please describe the deliverables and work completed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await contractService.submitContractForReview(
         contractId,
-        submissionMessage.trim() || undefined,
+        submissionMessage.trim(),
       );
       toast({
         title: "Submitted for review",
-        description: "Contract has been submitted for client review.",
+        description:
+          "Contract has been submitted for client review. Work completion is recorded off-chain.",
       });
       setSubmissionMessage("");
       onStatusChange?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting for review:", error);
+
+      // Check if error is related to wallet connection
+      const isWalletError =
+        error.message?.includes("Wallet not connected") ||
+        error.message?.includes("wallet") ||
+        error.message?.includes("connect your wallet");
+
       toast({
-        title: "Error",
-        description: "Failed to submit contract for review. Please try again.",
+        title: isWalletError ? "Wallet Required" : "Error",
+        description: isWalletError
+          ? "Please connect your wallet to record the submission."
+          : "Failed to submit contract for review. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -134,7 +245,7 @@ export function ContractWorkflow({
       toast({
         title: approved ? "Contract approved" : "Contract rejected",
         description: approved
-          ? "Contract has been approved and marked as completed."
+          ? "Contract has been approved and the agreement is marked as completed. The provider can now withdraw the escrow funds from the smart contract."
           : "Contract has been rejected and returned for revision.",
       });
       setReviewComments("");
@@ -152,7 +263,7 @@ export function ContractWorkflow({
       toast({
         title: isWalletError ? "Wallet Required" : "Error",
         description: isWalletError
-          ? "Please connect your wallet to complete the contract and release escrow funds."
+          ? "Please connect your wallet to complete the agreement and enable fund withdrawal."
           : "Failed to review contract. Please try again.",
         variant: "destructive",
       });
@@ -161,8 +272,66 @@ export function ContractWorkflow({
     }
   };
 
+  // Load workflow status
+  useEffect(() => {
+    const loadWorkflowStatus = async () => {
+      try {
+        const status =
+          await contractService.getContractWorkflowStatus(contractId);
+
+        // Get contract details to check funding and acceptance status
+        const contract = await contractService.getContractById(contractId);
+
+
+        console.log('canAcceptAgreement', status.userRole, currentStatus, contract?.escrow_funded, contract?.blockchain_status, status.userRole === "provider" &&
+            currentStatus === "pending_acceptance" &&
+            contract?.escrow_funded &&
+            contract?.blockchain_status !== "accepted" );
+        
+        setWorkflowStatus({
+          ...status,
+          canFundContract:
+            status.userRole === "needer" &&
+            currentStatus === "pending_funding" &&
+            !contract?.escrow_funded,
+          canAcceptAgreement:
+            status.userRole === "provider" &&
+            currentStatus === "pending_acceptance" &&
+            contract?.escrow_funded &&
+            contract?.blockchain_status !== "accepted",
+          isFunded: contract?.escrow_funded || false,
+          isAccepted: contract?.blockchain_status === "accepted" || false,
+          canWithdrawEscrow:
+            status.userRole === "provider" &&
+            status.isCompleted &&
+            contract?.escrow_funded &&
+            !contract?.escrow_released,
+          escrowReleased: contract?.escrow_released || false,
+        });
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error loading workflow status:", error);
+        setIsLoading(false);
+      }
+    };
+
+    loadWorkflowStatus();
+  }, [contractId, currentStatus]);
+
   const getStatusBadge = () => {
     switch (currentStatus) {
+      case "pending_funding":
+        return (
+          <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+            Pending Funding
+          </Badge>
+        );
+      case "pending_acceptance":
+        return (
+          <Badge variant="secondary" className="bg-indigo-100 text-indigo-800">
+            Pending Acceptance
+          </Badge>
+        );
       case "pending_start":
         return (
           <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
@@ -196,6 +365,10 @@ export function ContractWorkflow({
 
   const getStatusIcon = () => {
     switch (currentStatus) {
+      case "pending_funding":
+        return <DollarSign className="h-5 w-5 text-amber-600" />;
+      case "pending_acceptance":
+        return <Handshake className="h-5 w-5 text-indigo-600" />;
       case "pending_start":
         return <Clock className="h-5 w-5 text-yellow-600" />;
       case "active":
@@ -243,6 +416,54 @@ export function ContractWorkflow({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          {/* Fund Contract Action (for needer) */}
+          {workflowStatus.canFundContract && (
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+              <h4 className="font-medium text-amber-800 mb-2">Fund Contract</h4>
+              <p className="text-sm text-amber-700 mb-3">
+                Both parties have signed the contract. Now fund the contract to
+                create the smart contract agreement with escrow.
+              </p>
+              <Button
+                onClick={handleFundContract}
+                disabled={isSubmitting}
+                className="bg-amber-600 hover:bg-amber-700"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <DollarSign className="h-4 w-4 mr-2" />
+                )}
+                Fund Contract
+              </Button>
+            </div>
+          )}
+
+          {/* Accept Agreement Action (for provider) */}
+          {workflowStatus.canAcceptAgreement && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-md p-4">
+              <h4 className="font-medium text-indigo-800 mb-2">
+                Accept Agreement
+              </h4>
+              <p className="text-sm text-indigo-700 mb-3">
+                The contract has been funded. Accept the agreement to begin work
+                on this contract.
+              </p>
+              <Button
+                onClick={handleAcceptAgreement}
+                disabled={isSubmitting}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Handshake className="h-4 w-4 mr-2" />
+                )}
+                Accept Agreement
+              </Button>
+            </div>
+          )}
+
           {/* Start Work Action */}
           {workflowStatus.canStartWork && (
             <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
@@ -276,10 +497,16 @@ export function ContractWorkflow({
               </h4>
               <p className="text-sm text-purple-700 mb-3">
                 Submit your completed work for client review and approval.
+                {workflowStatus.userRole === "provider" && (
+                  <span className="block mt-1 font-medium">
+                    Work completion is tracked off-chain. Client approval will
+                    complete the agreement on the blockchain.
+                  </span>
+                )}
               </p>
               <div className="space-y-3">
                 <Textarea
-                  placeholder="Add a message about your completed work (optional)..."
+                  placeholder="Describe the deliverables and work completed..."
                   value={submissionMessage}
                   onChange={(e) => setSubmissionMessage(e.target.value)}
                   className="min-h-[80px]"
@@ -287,7 +514,7 @@ export function ContractWorkflow({
                 />
                 <Button
                   onClick={handleSubmitForReview}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !submissionMessage.trim()}
                   className="bg-purple-600 hover:bg-purple-700"
                 >
                   {isSubmitting ? (
@@ -310,6 +537,11 @@ export function ContractWorkflow({
               <p className="text-sm text-amber-700 mb-3">
                 The provider has submitted their work for your review. Please
                 review and approve or request changes.
+                <span className="block mt-1 font-medium text-amber-900">
+                  ⚠️ Important: Approving will complete the agreement on the
+                  blockchain, allowing the provider to withdraw the escrowed
+                  funds.
+                </span>
               </p>
 
               <div className="flex gap-2">
@@ -359,7 +591,7 @@ export function ContractWorkflow({
                       ) : (
                         <CheckCircle className="h-4 w-4 mr-2" />
                       )}
-                      Approve & Complete
+                      Approve & Complete Agreement
                     </Button>
                     <Button
                       onClick={() => handleReview(false)}
@@ -393,16 +625,66 @@ export function ContractWorkflow({
             </div>
           )}
 
+          {/* Withdraw Escrow Action (for provider after completion) */}
+          {workflowStatus.canWithdrawEscrow && (
+            <div className="bg-green-50 border border-green-200 rounded-md p-4">
+              <h4 className="font-medium text-green-800 mb-2 flex items-center gap-2">
+                <Wallet className="h-5 w-5" />
+                Withdraw Escrow Funds
+              </h4>
+              <p className="text-sm text-green-700 mb-3">
+                The contract has been completed and approved. You can now
+                withdraw the escrow funds from the smart contract.
+              </p>
+              <Button
+                onClick={handleWithdrawEscrow}
+                disabled={isSubmitting}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Wallet className="h-4 w-4 mr-2" />
+                )}
+                Withdraw Escrow
+              </Button>
+            </div>
+          )}
+
+          {/* Escrow Already Withdrawn */}
+          {workflowStatus.userRole === "provider" &&
+            workflowStatus.isCompleted &&
+            workflowStatus.escrowReleased && (
+              <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
+                <h4 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-gray-600" />
+                  Escrow Withdrawn
+                </h4>
+                <p className="text-sm text-gray-600">
+                  The escrow funds have been successfully withdrawn from this
+                  contract.
+                </p>
+              </div>
+            )}
+
           {/* Info for inactive states */}
-          {!workflowStatus.canStartWork &&
+          {!workflowStatus.canFundContract &&
+            !workflowStatus.canAcceptAgreement &&
+            !workflowStatus.canStartWork &&
             !workflowStatus.canSubmitForReview &&
             !workflowStatus.canReview &&
             !workflowStatus.isCompleted && (
               <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
                 <p className="text-sm text-gray-600">
-                  {workflowStatus.userRole === "provider"
-                    ? "Wait for client approval to proceed with the next step."
-                    : "The provider is currently working on this contract."}
+                  {currentStatus === "pending_funding" &&
+                  workflowStatus.userRole === "provider"
+                    ? "Waiting for the client to fund the contract."
+                    : currentStatus === "pending_acceptance" &&
+                        workflowStatus.userRole === "needer"
+                      ? "Waiting for the provider to accept the agreement."
+                      : workflowStatus.userRole === "provider"
+                        ? "Wait for client approval to proceed with the next step."
+                        : "The provider is currently working on this contract."}
                 </p>
               </div>
             )}

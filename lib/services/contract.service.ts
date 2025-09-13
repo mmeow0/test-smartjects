@@ -1,11 +1,12 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { blockchainService } from "@/lib/services/blockchain.service";
+import {
+  marketplaceService,
+  AgreementStatus,
+} from "@/lib/services/marketplace.service";
 import { notificationService } from "./notification.service";
 import type { ContractListType } from "../types";
-import {
-  BLOCKCHAIN_RECORDS_ONLY,
-  getDeploymentAmount,
-} from "@/lib/config/blockchain-features.config";
+import { getDeploymentAmount } from "@/lib/config/blockchain-features.config";
 
 export const contractService = {
   // Get contract data by match ID and proposal ID
@@ -551,65 +552,23 @@ export const contractService = {
       // Check if both parties have signed
       const bothSigned = data.provider_signed && data.needer_signed;
 
-      if (bothSigned && !data.blockchain_address) {
-        console.log("Both parties signed, deploying smart contract...");
+      if (bothSigned) {
+        console.log("Both parties have signed the contract");
 
-        try {
-          // Get user wallet addresses
-          const { data: providerWallet } = await supabase
-            .from("users")
-            .select("wallet_address")
-            .eq("id", contractData.provider_id)
-            .single();
+        // Update contract status to ready for funding
+        await supabase
+          .from("contracts")
+          .update({
+            status: "pending_funding",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", contractId);
 
-          const { data: neederWallet } = await supabase
-            .from("users")
-            .select("wallet_address")
-            .eq("id", contractData.needer_id)
-            .single();
-
-          if (providerWallet?.wallet_address && neederWallet?.wallet_address) {
-            // Deploy escrow smart contract
-            const deploymentAmount = getDeploymentAmount(
-              contractData.budget || 0,
-            );
-
-            const escrowAddress = await blockchainService.deployEscrowContract({
-              contractId: contractId,
-              clientAddress: neederWallet.wallet_address,
-              providerAddress: providerWallet.wallet_address,
-              amount: deploymentAmount,
-            });
-
-            if (escrowAddress) {
-              // Update contract with blockchain address
-              await supabase
-                .from("contracts")
-                .update({
-                  blockchain_address: escrowAddress,
-                  blockchain_deployed_at: new Date().toISOString(),
-                  blockchain_status: "deployed",
-                })
-                .eq("id", contractId);
-
-              console.log("Smart contract deployed at:", escrowAddress);
-
-              // Send notification about smart contract deployment
-              const deploymentMessage = `Smart contract has been deployed. The contract is now secured on the blockchain at address: ${escrowAddress}`;
-              await this.sendContractMessage(contractId, deploymentMessage);
-            }
-          } else {
-            console.log(
-              "Wallet addresses not found for users, skipping blockchain deployment",
-            );
-          }
-        } catch (blockchainError) {
-          console.error("Error deploying smart contract:", blockchainError);
-          // Don't fail the signing process if blockchain deployment fails
-          // Send notification about the error
+        // Send notification about next steps
+        if (!isProvider) {
           await this.sendContractMessage(
             contractId,
-            "Contract signed successfully, but smart contract deployment failed. Please contact support.",
+            "✅ Contract has been signed by both parties! The client can now fund the contract to create the smart contract agreement.",
           );
         }
       }
@@ -2544,11 +2503,7 @@ export const contractService = {
       const newStatus = approved ? "completed" : "active";
 
       // If approving and blockchain is enabled, check wallet connection first
-      if (
-        approved &&
-        contractData.blockchain_address &&
-        !BLOCKCHAIN_RECORDS_ONLY
-      ) {
+      if (approved && contractData.blockchain_address) {
         const isWalletConnected = await blockchainService.isWalletConnected();
         if (!isWalletConnected) {
           throw new Error(
@@ -3022,6 +2977,235 @@ export const contractService = {
     }
   },
 
+  // Fund contract and create smart contract agreement (for needer/client)
+  async fundContract(
+    contractId: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Get contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        throw new Error("Contract not found");
+      }
+
+      // Check if user is the needer (client)
+      if (contractData.needer_id !== currentUser.id) {
+        throw new Error("Only the client can fund the contract");
+      }
+
+      // Check if contract is fully signed
+      if (!contractData.provider_signed || !contractData.needer_signed) {
+        throw new Error("Contract must be fully signed before funding");
+      }
+
+      // Check if already funded
+      if (contractData.blockchain_address) {
+        return { success: true, message: "Contract is already funded" };
+      }
+
+      // Get user wallet addresses
+      const { data: providerWallet } = await supabase
+        .from("users")
+        .select("wallet_address")
+        .eq("id", contractData.provider_id)
+        .single();
+
+      const { data: neederWallet } = await supabase
+        .from("users")
+        .select("wallet_address")
+        .eq("id", contractData.needer_id)
+        .single();
+
+      if (!providerWallet?.wallet_address || !neederWallet?.wallet_address) {
+        throw new Error("Both parties must have connected wallets");
+      }
+
+      console.log("🔍 Original contract budget:", contractData.budget);
+      console.log("🔍 Contract budget type:", typeof contractData.budget);
+
+      // Calculate deployment amount
+      const deploymentAmount = await getDeploymentAmount(contractData.budget || 0);
+
+      console.log("💰 Escrow amount for agreement:", deploymentAmount, "ETH");
+      console.log("📋 Creating agreement with escrow");
+
+      // Create agreement on marketplace with escrow
+      const marketplaceAddress = await blockchainService.deployEscrowContract({
+        contractId: contractId,
+        clientAddress: neederWallet.wallet_address,
+        providerAddress: providerWallet.wallet_address,
+        amount: deploymentAmount, // Escrow amount included in creation
+      });
+
+      if (marketplaceAddress) {
+        // Update contract with blockchain address and funding info
+        const { error: updateError } = await supabase
+          .from("contracts")
+          .update({
+            blockchain_address: marketplaceAddress,
+            blockchain_deployed_at: new Date().toISOString(),
+            blockchain_status: "pending_acceptance",
+            escrow_funded: true,
+            escrow_funded_at: new Date().toISOString(),
+            escrow_amount: parseFloat(deploymentAmount),
+            status: "pending_acceptance",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", contractId);
+
+        if (updateError) {
+          console.error(
+            "Error updating contract after deployment:",
+            updateError,
+          );
+          throw new Error("Failed to update contract status after deployment");
+        }
+
+        console.log("Agreement created on marketplace at:", marketplaceAddress);
+        console.log("📋 Agreement status: Created with escrow included");
+        console.log("💾 Database updated with funding info:", {
+          blockchain_status: "pending_acceptance",
+          escrow_funded: true,
+          escrow_amount: deploymentAmount,
+        });
+
+        // Send notification about smart contract deployment
+        await this.sendContractMessage(
+          contractId,
+          `💰 Smart contract agreement has been created and funded! Address: ${marketplaceAddress}\n\nThe provider can now accept the agreement to begin work.`,
+        );
+
+        return {
+          success: true,
+          message:
+            "Contract funded successfully. The provider can now accept the agreement.",
+        };
+      } else {
+        throw new Error("Failed to create smart contract agreement");
+      }
+    } catch (error: any) {
+      console.error("Error funding contract:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to fund contract",
+      };
+    }
+  },
+
+  // Accept agreement (for provider)
+  async acceptAgreement(
+    contractId: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Get contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        throw new Error("Contract not found");
+      }
+
+      // Check if user is the provider
+      if (contractData.provider_id !== currentUser.id) {
+        throw new Error("Only the provider can accept the agreement");
+      }
+
+      // Check if contract is funded
+      if (!contractData.escrow_funded || !contractData.blockchain_address) {
+        throw new Error("Contract must be funded before acceptance");
+      }
+
+      // Check if already accepted
+      if (
+        contractData.blockchain_status === "accepted" ||
+        contractData.status === "active"
+      ) {
+        return { success: true, message: "Agreement is already accepted" };
+      }
+
+      // Call acceptAgreement on smart contract
+      console.log("📋 Provider accepting agreement for contract:", contractId);
+
+      // Import marketplaceService if not already imported
+      const { marketplaceService } = await import(
+        "@/lib/services/marketplace.service"
+      );
+
+      const success = await marketplaceService.acceptAgreement(contractId);
+
+      if (success) {
+        // Update contract status in database
+        const { error: updateError } = await supabase
+          .from("contracts")
+          .update({
+            blockchain_status: "accepted",
+            status: "pending_start",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", contractId);
+
+        if (updateError) {
+          console.error(
+            "Error updating contract after acceptance:",
+            updateError,
+          );
+          throw new Error("Failed to update contract status after acceptance");
+        }
+
+        console.log("✅ Agreement accepted successfully");
+        console.log("💾 Database updated with acceptance info:", {
+          blockchain_status: "accepted",
+          status: "pending_start",
+        });
+
+        // Send notification
+        await this.sendContractMessage(
+          contractId,
+          "✅ Provider has accepted the agreement! Work can now begin on the contract.",
+        );
+
+        return {
+          success: true,
+          message: "Agreement accepted successfully. You can now start work.",
+        };
+      } else {
+        throw new Error("Failed to accept agreement on blockchain");
+      }
+    } catch (error: any) {
+      console.error("Error accepting agreement:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to accept agreement",
+      };
+    }
+  },
+
   async completeMilestone(
     milestoneId: string,
     completionData: {
@@ -3266,6 +3450,79 @@ This milestone is now ready for review and approval.`;
     }
   },
 
+  // Finalize blockchain contract and release escrow funds
+  async finalizeBlockchainContract(
+    contractId: string,
+    blockchainContractId: number,
+    completionMessage?: string,
+  ): Promise<boolean> {
+    try {
+      console.log(
+        `💰 Finalizing blockchain contract ${blockchainContractId} to release escrow funds`,
+      );
+
+      // Add diagnostic checks before finalizing
+      try {
+        console.log("🔍 Running finalization diagnostics...");
+
+        // Get contract details for diagnostics
+        const contractDetails =
+          await marketplaceService.getContractDetails(blockchainContractId);
+        console.log("📋 Contract finalization diagnostics completed");
+
+        // Check if funds can be released
+        const canRelease =
+          await marketplaceService.canReleaseFunds(blockchainContractId);
+        if (!canRelease) {
+          console.error("❌ Cannot finalize: fund release not allowed");
+          return false;
+        }
+
+        console.log("✅ Finalization checks passed, proceeding...");
+      } catch (diagnosticError: any) {
+        console.error("❌ Finalization diagnostic failed:", diagnosticError);
+        return false;
+      }
+
+      // According to documentation: releaseContractFunds can only be called by neederId
+      // This releases funds to provider (minus 2.5% platform fee) and sets status to COMPLETED
+      console.log(
+        "💰 Calling releaseContractFunds (neederId releases funds to provider)",
+      );
+      const success = await marketplaceService.releaseContractFunds(contractId);
+
+      if (success) {
+        console.log(
+          "✅ Funds successfully released to provider via releaseContractFunds",
+        );
+        console.log("📋 Contract status changed to COMPLETED on blockchain");
+        console.log("💰 Provider received funds minus 2.5% platform fee");
+
+        // Update blockchain status in database
+        const supabase = getSupabaseBrowserClient();
+        await supabase
+          .from("contracts")
+          .update({
+            blockchain_completed_at: new Date().toISOString(),
+            blockchain_status: "completed",
+            escrow_released: true,
+            escrow_released_at: new Date().toISOString(),
+          })
+          .eq("id", contractId);
+
+        return true;
+      } else {
+        console.error(
+          "❌ Failed to release contract funds via releaseContractFunds",
+        );
+        return false;
+      }
+    } catch (error) {
+      console.error("Error finalizing blockchain contract:", error);
+      return false;
+    }
+  },
+
   async reviewContract(
     contractId: string,
     approved: boolean,
@@ -3303,7 +3560,76 @@ This milestone is now ready for review and approval.`;
 
       const newStatus = approved ? "completed" : "active";
 
-      // Update contract
+      // If approved and blockchain is enabled, provider can now withdraw escrow
+      if (approved && contractData.blockchain_address) {
+        // Check if wallet is connected
+        const isWalletConnected = await blockchainService.isWalletConnected();
+        if (!isWalletConnected) {
+          throw new Error(
+            "Wallet not connected. Please connect your wallet to approve the contract.",
+          );
+        }
+
+          // If blockchain is enabled, call completeAgreement on blockchain
+      if (contractData.blockchain_address) {
+        // Check if wallet is connected
+        const isWalletConnected = await blockchainService.isWalletConnected();
+        if (!isWalletConnected) {
+          throw new Error(
+            "Wallet not connected. Please connect your wallet to submit contract completion.",
+          );
+        }
+
+        try {
+          console.log("📋 Calling completeAgreement for contract:", contractId);
+
+          // Import marketplaceService if not already imported
+          const { marketplaceService } = await import(
+            "@/lib/services/marketplace.service"
+          );
+
+          // Needer marks agreement as completed
+          const success =
+            await marketplaceService.completeAgreement(contractId);
+
+          if (success) {
+            console.log("✅ Agreement marked as completed on blockchain");
+            console.log(
+              "💡 Next step: needer should approve to enable fund withdrawal",
+            );
+          } else {
+            console.error(
+              "Failed to mark agreement as completed on blockchain",
+            );
+            // Don't throw - allow database update to proceed
+          }
+        } catch (blockchainError) {
+          console.error(
+            "Error marking agreement as completed on blockchain:",
+            blockchainError,
+          );
+          // Don't throw - allow database update to proceed
+        }
+      }
+
+
+        try {
+          console.log(
+            "📋 Contract approved - provider can now withdraw escrow",
+          );
+
+          // The needer's approval allows the provider to withdraw
+          // The actual withdrawal will be initiated by the provider
+          await this.sendContractMessage(
+            contractId,
+            "✅ Contract has been approved! The provider can now withdraw the escrow funds from the smart contract.",
+          );
+        } catch (error: any) {
+          console.error("Error notifying about approval:", error);
+        }
+      }
+
+      // Update contract in database
       const { error: updateError } = await supabase
         .from("contracts")
         .update({
@@ -3319,50 +3645,10 @@ This milestone is now ready for review and approval.`;
         throw updateError;
       }
 
-      // If approved and blockchain is enabled, release escrow funds
-      if (
-        approved &&
-        contractData.blockchain_address &&
-        !BLOCKCHAIN_RECORDS_ONLY
-      ) {
-        // Check if wallet is connected before attempting blockchain interaction
-        const isWalletConnected = await blockchainService.isWalletConnected();
-        if (!isWalletConnected) {
-          throw new Error(
-            "Wallet not connected. Please connect your wallet to complete the contract and release escrow funds.",
-          );
-        }
-
-        try {
-          console.log("Releasing escrow funds for contract:", contractId);
-
-          const released = await blockchainService.releaseEscrowFunds(
-            contractId,
-            true, // approved
-          );
-
-          if (released) {
-            // Update blockchain status
-            await supabase
-              .from("contracts")
-              .update({
-                blockchain_completed_at: new Date().toISOString(),
-                blockchain_status: "completed",
-              })
-              .eq("id", contractId);
-
-            console.log("Escrow funds released successfully");
-          }
-        } catch (blockchainError) {
-          console.error("Error releasing escrow funds:", blockchainError);
-          // Continue with the review process even if blockchain fails
-        }
-      }
-
       // Send notification message
       const message = approved
-        ? `Contract has been approved and marked as completed.${reviewComments ? "\n\nClient comments: " + reviewComments : ""}${contractData.blockchain_address && !BLOCKCHAIN_RECORDS_ONLY ? "\n\nEscrow funds have been released to the provider." : contractData.blockchain_address ? "\n\nContract completion recorded on blockchain." : ""}`
-        : `Contract has been rejected and returned for revision.${reviewComments ? "\n\nClient comments: " + reviewComments : ""}`;
+        ? `✅ Contract has been approved and marked as completed.${reviewComments ? "\n\n📝 Client comments: " + reviewComments : ""}${contractData.blockchain_address ? "\n\n💰 Escrow funds have been released to the provider." : ""}`
+        : `❌ Contract has been rejected and returned for revision.${reviewComments ? "\n\n📝 Client comments: " + reviewComments : ""}`;
 
       await this.sendContractMessage(contractId, message);
 
@@ -3370,6 +3656,91 @@ This milestone is now ready for review and approval.`;
     } catch (error) {
       console.error("Error reviewing contract:", error);
       throw error;
+    }
+  },
+
+  // Withdraw escrow funds (for provider after needer approval)
+  async withdrawEscrow(
+    contractId: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Get contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        throw new Error("Contract not found");
+      }
+
+      // Check if user is the provider
+      if (contractData.provider_id !== currentUser.id) {
+        throw new Error("Only the provider can withdraw escrow funds");
+      }
+
+      // Check if contract is completed
+      if (contractData.status !== "completed") {
+        throw new Error("Contract must be completed before withdrawing funds");
+      }
+
+      // Check if funds already withdrawn
+      if (contractData.escrow_released) {
+        return { success: true, message: "Escrow funds already withdrawn" };
+      }
+
+      console.log("💰 Provider withdrawing escrow for contract:", contractId);
+
+      // Import marketplaceService if not already imported
+      const { marketplaceService } = await import(
+        "@/lib/services/marketplace.service"
+      );
+
+      // Provider withdraws escrow
+      const success = await marketplaceService.withdrawEscrow(contractId);
+
+      if (success) {
+        // Update contract status in database
+        await supabase
+          .from("contracts")
+          .update({
+            escrow_released: true,
+            escrow_released_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", contractId);
+
+        console.log("✅ Escrow funds withdrawn successfully");
+
+        // Send notification
+        await this.sendContractMessage(
+          contractId,
+          "💰 Escrow funds have been successfully withdrawn! Thank you for using our platform.",
+        );
+
+        return {
+          success: true,
+          message: "Escrow funds withdrawn successfully",
+        };
+      } else {
+        throw new Error("Failed to withdraw escrow from blockchain");
+      }
+    } catch (error: any) {
+      console.error("Error withdrawing escrow:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to withdraw escrow",
+      };
     }
   },
 
@@ -3427,18 +3798,42 @@ This milestone is now ready for review and approval.`;
       }
 
       const isCompleted = contractData.status === "completed";
-      const canStartWork =
-        userRole === "provider" &&
-        contractData.status === "pending_start" &&
-        !hasMilestones;
-      const canSubmitForReview =
-        userRole === "provider" &&
-        contractData.status === "active" &&
-        !hasMilestones;
-      const canReview =
-        userRole === "needer" &&
-        contractData.status === "pending_review" &&
-        !hasMilestones;
+
+      // Handle new workflow states
+      let canStartWork = false;
+      let canSubmitForReview = false;
+      let canReview = false;
+
+      // Check various status conditions
+      if (!hasMilestones) {
+        // For contracts without milestones
+        if (contractData.status === "pending_funding") {
+          // Contract is signed, waiting for funding
+          canStartWork = false;
+          canSubmitForReview = false;
+          canReview = false;
+        } else if (contractData.status === "pending_acceptance") {
+          // Contract is funded, waiting for provider acceptance
+          canStartWork = false;
+          canSubmitForReview = false;
+          canReview = false;
+        } else if (contractData.status === "pending_start") {
+          // Contract is accepted, provider can start work
+          canStartWork = userRole === "provider";
+          canSubmitForReview = false;
+          canReview = false;
+        } else if (contractData.status === "active") {
+          // Work is in progress, provider can submit for review
+          canStartWork = false;
+          canSubmitForReview = userRole === "provider";
+          canReview = false;
+        } else if (contractData.status === "pending_review") {
+          // Work submitted, needer can review
+          canStartWork = false;
+          canSubmitForReview = false;
+          canReview = userRole === "needer";
+        }
+      }
 
       return {
         canStartWork,
@@ -3457,6 +3852,119 @@ This milestone is now ready for review and approval.`;
         isCompleted: false,
         hasMilestones: false,
         userRole: null,
+      };
+    }
+  },
+
+  // Complete contract and release funds (for needer/client)
+  async completeContractAndReleaseFunds(
+    contractId: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("No authenticated user");
+      }
+
+      // Get contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        throw new Error("Contract not found");
+      }
+
+      // Check if user is the needer (client)
+      if (contractData.needer_id !== currentUser.id) {
+        throw new Error(
+          "Only the client can complete the contract and release funds",
+        );
+      }
+
+      // Check if contract is funded
+      if (!contractData.escrow_funded) {
+        throw new Error("Contract must be funded before completion");
+      }
+
+      // Check if contract is already completed
+      if (contractData.blockchain_status === "completed") {
+        return { success: true, message: "Contract is already completed" };
+      }
+
+      // In new contract: completeAgreement marks as completed, then provider withdraws
+      console.log("💰 Completing agreement for contract:", contractId);
+      console.log("📋 Needer completes agreement, then provider can withdraw");
+
+      // Add diagnostic checks before releasing funds
+      try {
+        console.log("🔍 Running pre-release diagnostics...");
+
+        // Check if agreement exists and can be completed
+        const agreementExists =
+          await marketplaceService.contractExists(contractId);
+        console.log("📋 Agreement existence check completed");
+
+        if (!agreementExists) {
+          throw new Error("Agreement does not exist on blockchain");
+        }
+
+        console.log(
+          "✅ Pre-release checks passed, proceeding with fund release...",
+        );
+      } catch (diagnosticError: any) {
+        console.error("❌ Pre-release diagnostic failed:", diagnosticError);
+        throw new Error(`Diagnostic check failed: ${diagnosticError.message}`);
+      }
+
+      // Complete agreement (needer action), which allows provider to withdraw
+      const releaseSuccess =
+        await marketplaceService.releaseContractFunds(contractId);
+
+      if (!releaseSuccess) {
+        throw new Error("Failed to release funds on blockchain");
+      }
+
+      // Update contract status in database
+      const { error: updateError } = await supabase
+        .from("contracts")
+        .update({
+          blockchain_status: "completed",
+          status: "completed",
+          escrow_released: true,
+          escrow_released_at: new Date().toISOString(),
+          blockchain_completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", contractId);
+
+      if (updateError) {
+        console.error("Error updating contract status:", updateError);
+        // Don't throw - blockchain transaction was successful
+      }
+
+      // Send completion message according to new workflow
+      await this.sendContractMessage(
+        contractId,
+        "✅ Agreement has been completed! The provider can now withdraw the escrow funds from the smart contract. Thank you for using our platform!",
+      );
+
+      return {
+        success: true,
+        message:
+          "Contract completed successfully - funds released to provider via releaseContractFunds",
+      };
+    } catch (error: any) {
+      console.error("Error completing contract and releasing funds:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to complete contract",
       };
     }
   },
@@ -3656,16 +4164,20 @@ This milestone is now ready for review and approval.`;
         return false;
       }
 
-      console.log("contractData.budget", contractData.budget);
-      console.log("contractData.budget", {
+      console.log("🔍 Original contract budget:", contractData.budget);
+      console.log("🔍 Contract budget type:", typeof contractData.budget);
+
+      // Deploy escrow smart contract
+      const deploymentAmount = await getDeploymentAmount(contractData.budget || 0);
+
+      console.log("💰 Calculated deployment amount:", deploymentAmount);
+      console.log("🔍 Deployment params:", {
         contractId: contractId,
         clientAddress: neederWallet.wallet_address,
         providerAddress: providerWallet.wallet_address,
-        amount: contractData.budget.toString(),
+        originalBudget: contractData.budget,
+        deploymentAmount: deploymentAmount,
       });
-
-      // Deploy escrow smart contract
-      const deploymentAmount = getDeploymentAmount(contractData.budget || 0);
 
       const escrowAddress = await blockchainService.deployEscrowContract({
         contractId: contractId,
@@ -3677,20 +4189,40 @@ This milestone is now ready for review and approval.`;
       console.log("escrowAddress", escrowAddress);
 
       if (escrowAddress) {
-        // Update contract with blockchain address
-        await supabase
+        console.log(`📝 Agreement created for contract ${contractId}`);
+
+        // Update contract with blockchain address and funding info
+        const { error: updateError } = await supabase
           .from("contracts")
           .update({
             blockchain_address: escrowAddress,
             blockchain_deployed_at: new Date().toISOString(),
-            blockchain_status: "deployed",
+            blockchain_status: "pending_acceptance",
+            escrow_funded: true,
+            escrow_funded_at: new Date().toISOString(),
+            escrow_amount: parseFloat(deploymentAmount),
+            status: "pending_acceptance",
+            updated_at: new Date().toISOString(),
           })
           .eq("id", contractId);
 
-        console.log("✅ Smart contract deployed at:", escrowAddress);
+        if (updateError) {
+          console.error(
+            "Error updating contract after deployment:",
+            updateError,
+          );
+          throw new Error("Failed to update contract status after deployment");
+        }
+
+        console.log("Agreement created at marketplace:", escrowAddress);
+        console.log("💾 Database updated with funding info:", {
+          blockchain_status: "pending_acceptance",
+          escrow_funded: true,
+          escrow_amount: deploymentAmount,
+        });
 
         // Send notification about smart contract deployment
-        const deploymentMessage = `Smart contract has been successfully deployed! The contract is now secured on the blockchain at address: ${escrowAddress}`;
+        const deploymentMessage = `Smart contract agreement has been successfully created and funded! The agreement is now secured on the blockchain at address: ${escrowAddress}\n\nThe provider can now accept the agreement to begin work.`;
         await this.sendContractMessage(contractId, deploymentMessage);
 
         return true;
@@ -3742,6 +4274,162 @@ This milestone is now ready for review and approval.`;
       return true;
     } catch (error) {
       console.error("Error in updateContractFundingStatus:", error);
+      return false;
+    }
+  },
+
+  // Additional Marketplace Methods (keeping for backward compatibility)
+
+  // Create marketplace proposal from existing contract
+  async createMarketplaceProposal(
+    contractId: string,
+    proposalType: ProposalType = ProposalType.NEED,
+  ): Promise<number | null> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Get contract details
+      const { data: contract } = await supabase
+        .from("contracts")
+        .select("*, proposals(*)")
+        .eq("id", contractId)
+        .single();
+
+      if (!contract) {
+        throw new Error("Contract not found");
+      }
+
+      const proposal = contract.proposals as any;
+
+      // Create proposal on marketplace
+      const txHash = await marketplaceService.createProposal(
+        contractId,
+        proposalType,
+        contract.budget?.toString() || "0",
+        proposal?.title || "Contract Work",
+        proposal?.requirements || "See contract details",
+      );
+
+      if (txHash) {
+        // In production, extract proposal ID from transaction events
+        // For now, return a placeholder
+        return 1;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error creating marketplace proposal:", error);
+      return null;
+    }
+  },
+
+  // Accept marketplace proposal and create contract
+  async acceptMarketplaceProposal(
+    proposalId: number,
+    counterpartyAddress: string,
+    paymentAmount?: string,
+  ): Promise<string | null> {
+    try {
+      const txHash = await marketplaceService.acceptProposal(
+        proposalId,
+        counterpartyAddress,
+        paymentAmount,
+      );
+
+      return txHash;
+    } catch (error) {
+      console.error("Error accepting marketplace proposal:", error);
+      return null;
+    }
+  },
+
+  // Fund marketplace contract
+  async fundMarketplaceContract(
+    contractId: number,
+    amount: string,
+  ): Promise<boolean> {
+    try {
+      return await marketplaceService.fundContract(contractId, amount);
+    } catch (error) {
+      console.error("Error funding marketplace contract:", error);
+      return false;
+    }
+  },
+
+  // Complete marketplace contract
+  async completeMarketplaceContract(
+    contractId: number,
+    deliverables: string,
+  ): Promise<boolean> {
+    try {
+      return await marketplaceService.completeContract(
+        contractId,
+        deliverables,
+      );
+    } catch (error) {
+      console.error("Error completing marketplace contract:", error);
+      return false;
+    }
+  },
+
+  // Get marketplace contract details
+  async getMarketplaceContract(contractId: number) {
+    try {
+      const contract = await marketplaceService.getContract(contractId);
+      return contract;
+    } catch (error) {
+      console.error("Error getting marketplace contract:", error);
+      return null;
+    }
+  },
+
+  // Sync database with marketplace contract
+  async syncWithMarketplace(
+    dbContractId: string,
+    blockchainContractId: number,
+  ): Promise<boolean> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // Get blockchain contract details
+      const blockchainContract =
+        await marketplaceService.getContract(blockchainContractId);
+
+      if (!blockchainContract) {
+        console.error("Blockchain contract not found");
+        return false;
+      }
+
+      // Map blockchain status to database status
+      const statusMap: { [key: number]: string } = {
+        [ContractStatus.PENDING]: "pending",
+        [ContractStatus.ACTIVE]: "active",
+        [ContractStatus.COMPLETED]: "completed",
+        [ContractStatus.CANCELLED]: "cancelled",
+        [ContractStatus.DISPUTED]: "disputed",
+      };
+
+      // Update database contract
+      const { error } = await supabase
+        .from("contracts")
+        .update({
+          blockchain_contract_status:
+            statusMap[blockchainContract.status] || "unknown",
+          escrow_amount: Number(blockchainContract.escrowAmount) / 1e18, // Convert from wei
+          escrow_funded: blockchainContract.escrowAmount > BigInt(0),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", dbContractId);
+
+      if (error) {
+        console.error("Error updating contract:", error);
+        return false;
+      }
+
+      console.log("✅ Contract synced with marketplace");
+      return true;
+    } catch (error) {
+      console.error("Error syncing with marketplace:", error);
       return false;
     }
   },

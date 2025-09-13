@@ -1,5 +1,5 @@
-// Blockchain configuration checker utility
-// This helps diagnose issues with blockchain integration in different environments
+// Blockchain configuration checker utility for SmartjectsMarketplace
+// This helps diagnose issues with marketplace contract integration
 
 export interface BlockchainConfigStatus {
   isValid: boolean;
@@ -8,7 +8,7 @@ export interface BlockchainConfigStatus {
   config: {
     clientId: boolean;
     secretKey: boolean;
-    factoryAddress: boolean;
+    marketplaceAddress: boolean;
     chainId: number;
     chainName: string;
     rpcUrl: string;
@@ -18,16 +18,16 @@ export interface BlockchainConfigStatus {
 }
 
 /**
- * Check blockchain configuration and environment setup
- * Useful for debugging deployment issues between dev and production
+ * Check blockchain configuration for SmartjectsMarketplace
+ * Focuses on Hardhat local network setup
  */
 export function checkBlockchainConfig(): BlockchainConfigStatus {
   const errors: string[] = [];
   const warnings: string[] = [];
 
   // Check environment
-  const environment = process.env.NODE_ENV || 'development';
-  const isProduction = environment === 'production';
+  const environment = process.env.NODE_ENV || "development";
+  const isProduction = environment === "production";
 
   // Check client ID (required for all environments)
   const clientId = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
@@ -35,7 +35,7 @@ export function checkBlockchainConfig(): BlockchainConfigStatus {
 
   if (!hasClientId) {
     errors.push(
-      'NEXT_PUBLIC_THIRDWEB_CLIENT_ID is not set. This is required for blockchain functionality.'
+      "NEXT_PUBLIC_THIRDWEB_CLIENT_ID is not set. This is required for blockchain functionality.",
     );
   }
 
@@ -43,34 +43,45 @@ export function checkBlockchainConfig(): BlockchainConfigStatus {
   const secretKey = process.env.THIRDWEB_SECRET_KEY;
   const hasSecretKey = !!secretKey && secretKey.length > 0;
 
-  // Check factory address
-  const factoryAddress = process.env.NEXT_PUBLIC_ESCROW_FACTORY_ADDRESS;
-  const hasFactoryAddress = !!factoryAddress && factoryAddress.length > 0;
+  // Check marketplace address (new system only)
+  const marketplaceAddress =
+    process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS ||
+    "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+  const hasMarketplaceAddress =
+    !!marketplaceAddress && marketplaceAddress.length > 0;
 
-  if (!hasFactoryAddress) {
+  if (!hasMarketplaceAddress) {
     warnings.push(
-      'NEXT_PUBLIC_ESCROW_FACTORY_ADDRESS is not set. Using default address which may not be correct for your deployment.'
+      "NEXT_PUBLIC_MARKETPLACE_ADDRESS is not set. Using default Hardhat deployment address.",
     );
   }
 
-  // Check chain configuration
-  const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '80002');
-  const chainName = process.env.NEXT_PUBLIC_CHAIN_NAME || 'Polygon Amoy Testnet';
-  const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc-amoy.polygon.technology';
+  // Hardhat network configuration
+  const chainId = 31337; // Always Hardhat for now
+  const chainName = "Hardhat Local";
+  const rpcUrl =
+    process.env.NEXT_PUBLIC_HARDHAT_RPC_URL || "http://127.0.0.1:8545";
 
-  // Additional production checks
-  if (isProduction) {
-    if (!hasClientId) {
-      errors.push(
-        'In production, NEXT_PUBLIC_THIRDWEB_CLIENT_ID must be set during build time (next build).'
-      );
-    }
-
-    if (chainId === 80002) {
+  // Development-specific checks
+  if (environment === "development") {
+    if (chainId !== 31337) {
       warnings.push(
-        'Using testnet (Polygon Amoy) in production environment. Consider switching to mainnet.'
+        "Expected Hardhat chainId (1337) for development. Make sure Hardhat node is running.",
       );
     }
+
+    if (!rpcUrl.includes("127.0.0.1") && !rpcUrl.includes("localhost")) {
+      warnings.push(
+        "RPC URL does not point to localhost. Make sure Hardhat node is running on port 8545.",
+      );
+    }
+  }
+
+  // Production checks (when ready for production)
+  if (isProduction) {
+    warnings.push(
+      "Production deployment detected. Make sure to deploy SmartjectsMarketplace to production network and update NEXT_PUBLIC_MARKETPLACE_ADDRESS.",
+    );
   }
 
   const isValid = errors.length === 0;
@@ -82,7 +93,7 @@ export function checkBlockchainConfig(): BlockchainConfigStatus {
     config: {
       clientId: hasClientId,
       secretKey: hasSecretKey,
-      factoryAddress: hasFactoryAddress,
+      marketplaceAddress: hasMarketplaceAddress,
       chainId,
       chainName,
       rpcUrl,
@@ -98,33 +109,42 @@ export function checkBlockchainConfig(): BlockchainConfigStatus {
 export function logBlockchainConfig(): void {
   const status = checkBlockchainConfig();
 
-  console.log('🔍 Blockchain Configuration Check');
-  console.log('================================');
+  console.log("🔍 SmartjectsMarketplace Configuration Check");
+  console.log("================================");
   console.log(`Environment: ${status.config.environment}`);
   console.log(`Is Production: ${status.config.isProduction}`);
-  console.log(`Chain: ${status.config.chainName} (ID: ${status.config.chainId})`);
+  console.log(
+    `Chain: ${status.config.chainName} (ID: ${status.config.chainId})`,
+  );
   console.log(`RPC URL: ${status.config.rpcUrl}`);
-  console.log('');
-  console.log('Configuration Status:');
-  console.log(`✓ Client ID: ${status.config.clientId ? '✅' : '❌'}`);
-  console.log(`✓ Secret Key: ${status.config.secretKey ? '✅' : '⚠️  (optional)'}`);
-  console.log(`✓ Factory Address: ${status.config.factoryAddress ? '✅' : '⚠️  (using default)'}`);
-  console.log('');
+  console.log(
+    `Marketplace Address: ${process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS || "0x5FbDB2315678afecb367f032d93F642f64180aa3"}`,
+  );
+  console.log("");
+  console.log("Configuration Status:");
+  console.log(`✓ Client ID: ${status.config.clientId ? "✅" : "❌"}`);
+  console.log(
+    `✓ Secret Key: ${status.config.secretKey ? "✅" : "⚠️  (optional)"}`,
+  );
+  console.log(
+    `✓ Marketplace Address: ${status.config.marketplaceAddress ? "✅" : "⚠️  (using default)"}`,
+  );
+  console.log("");
 
   if (status.errors.length > 0) {
-    console.log('❌ Errors:');
-    status.errors.forEach(error => console.log(`   - ${error}`));
-    console.log('');
+    console.log("❌ Errors:");
+    status.errors.forEach((error) => console.log(`   - ${error}`));
+    console.log("");
   }
 
   if (status.warnings.length > 0) {
-    console.log('⚠️  Warnings:');
-    status.warnings.forEach(warning => console.log(`   - ${warning}`));
-    console.log('');
+    console.log("⚠️  Warnings:");
+    status.warnings.forEach((warning) => console.log(`   - ${warning}`));
+    console.log("");
   }
 
-  console.log(`Overall Status: ${status.isValid ? '✅ Valid' : '❌ Invalid'}`);
-  console.log('================================');
+  console.log(`Overall Status: ${status.isValid ? "✅ Valid" : "❌ Invalid"}`);
+  console.log("================================");
 }
 
 /**
@@ -137,15 +157,11 @@ export function getConfigErrorMessage(): string | null {
     return null;
   }
 
-  if (status.config.isProduction && !status.config.clientId) {
-    return 'Blockchain integration is not properly configured for production. Please ensure environment variables are set during the build process.';
-  }
-
   if (!status.config.clientId) {
-    return 'Blockchain integration is not configured. Please set up the required environment variables.';
+    return "ThirdWeb client ID is not configured. Please set NEXT_PUBLIC_THIRDWEB_CLIENT_ID in your .env.local file.";
   }
 
-  return status.errors[0] || 'Blockchain configuration error detected.';
+  return status.errors[0] || "Blockchain configuration error detected.";
 }
 
 /**
@@ -153,5 +169,49 @@ export function getConfigErrorMessage(): string | null {
  */
 export function isBlockchainAvailable(): boolean {
   const status = checkBlockchainConfig();
-  return status.isValid || (status.errors.length === 0 && status.config.clientId);
+  return status.isValid && status.config.clientId;
+}
+
+/**
+ * Check if Hardhat network is properly configured
+ */
+export function isHardhatConfigured(): boolean {
+  const status = checkBlockchainConfig();
+  return (
+    status.config.chainId === 31337 &&
+    status.config.rpcUrl.includes("127.0.0.1") &&
+    status.config.clientId
+  );
+}
+
+/**
+ * Get setup instructions for missing configuration
+ */
+export function getSetupInstructions(): string[] {
+  const status = checkBlockchainConfig();
+  const instructions: string[] = [];
+
+  if (!status.config.clientId) {
+    instructions.push(
+      "1. Get a ThirdWeb client ID from https://thirdweb.com/dashboard",
+    );
+    instructions.push(
+      "2. Add NEXT_PUBLIC_THIRDWEB_CLIENT_ID=your_client_id to .env.local",
+    );
+  }
+
+  if (!status.config.marketplaceAddress) {
+    instructions.push(
+      "3. Add NEXT_PUBLIC_MARKETPLACE_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3 to .env.local",
+    );
+  }
+
+  if (status.config.environment === "development") {
+    instructions.push("4. Start Hardhat node: npx hardhat node");
+    instructions.push(
+      "5. Make sure MetaMask is connected to Hardhat network (chainId: 1337)",
+    );
+  }
+
+  return instructions;
 }

@@ -115,7 +115,7 @@ export function ContractCompletion({
           ? "Contract completed!"
           : "Contract completion rejected",
         description: approved
-          ? "🎉 Contract has been completed successfully!"
+          ? "🎉 Agreement has been completed successfully! The provider can now withdraw the escrow funds."
           : "Contract has been returned to active status for further work.",
       });
       setReviewComments("");
@@ -133,7 +133,7 @@ export function ContractCompletion({
       toast({
         title: isWalletError ? "Wallet Required" : "Error",
         description: isWalletError
-          ? "Please connect your wallet to complete the contract and release escrow funds."
+          ? "Please connect your wallet to complete the agreement and enable fund withdrawal."
           : "Failed to review contract completion. Please try again.",
         variant: "destructive",
       });
@@ -361,8 +361,11 @@ export function ContractCompletion({
               <li>• All milestones must be completed before final review</li>
               <li>• Provider submits contract for final approval</li>
               <li>• Client reviews all delivered work and milestones</li>
-              <li>• Final approval completes the contract officially</li>
-              <li>• Contract completion triggers final payment processing</li>
+              <li>• Final approval completes the agreement on blockchain</li>
+              <li>
+                • Provider can then withdraw escrow funds from the smart
+                contract
+              </li>
             </ul>
           </div>
         </div>

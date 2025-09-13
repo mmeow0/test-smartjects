@@ -971,7 +971,7 @@ export default function IndividualNegotiatePage({
                 <ThumbsUp className="h-4 w-4 mr-2" />
                 {acceptingTerms
                   ? "Creating Contract..."
-                  : `Initiate smart contract with ${negotiation.otherUser?.name}`}
+                  : `Initiate contract with ${negotiation.otherUser?.name}`}
               </Button>
             </CardFooter>
           </Card>

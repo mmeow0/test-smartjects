@@ -1,144 +1,132 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { blockchainService } from "@/lib/services/blockchain.service"
-import { getSupabaseBrowserClient } from "@/lib/supabase"
-import { useToast } from "@/hooks/use-toast"
+import { useState, useEffect, useCallback } from "react";
+import { useWallet as useWalletContext } from "@/contexts/wallet-context";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 interface UseWalletReturn {
-  address: string | null
-  balance: string | null
-  isConnecting: boolean
-  isConnected: boolean
-  connect: () => Promise<string | null>
-  disconnect: () => Promise<void>
-  refreshBalance: () => Promise<void>
+  address: string | null;
+  balance: string | null;
+  isConnecting: boolean;
+  isConnected: boolean;
+  connect: () => Promise<string | null>;
+  disconnect: () => Promise<void>;
+  refreshBalance: () => Promise<void>;
 }
 
 export function useWallet(): UseWalletReturn {
-  const { toast } = useToast()
-  const [address, setAddress] = useState<string | null>(null)
-  const [balance, setBalance] = useState<string | null>(null)
-  const [isConnecting, setIsConnecting] = useState(false)
+  const { toast } = useToast();
+  const {
+    address: contextAddress,
+    balance: contextBalance,
+    isConnected: contextIsConnected,
+    disconnectWallet: contextDisconnect,
+  } = useWalletContext();
 
-  // Check wallet connection on mount
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [address, setAddress] = useState<string | null>(null);
+  const [balance, setBalance] = useState<string | null>(null);
+
+  // Sync with context values
   useEffect(() => {
-    checkWalletConnection()
-  }, [])
+    setAddress(contextAddress || null);
+    setBalance(contextBalance);
+  }, [contextAddress, contextBalance]);
 
-  // Load balance when address changes
+  // Load user wallet from database on mount
   useEffect(() => {
-    if (address) {
-      loadBalance()
-    }
-  }, [address])
-
-  const checkWalletConnection = async () => {
-    try {
-      const walletAddress = await blockchainService.getWalletAddress()
-      if (walletAddress) {
-        setAddress(walletAddress)
-        await loadUserWallet()
-      }
-    } catch (error) {
-      console.error("Error checking wallet connection:", error)
-    }
-  }
-
-  const loadBalance = async () => {
-    try {
-      const walletBalance = await blockchainService.getWalletBalance()
-      setBalance(walletBalance)
-    } catch (error) {
-      console.error("Error loading balance:", error)
-    }
-  }
+    loadUserWallet();
+  }, []);
 
   const loadUserWallet = async () => {
     try {
-      const supabase = getSupabaseBrowserClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (user) {
         const { data } = await supabase
           .from("users")
           .select("wallet_address")
           .eq("id", user.id)
-          .single()
+          .single();
 
-        if (data?.wallet_address) {
-          setAddress(data.wallet_address)
+        if (data?.wallet_address && !contextAddress) {
+          // Wallet address exists in DB but not connected
+          // This will be handled by thirdweb's autoConnect
+          console.log("Wallet address in DB:", data.wallet_address);
         }
       }
     } catch (error) {
-      console.error("Error loading user wallet:", error)
+      console.error("Error loading user wallet:", error);
     }
-  }
-
-  const updateUserWallet = async (walletAddress: string) => {
-    try {
-      const supabase = getSupabaseBrowserClient()
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (user) {
-        const { error } = await supabase
-          .from("users")
-          .update({
-            wallet_address: walletAddress,
-            wallet_connected_at: new Date().toISOString(),
-          })
-          .eq("id", user.id)
-
-        if (error) {
-          console.error("Error updating wallet address:", error)
-        }
-      }
-    } catch (error) {
-      console.error("Error updating user wallet:", error)
-    }
-  }
+  };
 
   const connect = useCallback(async (): Promise<string | null> => {
-    setIsConnecting(true)
+    setIsConnecting(true);
 
     try {
-      const walletAddress = await blockchainService.connectWallet()
+      // The actual connection is handled by the ConnectButton component
+      // This function is mainly for compatibility with existing code
+      // We just need to wait for the wallet to be connected
 
-      if (walletAddress) {
-        setAddress(walletAddress)
-        await updateUserWallet(walletAddress)
+      // Show a message to the user
+      toast({
+        title: "Connect Wallet",
+        description:
+          "Please use the Connect Wallet button to connect your wallet.",
+      });
 
-        toast({
-          title: "Wallet connected",
-          description: `Connected to ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
-        })
+      // Wait a bit and check if wallet got connected
+      return new Promise((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (contextAddress) {
+            clearInterval(checkInterval);
+            setIsConnecting(false);
 
-        return walletAddress
-      }
+            toast({
+              title: "Wallet connected",
+              description: `Connected to ${contextAddress.slice(0, 6)}...${contextAddress.slice(-4)}`,
+            });
 
-      return null
+            resolve(contextAddress);
+          }
+        }, 500);
+
+        // Timeout after 30 seconds
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          setIsConnecting(false);
+          resolve(null);
+        }, 30000);
+      });
     } catch (error: any) {
-      console.error("Error connecting wallet:", error)
+      console.error("Error connecting wallet:", error);
       toast({
         title: "Connection failed",
         description: error.message || "Failed to connect wallet",
         variant: "destructive",
-      })
-      return null
-    } finally {
-      setIsConnecting(false)
+      });
+      setIsConnecting(false);
+      return null;
     }
-  }, [toast])
+  }, [contextAddress, toast]);
 
   const disconnect = useCallback(async () => {
     try {
+      await contextDisconnect();
+
       // Clear wallet address from state
-      setAddress(null)
-      setBalance(null)
+      setAddress(null);
+      setBalance(null);
 
       // Clear from database
-      const supabase = getSupabaseBrowserClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (user) {
         await supabase
@@ -147,36 +135,33 @@ export function useWallet(): UseWalletReturn {
             wallet_address: null,
             wallet_connected_at: null,
           })
-          .eq("id", user.id)
+          .eq("id", user.id);
       }
-
-      toast({
-        title: "Wallet disconnected",
-        description: "Your wallet has been disconnected",
-      })
     } catch (error) {
-      console.error("Error disconnecting wallet:", error)
+      console.error("Error disconnecting wallet:", error);
       toast({
         title: "Error",
         description: "Failed to disconnect wallet",
         variant: "destructive",
-      })
+      });
     }
-  }, [toast])
+  }, [contextDisconnect, toast]);
 
   const refreshBalance = useCallback(async () => {
-    if (address) {
-      await loadBalance()
+    // Balance is automatically refreshed by the context
+    // This is just for compatibility
+    if (contextBalance) {
+      setBalance(contextBalance);
     }
-  }, [address])
+  }, [contextBalance]);
 
   return {
     address,
     balance,
     isConnecting,
-    isConnected: !!address,
+    isConnected: contextIsConnected,
     connect,
     disconnect,
     refreshBalance,
-  }
+  };
 }

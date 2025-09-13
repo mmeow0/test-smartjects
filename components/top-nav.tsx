@@ -147,7 +147,7 @@ export function TopNav({ isDarkNav: isHomePage = false }: TopNavProps) {
             )}
 
             {/* Wallet Connect (for authenticated users) */}
-            {isAuthenticated && (
+            {isAuthenticated && !isHomePage && (
               <div className="ml-2">
                 <WalletConnect compact />
               </div>

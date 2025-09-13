@@ -5,7 +5,6 @@ import {
   sendTransaction,
   waitForReceipt,
   readContract,
-  getAddress,
   ThirdwebClient,
 } from "thirdweb";
 import {
@@ -13,25 +12,41 @@ import {
   checkBlockchainConfig,
 } from "@/lib/utils/blockchain-config-check";
 import { getRpcClient } from "thirdweb/rpc";
-import { createWallet, injectedProvider } from "thirdweb/wallets";
 import { toWei, toEther } from "thirdweb/utils";
 import {
-  CONTRACT_ADDRESSES,
+  getActiveAccount,
+  getActiveAddress,
+} from "@/lib/utils/thirdweb-wallet";
+import {
   THIRDWEB_CONFIG,
-  activeChain,
-  configuredChain,
   TX_CONFIG,
   BLOCKCHAIN_ERRORS,
   logTransaction,
   validateAddress,
+  hardhatChain,
 } from "@/lib/config/blockchain.config";
+import MARKETPLACE_JSON from "./hardhat-SmartjectsMarketplace-ABI.json"
+import { parseAbi } from "viem";
 
-// Types
+// Marketplace contract configuration
+const MARKETPLACE_ADDRESS =
+  process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS ||
+  "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+
+// Marketplace contract types
+export enum AgreementStatus {
+  Created = 0,
+  Accepted = 1,
+  Completed = 2,
+  Cancelled = 3,
+}
+
+// Types for compatibility with existing code
 export interface DeployEscrowParams {
   contractId: string;
   clientAddress: string;
   providerAddress: string;
-  amount: string; // Amount in ETH/MATIC
+  amount: string; // Amount in ETH
 }
 
 export interface EscrowDetails {
@@ -41,6 +56,8 @@ export interface EscrowDetails {
   state: number;
   balance: bigint;
 }
+
+const MARKETPLACE_ABI = parseAbi(MARKETPLACE_JSON.abi);
 
 // Error handling
 class BlockchainError extends Error {
@@ -53,20 +70,24 @@ class BlockchainError extends Error {
   }
 }
 
-// Blockchain service class
+// No longer need to map IDs - we use contract IDs directly as external IDs
+
+// Blockchain service class - ONLY MARKETPLACE
 class BlockchainService {
   private client: ThirdwebClient | null = null;
-  private wallet: any = null;
+  private chain: any;
 
   constructor() {
     this.initializeClient();
+    // Always use hardhat for now
+    this.chain = hardhatChain;
   }
 
   // Initialize Thirdweb client
   private initializeClient() {
-    console.log("🔧 Initializing Thirdweb client...");
+    console.log("🔧 Initializing Thirdweb client for Marketplace...");
 
-    // Log full configuration status
+    // Log configuration status
     logBlockchainConfig();
 
     const configStatus = checkBlockchainConfig();
@@ -88,36 +109,50 @@ class BlockchainService {
       this.client = createThirdwebClient({
         clientId: THIRDWEB_CONFIG.clientId,
       });
-      console.log("✅ Thirdweb client initialized successfully");
+      console.log("✅ Thirdweb client initialized for Marketplace");
+      console.log("📍 Marketplace address:", MARKETPLACE_ADDRESS);
     } catch (error) {
       console.error("❌ Failed to initialize Thirdweb client:", error);
       this.client = null;
     }
   }
 
-  // Connect wallet
+  // Get marketplace contract instance
+  private getMarketplaceContract() {
+    if (!this.client) {
+      throw new BlockchainError("Thirdweb client not initialized");
+    }
+
+    if (!MARKETPLACE_ADDRESS || !validateAddress(MARKETPLACE_ADDRESS)) {
+      throw new BlockchainError("Marketplace contract not deployed");
+    }
+
+    return getContract({
+      client: this.client,
+      chain: this.chain,
+      address: MARKETPLACE_ADDRESS,
+      abi: MARKETPLACE_ABI,
+    });
+  }
+
+  // Connect wallet (compatibility method)
   async connectWallet(): Promise<string | null> {
     try {
-      if (!this.client) {
-        throw new BlockchainError("Thirdweb client not initialized");
+      console.log("Wallet connection should be handled by UI component");
+
+      // Try to get the current address if wallet is already connected
+      const address = await this.getWalletAddress();
+      if (address) {
+        console.log("Wallet already connected:", address);
+        return address;
       }
 
-      // Create wallet instance for MetaMask
-      this.wallet = createWallet("io.metamask");
-
-      // Connect wallet
-      const account = await this.wallet.connect({
-        client: this.client,
-      });
-
-      const address = account.address;
-      console.log("Wallet connected:", address);
-      return address;
+      console.log(
+        "No wallet connected - use ConnectButton component to connect",
+      );
+      return null;
     } catch (error: any) {
-      console.error("Error connecting wallet:", error);
-      if (error.message?.includes("rejected")) {
-        throw new BlockchainError(BLOCKCHAIN_ERRORS.USER_REJECTED);
-      }
+      console.error("Error in connectWallet:", error);
       throw new BlockchainError(BLOCKCHAIN_ERRORS.WALLET_NOT_CONNECTED);
     }
   }
@@ -125,12 +160,7 @@ class BlockchainService {
   // Get connected wallet address
   async getWalletAddress(): Promise<string | null> {
     try {
-      if (!this.wallet) {
-        return null;
-      }
-
-      const account = await this.wallet.getAccount();
-      return account?.address || null;
+      return getActiveAddress();
     } catch (error) {
       console.error("Error getting wallet address:", error);
       return null;
@@ -143,23 +173,13 @@ class BlockchainService {
     return !!address;
   }
 
-  // Deploy new escrow contract
+  // Deploy escrow contract - NOW CREATES AGREEMENT ON MARKETPLACE
   async deployEscrowContract(
     params: DeployEscrowParams,
   ): Promise<string | null> {
-    console.log("🚀 Starting escrow contract deployment...");
-    console.log("📋 Deployment params:", {
-      contractId: params.contractId,
-      clientAddress: params.clientAddress,
-      providerAddress: params.providerAddress,
-      amount: params.amount,
-    });
-
-    // Test RPC connection first
-    const rpcOk = await this.testRPCConnection();
-    if (!rpcOk) {
-      console.error("❌ RPC connection test failed");
-    }
+    console.log("🚀 Creating agreement on marketplace for:", params.contractId);
+    console.log("📋 Contract params:", params);
+    console.log("💰 Escrow amount:", params.amount, "ETH");
 
     try {
       if (!this.client) {
@@ -169,8 +189,9 @@ class BlockchainService {
         );
       }
 
-      if (!this.wallet) {
-        console.error("❌ Wallet not connected");
+      const account = getActiveAccount();
+      if (!account) {
+        console.error("❌ No active wallet account");
         throw new BlockchainError(BLOCKCHAIN_ERRORS.WALLET_NOT_CONNECTED);
       }
 
@@ -184,167 +205,59 @@ class BlockchainService {
         throw new BlockchainError("Invalid wallet address");
       }
 
-      // Validate factory contract address
-      console.log("🏭 Factory address:", CONTRACT_ADDRESSES.escrowFactory);
-      if (!validateAddress(CONTRACT_ADDRESSES.escrowFactory)) {
-        console.error("❌ Invalid factory contract address");
-        throw new BlockchainError(BLOCKCHAIN_ERRORS.CONTRACT_NOT_DEPLOYED);
-      }
-      console.log("✅ Factory address is valid");
-
-      // Get factory contract
-      console.log("📝 Getting factory contract...");
-      const factoryContract = getContract({
-        client: this.client,
-        chain: configuredChain,
-        address: CONTRACT_ADDRESSES.escrowFactory,
-      });
-      console.log("✅ Factory contract instance created");
+      // Get marketplace contract
+      console.log("📝 Getting marketplace contract...");
+      const marketplaceContract = this.getMarketplaceContract();
+      console.log("✅ Marketplace contract instance created");
 
       // Convert amount to wei
+      console.log("💰 Converting to wei - Amount:", params.amount, "ETH");
       const amountInWei = toWei(params.amount);
       console.log("💰 Amount in wei:", amountInWei.toString());
 
-      // Prepare transaction
-      console.log("📤 Preparing contract call...");
-      const transaction = prepareContractCall({
-        contract: factoryContract,
+      // Create agreement on marketplace with escrow
+      console.log("📤 Creating agreement on marketplace...");
+      const createAgreementTx = prepareContractCall({
+        contract: marketplaceContract,
         method:
-          "function createEscrow(string memory _contractId, address _client, address _provider, uint256 _amount)",
+          "function createAgreement(string,address,address,string,string) payable",
         params: [
-          params.contractId,
-          getAddress(params.clientAddress),
-          getAddress(params.providerAddress),
-          amountInWei,
+          params.contractId, // External ID (database contract ID)
+          params.clientAddress as `0x${string}`, // Needer address
+          params.providerAddress as `0x${string}`, // Provider address
+          `Requirements for contract ${params.contractId}`,
+          `Terms for contract ${params.contractId}`,
         ],
+        value: amountInWei, // Include escrow amount
       });
-      console.log("✅ Transaction prepared");
 
-      // Send transaction
-      console.log("🔄 Sending transaction...");
-      const account = await this.wallet.getAccount();
-      console.log("👤 Sending from account:", account.address);
-
-      const result = await sendTransaction({
-        transaction,
+      const agreementResult = await sendTransaction({
+        transaction: createAgreementTx,
         account: account,
       });
-      console.log("✅ Transaction sent:", result.transactionHash);
+      console.log(
+        "✅ Agreement transaction sent:",
+        agreementResult.transactionHash,
+      );
 
-      // Wait for confirmation
-      console.log("⏳ Waiting for transaction confirmation...");
-      console.log("   Chain:", configuredChain.name);
-      console.log("   Confirmations required:", TX_CONFIG.confirmationBlocks);
-      console.log("   RPC URL:", configuredChain.rpc);
-      console.log("   Timeout:", TX_CONFIG.confirmationTimeout, "ms");
+      // Wait for agreement creation confirmation
+      await waitForReceipt({
+        client: this.client,
+        chain: this.chain,
+        transactionHash: agreementResult.transactionHash,
+      });
+      console.log("✅ Agreement created on marketplace with escrow");
 
-      let receipt;
-      try {
-        // Add a manual timeout since maxBlockWaitTime might not work properly
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => {
-            reject(
-              new Error(
-                `Transaction confirmation timeout after ${TX_CONFIG.confirmationTimeout}ms`,
-              ),
-            );
-          }, TX_CONFIG.confirmationTimeout);
-        });
+      logTransaction(
+        "Marketplace agreement created",
+        agreementResult.transactionHash,
+      );
 
-        const receiptPromise = waitForReceipt({
-          client: this.client,
-          chain: configuredChain,
-          transactionHash: result.transactionHash,
-          confirmations: TX_CONFIG.confirmationBlocks,
-          maxBlockWaitTime: TX_CONFIG.confirmationTimeout,
-        });
-
-        // Race between receipt and timeout
-        receipt = await Promise.race([receiptPromise, timeoutPromise]);
-
-        console.log("✅ Transaction confirmed");
-        console.log("   Block number:", receipt.blockNumber);
-        console.log("   Gas used:", receipt.gasUsed?.toString());
-      } catch (receiptError: any) {
-        console.error("❌ Error waiting for receipt:");
-        console.error("   Error:", receiptError.message);
-        console.error("   Details:", receiptError);
-
-        // Check if it's a timeout error
-        if (
-          receiptError.message?.includes("timeout") ||
-          receiptError.message?.includes("Timeout")
-        ) {
-          console.error(
-            "⏱️ Transaction confirmation timed out after",
-            TX_CONFIG.confirmationTimeout,
-            "ms",
-          );
-          console.error(
-            "   Transaction may still be pending on the blockchain",
-          );
-          console.error("   Transaction hash:", result.transactionHash);
-
-          // Try alternative confirmation method
-          console.log("🔄 Attempting alternative confirmation method...");
-          try {
-            receipt = await this.checkTransactionWithRetry(
-              result.transactionHash,
-            );
-            if (receipt) {
-              console.log("✅ Transaction confirmed via alternative method");
-            }
-          } catch (altError) {
-            console.error("❌ Alternative confirmation also failed:", altError);
-          }
-        }
-
-        if (!receipt) {
-          throw new Error(
-            `Transaction confirmation failed: ${receiptError.message}`,
-          );
-        }
-      }
-
-      logTransaction("Escrow deployed", result.transactionHash);
-
-      // Get deployed escrow address from events
-      console.log("🔍 Getting deployed escrow address...");
-      let escrowAddress;
-      try {
-        // First try to get address from factory contract
-        escrowAddress = await this.getEscrowAddress(params.contractId);
-
-        // If that fails, try to get it from transaction events
-        if (!escrowAddress) {
-          console.log(
-            "⚠️ Direct read failed, trying to get address from events...",
-          );
-          escrowAddress = await this.getEscrowAddressFromEvents(
-            result.transactionHash,
-          );
-        }
-
-        if (!escrowAddress) {
-          console.error("❌ No escrow address returned from any method");
-          throw new Error(
-            "Failed to get escrow address from contract or events",
-          );
-        }
-
-        console.log("✅ Escrow deployed at:", escrowAddress);
-      } catch (addressError: any) {
-        console.error("❌ Error getting escrow address:");
-        console.error("   Error:", addressError.message);
-        console.error("   Details:", addressError);
-        throw new Error(
-          `Failed to retrieve escrow address: ${addressError.message}`,
-        );
-      }
-
-      return escrowAddress;
+      // Return the marketplace contract address
+      console.log("✅ Using marketplace at:", MARKETPLACE_ADDRESS);
+      return MARKETPLACE_ADDRESS;
     } catch (error: any) {
-      console.error("❌ Error deploying escrow contract:");
+      console.error("❌ Error creating marketplace agreement:");
       console.error("Error type:", error.constructor.name);
       console.error("Error message:", error.message);
       console.error("Error details:", error);
@@ -358,341 +271,262 @@ class BlockchainService {
     }
   }
 
-  // Fund escrow contract (client deposits funds)
+  // Fund escrow contract - NOT NEEDED ANYMORE (funds added during creation)
   async fundEscrowContract(
     contractId: string,
     amount: string,
   ): Promise<boolean> {
     try {
-      if (!this.client || !this.wallet) {
-        throw new BlockchainError(BLOCKCHAIN_ERRORS.WALLET_NOT_CONNECTED);
-      }
+      console.log(
+        "⚠️ Funding is done during agreement creation in new contract",
+      );
+      console.log("⚠️ This method is kept for compatibility but returns true");
 
-      // Get escrow contract address
-      const escrowAddress = await this.getEscrowAddress(contractId);
-      if (!escrowAddress) {
-        throw new BlockchainError("Escrow contract not found");
-      }
+      // In the new contract, escrow is added during createAgreement
+      // This method is kept for backward compatibility
+      // It returns true to indicate the contract is "funded"
 
-      // Get escrow contract
-      const escrowContract = getContract({
-        client: this.client,
-        chain: configuredChain,
-        address: escrowAddress,
-      });
-
-      // Convert amount to wei
-      const amountInWei = toWei(amount);
-
-      // Prepare deposit transaction
-      const transaction = prepareContractCall({
-        contract: escrowContract,
-        method: "function deposit()",
-        params: [],
-        value: amountInWei,
-      });
-
-      // Send transaction
-      const result = await sendTransaction({
-        transaction,
-        account: await this.wallet.getAccount(),
-      });
-
-      // Wait for confirmation
-      await waitForReceipt({
-        client: this.client,
-        chain: configuredChain,
-        transactionHash: result.transactionHash,
-        confirmations: TX_CONFIG.confirmationBlocks,
-      });
-
-      logTransaction("Escrow funded", result.transactionHash);
       return true;
     } catch (error: any) {
-      console.error("Error funding escrow contract:", error);
-      this.handleBlockchainError(error);
+      console.error("Error in fundEscrowContract:", error);
       return false;
     }
   }
 
-  // Release escrow funds (approve or reject)
+  // Release escrow funds - NOW COMPLETES AGREEMENT
   async releaseEscrowFunds(
     contractId: string,
     approved: boolean,
   ): Promise<boolean> {
     try {
-      if (!this.client || !this.wallet) {
+      if (!this.client) {
+        throw new BlockchainError("Thirdweb client not initialized");
+      }
+
+      const account = getActiveAccount();
+      if (!account) {
         throw new BlockchainError(BLOCKCHAIN_ERRORS.WALLET_NOT_CONNECTED);
       }
 
-      // Get factory contract
-      const factoryContract = getContract({
-        client: this.client,
-        chain: activeChain,
-        address: CONTRACT_ADDRESSES.escrowFactory,
-      });
+      // Get marketplace contract
+      const marketplaceContract = this.getMarketplaceContract();
 
-      // Prepare release transaction
-      const transaction = prepareContractCall({
-        contract: factoryContract,
-        method:
-          "function releaseEscrow(string memory _contractId, bool _approved)",
-        params: [contractId, approved],
+      // Compute bytes32 external ID
+      const externalIdResult = await readContract({
+        contract: marketplaceContract,
+        method: "function computeExternalId(string) pure returns (bytes32)",
+        params: [contractId],
       });
+      const externalId = externalIdResult as `0x${string}`;
 
-      // Send transaction
-      const result = await sendTransaction({
-        transaction,
-        account: await this.wallet.getAccount(),
-      });
-
-      // Wait for confirmation
-      await waitForReceipt({
-        client: this.client,
-        chain: configuredChain,
-        transactionHash: result.transactionHash,
-        confirmations: TX_CONFIG.confirmationBlocks,
-      });
-
-      logTransaction(
-        approved ? "Escrow released" : "Escrow refunded",
-        result.transactionHash,
+      console.log(
+        `${approved ? "Completing" : "Cancelling"} agreement ${contractId}`,
       );
+
+      if (approved) {
+        // Complete the agreement (needer action)
+        const transaction = prepareContractCall({
+          contract: marketplaceContract,
+          method: "function completeAgreement(bytes32)",
+          params: [externalId],
+        });
+
+        const result = await sendTransaction({
+          transaction,
+          account: account,
+        });
+
+        await waitForReceipt({
+          client: this.client,
+          chain: this.chain,
+          transactionHash: result.transactionHash,
+        });
+
+        logTransaction("Agreement completed", result.transactionHash);
+
+        console.log("✅ Agreement marked as completed");
+        console.log("📋 Provider can now withdraw escrow funds");
+      } else {
+        // Cancel the agreement
+        const transaction = prepareContractCall({
+          contract: marketplaceContract,
+          method: "function cancelAgreement(bytes32)",
+          params: [externalId],
+        });
+
+        const result = await sendTransaction({
+          transaction,
+          account: account,
+        });
+
+        await waitForReceipt({
+          client: this.client,
+          chain: this.chain,
+          transactionHash: result.transactionHash,
+        });
+
+        logTransaction("Agreement cancelled", result.transactionHash);
+      }
+
       return true;
     } catch (error: any) {
-      console.error("Error releasing escrow funds:", error);
+      console.error("Error completing/cancelling agreement:", error);
       this.handleBlockchainError(error);
       return false;
     }
   }
 
-  // Get escrow contract address
+  // Get escrow address - RETURNS MARKETPLACE ADDRESS
   async getEscrowAddress(contractId: string): Promise<string | null> {
-    console.log("📍 Getting escrow address for contract:", contractId);
+    console.log("📍 Contract", contractId, "is managed by marketplace");
 
-    try {
-      if (!this.client) {
-        console.error("❌ Client not initialized in getEscrowAddress");
-        throw new BlockchainError("Thirdweb client not initialized");
-      }
-
-      console.log("🏭 Creating factory contract instance...");
-      const factoryContract = getContract({
-        client: this.client,
-        chain: configuredChain,
-        address: CONTRACT_ADDRESSES.escrowFactory,
-      });
-      console.log("✅ Factory contract created");
-
-      console.log("📖 Reading escrow address from factory...");
-      console.log("   Contract ID:", contractId);
-      console.log("   Factory address:", CONTRACT_ADDRESSES.escrowFactory);
-
-      const address = await readContract({
-        contract: factoryContract,
-        method:
-          "function getEscrowAddress(string memory _contractId) view returns (address)",
-        params: [contractId],
-      });
-
-      console.log("📋 Read contract result:", address);
-      console.log("   Type:", typeof address);
-      console.log(
-        "   Is zero address:",
-        address === "0x0000000000000000000000000000000000000000",
-      );
-
-      if (
-        !address ||
-        address === "0x0000000000000000000000000000000000000000"
-      ) {
-        console.warn(
-          "⚠️ Factory returned zero address - contract may not be deployed yet",
-        );
-        return null;
-      }
-
-      console.log("✅ Successfully retrieved escrow address:", address);
-      return address as string;
-    } catch (error: any) {
-      console.error("❌ Error getting escrow address:");
-      console.error("   Error type:", error.constructor.name);
-      console.error("   Error message:", error.message);
-      console.error("   Error details:", error);
-
-      if (error.cause) {
-        console.error("   Error cause:", error.cause);
-      }
-
+    if (!MARKETPLACE_ADDRESS || !validateAddress(MARKETPLACE_ADDRESS)) {
+      console.warn("⚠️ Marketplace contract not deployed");
       return null;
     }
+
+    console.log("✅ Using marketplace address:", MARKETPLACE_ADDRESS);
+    return MARKETPLACE_ADDRESS;
   }
 
-  // Get escrow address from transaction events (fallback method)
-  async getEscrowAddressFromEvents(
-    transactionHash: string,
-  ): Promise<string | null> {
-    console.log("🔍 Getting escrow address from transaction events...");
+  // Добавьте эту функцию в ваш BlockchainService
+async diagnosticContractState(): Promise<void> {
+  try {
+    console.log("🔧 BLOCKCHAIN DIAGNOSTIC START");
+    
+    const marketplaceContract = this.getMarketplaceContract();
+    console.log("📍 Contract address:", marketplaceContract.address);
+    console.log("🌐 Chain ID:", marketplaceContract.chain.id);
+    console.log("🔗 RPC URL:", marketplaceContract.chain.rpc);
+    console.log("🔗 marketplaceContract:", marketplaceContract);
 
-    try {
-      if (!this.client) {
-        console.error("❌ Client not initialized");
-        return null;
-      }
-
-      console.log("📋 Fetching transaction receipt...");
-      const receipt = await waitForReceipt({
+    const rpcRequest = getRpcClient({
         client: this.client,
-        chain: configuredChain,
-        transactionHash: transactionHash,
-        confirmations: 1, // Just need the receipt, not full confirmations
+        chain: this.chain,
       });
 
-      console.log("📋 Receipt retrieved, checking events...");
-      console.log("   Number of events:", receipt.logs?.length || 0);
+    // Проверяем код контракта
+    const code = await rpcRequest({
+      method: "eth_getCode", 
+      params: [marketplaceContract.address, "latest"],
+    });
+    
+    console.log("📜 Contract code length:", code.length);
+    console.log("🏗️ Contract deployed:", code !== "0x");
 
-      // Look for EscrowCreated event
-      // Event signature: EscrowCreated(string indexed contractId, address escrow)
-      const escrowCreatedTopic =
-        "0x" + "EscrowCreated(string,address)".replace(/\s/g, "");
-
-      for (const log of receipt.logs || []) {
-        console.log("   Checking log:", {
-          address: log.address,
-          topics: log.topics,
-        });
-
-        // The event will have the contractId as the first indexed parameter
-        // and the escrow address in the data
-        if (
-          log.topics?.[0]?.includes("EscrowCreated") ||
-          log.address === CONTRACT_ADDRESSES.escrowFactory
-        ) {
-          // Decode the escrow address from the log data
-          // The address is the second parameter (after contractId)
-          const addressHex = log.data?.slice(66, 130); // Skip first 32 bytes (contractId), take next 32 bytes
-          if (addressHex) {
-            const escrowAddress = "0x" + addressHex.slice(24); // Remove padding, keep last 40 chars
-            console.log("✅ Found escrow address in events:", escrowAddress);
-            return escrowAddress;
-          }
-        }
-      }
-
-      console.warn("⚠️ No EscrowCreated event found in transaction");
-      return null;
-    } catch (error: any) {
-      console.error("❌ Error getting escrow address from events:");
-      console.error("   Error:", error.message);
-      console.error("   Details:", error);
-      return null;
-    }
-  }
-
-  // Alternative transaction confirmation method with retry
-  async checkTransactionWithRetry(transactionHash: string): Promise<any> {
-    console.log("🔄 Checking transaction status with retry...");
-
-    const maxAttempts = 10;
-    const delayMs = 3000; // 3 seconds between attempts
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      console.log(`   Attempt ${attempt}/${maxAttempts}...`);
-
-      try {
-        // Try to get transaction receipt with minimal confirmations
-        const receipt = await waitForReceipt({
-          client: this.client,
-          chain: configuredChain,
-          transactionHash: transactionHash,
-          confirmations: 1, // Just 1 confirmation for now
-          maxBlockWaitTime: 10000, // 10 second timeout per attempt
-        });
-
-        if (receipt && receipt.status === "success") {
-          console.log(`✅ Transaction confirmed on attempt ${attempt}`);
-          return receipt;
-        }
-      } catch (error: any) {
-        console.log(`   Attempt ${attempt} failed:`, error.message);
-
-        if (attempt < maxAttempts) {
-          console.log(`   Waiting ${delayMs}ms before retry...`);
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
-      }
+    if (code === "0x") {
+      console.error("❌ CONTRACT NOT DEPLOYED!");
+      console.log("💡 Solutions:");
+      console.log("   1. Deploy contract: npx hardhat run scripts/deploy.ts --network localhost");
+      console.log("   2. Check contract address in your config");
+      console.log("   3. Make sure you're on the right network");
+      return;
     }
 
-    throw new Error(
-      `Transaction confirmation failed after ${maxAttempts} attempts`,
-    );
-  }
-
-  // Test RPC connection
-  async testRPCConnection(): Promise<boolean> {
+    // Пробуем простые вызовы
     try {
-      console.log("🔍 Testing RPC connection...");
-      if (!this.client) {
-        console.error("❌ Client not initialized");
-        return false;
-      }
-
-      const rpcClient = getRpcClient({
-        client: this.client,
-        chain: configuredChain,
+      const testId = await readContract({
+        contract: marketplaceContract,
+        method: "function computeExternalId(string) pure returns (bytes32)",
+        params: ["test-123"],
       });
-      const blockNumber = await rpcClient.getBlockNumber();
-      console.log("✅ RPC connection successful, latest block:", blockNumber);
-      return true;
-    } catch (error: any) {
-      console.error("❌ RPC connection failed:", error.message);
-      return false;
+      console.log("✅ computeExternalId works:", testId);
+    } catch (error) {
+      console.error("❌ computeExternalId failed:", error);
     }
-  }
 
-  // Get escrow details
+    try {
+      const agreementIds = await readContract({
+        contract: marketplaceContract,
+        method: "function listAgreementIds() view returns (bytes32[])",
+        params: [],
+      });
+      console.log("✅ Total agreements:", agreementIds.length);
+      console.log("📋 Agreement IDs:", agreementIds);
+    } catch (error) {
+      console.error("❌ listAgreementIds failed:", error);
+    }
+
+    console.log("🔧 BLOCKCHAIN DIAGNOSTIC END");
+
+  } catch (error) {
+    console.error("❌ Diagnostic failed:", error);
+  }
+}
+
+  // Get escrow details - FROM MARKETPLACE AGREEMENT
   async getEscrowDetails(contractId: string): Promise<EscrowDetails | null> {
     try {
       if (!this.client) {
         throw new BlockchainError("Thirdweb client not initialized");
       }
+      await blockchainService.diagnosticContractState();
 
-      const factoryContract = getContract({
-        client: this.client,
-        chain: activeChain,
-        address: CONTRACT_ADDRESSES.escrowFactory,
+      const marketplaceContract = this.getMarketplaceContract();
+
+      // Compute bytes32 external ID
+      const externalIdResult = await readContract({
+        contract: marketplaceContract,
+        method: "function computeExternalId(string) pure returns (bytes32)",
+        params: [contractId],
+      });
+      const externalId = externalIdResult as `0x${string}`;
+
+      // Check if agreement exists
+      const exists = await readContract({
+        contract: marketplaceContract,
+        method: "function exists(bytes32) view returns (bool)",
+        params: [externalId],
       });
 
-      const [client, provider, amount, state, balance] = (await readContract({
-        contract: factoryContract,
-        method:
-          "function getEscrowDetails(string memory _contractId) view returns (address client, address provider, uint256 amount, uint8 state, uint256 balance)",
-        params: [contractId],
-      })) as [string, string, bigint, number, bigint];
+      if (!exists) return null;
 
-      return {
-        client,
+      // Get agreement details
+      const result = await readContract({
+        contract: marketplaceContract,
+        method:
+          "function getAgreement(bytes32) view returns (bytes32,address,address,string,string,uint8,uint256,uint256)",
+        params: [externalId],
+      });
+
+      if (!result) return null;
+
+      const [
+        returnedId,
+        needer,
         provider,
-        amount,
-        state,
-        balance,
+        requirements,
+        terms,
+        status,
+        createdAt,
+        escrowAmount,
+      ] = result as any;
+
+      // Map to EscrowDetails format for compatibility
+      return {
+        client: needer,
+        provider: provider,
+        amount: escrowAmount,
+        state: status, // AgreementStatus enum
+        balance: escrowAmount,
       };
     } catch (error) {
-      console.error("Error getting escrow details:", error);
+      console.error("Error getting agreement details:", error);
       return null;
     }
   }
 
-  // Check if escrow is funded
+  // Check if escrow is funded - CHECKS MARKETPLACE AGREEMENT
   async isEscrowFunded(contractId: string): Promise<boolean> {
     try {
       const details = await this.getEscrowDetails(contractId);
       if (!details) return false;
 
-      // State 1 = FUNDED
-      return details.state === 1;
+      // Agreement has escrow if balance > 0
+      // Status doesn't matter for funding check in new contract
+      return details.balance > BigInt(0);
     } catch (error) {
-      console.error("Error checking escrow status:", error);
+      console.error("Error checking agreement funding status:", error);
       return false;
     }
   }
@@ -700,17 +534,17 @@ class BlockchainService {
   // Get wallet balance
   async getWalletBalance(): Promise<string | null> {
     try {
-      if (!this.wallet || !this.client) {
+      if (!this.client) {
         return null;
       }
 
-      const account = await this.wallet.getAccount();
+      const account = getActiveAccount();
       if (!account) return null;
 
       // Use RPC client to get balance
       const rpcRequest = getRpcClient({
         client: this.client,
-        chain: activeChain,
+        chain: this.chain,
       });
 
       const balanceWei = await rpcRequest({
@@ -725,6 +559,46 @@ class BlockchainService {
       console.error("Error getting wallet balance:", error);
       return null;
     }
+  }
+
+  // Test RPC connection
+  async testRPCConnection(): Promise<boolean> {
+    try {
+      console.log("🔍 Testing RPC connection to Hardhat...");
+      if (!this.client) {
+        console.error("❌ Client not initialized");
+        return false;
+      }
+
+      const rpcClient = getRpcClient({
+        client: this.client,
+        chain: this.chain,
+      });
+      const blockNumber = await rpcClient.getBlockNumber();
+      console.log("✅ RPC connection successful, latest block:", blockNumber);
+      return true;
+    } catch (error: any) {
+      console.error("❌ RPC connection failed:", error.message);
+      return false;
+    }
+  }
+
+  // No dispute function in new contract
+  async disputeContract(contractId: string): Promise<boolean> {
+    console.log("⚠️ Dispute function not available in new contract");
+    return false;
+  }
+
+  // Get blockchain contract ID - not needed anymore
+  getBlockchainContractId(contractId: string): number | null {
+    // In new contract, we use the database contract ID directly
+    return null;
+  }
+
+  // Set blockchain contract ID - not needed anymore
+  setBlockchainContractId(contractId: string, blockchainId: number): void {
+    // Not needed in new contract
+    console.log("⚠️ ID mapping not needed in new contract");
   }
 
   // Handle blockchain errors
