@@ -138,13 +138,13 @@ export function WalletConnect({
 
         // Connect button customization for compact mode
         connectButton={{
-          label: "Connect",
-          className: "h-9 px-4",
+          label: "Connect wallet",
+          className: "h-9 px-1",
         }}
 
         // Details button customization for compact mode
         detailsButton={{
-          className: "h-9 px-4",
+          className: "h-9 px-1",
         }}
 
         // Modal customization
@@ -170,7 +170,7 @@ export function WalletConnect({
         // Theme
         theme={lightTheme({
           colors: {
-            primaryButtonBg: "hsl(var(--primary))",
+            primaryButtonBg: "hsl(50, 80%, 65%)",
             primaryButtonText: "hsl(var(--primary-foreground))",
             modalBg: "hsl(var(--background))",
             borderColor: "hsl(var(--border))",
