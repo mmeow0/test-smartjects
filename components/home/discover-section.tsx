@@ -167,25 +167,25 @@ export const DiscoverSection = () => {
     [],
   );
 
-  // Filter functions for dropdown searches
+  // Filter functions for dropdown searches - Updated to handle objects with id and name
   const filteredIndustries = useMemo(() => {
     if (!industriesSearchTerm) return meta.industries || [];
     return (meta.industries || []).filter((industry) =>
-      industry.toLowerCase().includes(industriesSearchTerm.toLowerCase()),
+      industry.name.toLowerCase().includes(industriesSearchTerm.toLowerCase()),
     );
   }, [meta.industries, industriesSearchTerm]);
 
   const filteredAudience = useMemo(() => {
     if (!audienceSearchTerm) return meta.audience || [];
     return (meta.audience || []).filter((audience) =>
-      audience.toLowerCase().includes(audienceSearchTerm.toLowerCase()),
+      audience.name.toLowerCase().includes(audienceSearchTerm.toLowerCase()),
     );
   }, [meta.audience, audienceSearchTerm]);
 
   const filteredFunctions = useMemo(() => {
     if (!functionsSearchTerm) return meta.businessFunctions || [];
     return (meta.businessFunctions || []).filter((func) =>
-      func.toLowerCase().includes(functionsSearchTerm.toLowerCase()),
+      func.name.toLowerCase().includes(functionsSearchTerm.toLowerCase()),
     );
   }, [meta.businessFunctions, functionsSearchTerm]);
 
@@ -195,6 +195,31 @@ export const DiscoverSection = () => {
       team.toLowerCase().includes(teamsSearchTerm.toLowerCase()),
     );
   }, [meta.teams, teamsSearchTerm]);
+
+  // Helper functions to get display names from IDs
+  const getIndustryName = useCallback(
+    (id: string) => {
+      const industry = meta.industries?.find((ind) => ind.id === id);
+      return industry ? industry.name : id;
+    },
+    [meta.industries],
+  );
+
+  const getAudienceName = useCallback(
+    (id: string) => {
+      const audience = meta.audience?.find((aud) => aud.id === id);
+      return audience ? audience.name : id;
+    },
+    [meta.audience],
+  );
+
+  const getFunctionName = useCallback(
+    (id: string) => {
+      const func = meta.businessFunctions?.find((fn) => fn.id === id);
+      return func ? func.name : id;
+    },
+    [meta.businessFunctions],
+  );
 
   const handleVoted = useCallback(() => {
     refetch();
@@ -258,6 +283,10 @@ export const DiscoverSection = () => {
             onToggleDateRangeDropdown={() =>
               setShowDateRangeDropdown(!showDateRangeDropdown)
             }
+            // Helper functions for display names
+            getIndustryName={getIndustryName}
+            getAudienceName={getAudienceName}
+            getFunctionName={getFunctionName}
           />
         </div>
 

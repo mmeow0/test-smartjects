@@ -38,9 +38,9 @@ interface SearchFiltersProps {
   onToggleSortDropdown: () => void;
   onClearAllFilters: () => void;
   meta: {
-    industries: string[];
-    audience: string[];
-    businessFunctions: string[];
+    industries: Array<{ id: string; name: string }>;
+    audience: Array<{ id: string; name: string }>;
+    businessFunctions: Array<{ id: string; name: string }>;
     teams: string[];
   };
   totalFiltersCount: number;
@@ -52,14 +52,18 @@ interface SearchFiltersProps {
   onAudienceSearchChange: (term: string) => void;
   onFunctionsSearchChange: (term: string) => void;
   onTeamsSearchChange: (term: string) => void;
-  filteredIndustries: string[];
-  filteredAudience: string[];
-  filteredFunctions: string[];
+  filteredIndustries: Array<{ id: string; name: string }>;
+  filteredAudience: Array<{ id: string; name: string }>;
+  filteredFunctions: Array<{ id: string; name: string }>;
   filteredTeams: string[];
   dateRange?: DateRange;
   onDateRangeChange: (dateRange?: DateRange) => void;
   showDateRangeDropdown: boolean;
   onToggleDateRangeDropdown: () => void;
+  // Helper functions for display names
+  getIndustryName?: (id: string) => string;
+  getAudienceName?: (id: string) => string;
+  getFunctionName?: (id: string) => string;
 }
 
 const sortOptions = [
@@ -112,6 +116,9 @@ export const SearchFilters = memo(
     onDateRangeChange,
     showDateRangeDropdown,
     onToggleDateRangeDropdown,
+    getIndustryName,
+    getAudienceName,
+    getFunctionName,
   }: SearchFiltersProps) => {
     const [showMobileFilters, setShowMobileFilters] = useState(false);
     const [showMobileSortDropdown, setShowMobileSortDropdown] = useState(false);
@@ -318,20 +325,20 @@ export const SearchFilters = memo(
                       {filteredIndustries.length > 0 ? (
                         filteredIndustries.map((industry) => (
                           <div
-                            key={industry}
+                            key={industry.id}
                             className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                              selectedIndustries.includes(industry)
+                              selectedIndustries.includes(industry.id)
                                 ? "bg-blue-50 text-blue-700 font-medium"
                                 : "text-gray-700"
                             }`}
                             onClick={() => {
-                              onToggleIndustry(industry);
+                              onToggleIndustry(industry.id);
                               onIndustriesSearchChange("");
                             }}
                           >
                             <div className="flex items-center justify-between">
-                              <span className="truncate">{industry}</span>
-                              {selectedIndustries.includes(industry) && (
+                              <span className="truncate">{industry.name}</span>
+                              {selectedIndustries.includes(industry.id) && (
                                 <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />
                               )}
                             </div>
@@ -379,20 +386,20 @@ export const SearchFilters = memo(
                       {filteredAudience.length > 0 ? (
                         filteredAudience.map((tech) => (
                           <div
-                            key={tech}
+                            key={tech.id}
                             className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                              selectedAudience.includes(tech)
+                              selectedAudience.includes(tech.id)
                                 ? "bg-blue-50 text-blue-700 font-medium"
                                 : "text-gray-700"
                             }`}
                             onClick={() => {
-                              onToggleTechnology(tech);
+                              onToggleTechnology(tech.id);
                               onAudienceSearchChange("");
                             }}
                           >
                             <div className="flex items-center justify-between">
-                              <span className="truncate">{tech}</span>
-                              {selectedAudience.includes(tech) && (
+                              <span className="truncate">{tech.name}</span>
+                              {selectedAudience.includes(tech.id) && (
                                 <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />
                               )}
                             </div>
@@ -442,20 +449,20 @@ export const SearchFilters = memo(
                       {filteredFunctions.length > 0 ? (
                         filteredFunctions.map((func) => (
                           <div
-                            key={func}
+                            key={func.id}
                             className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                              selectedFunctions.includes(func)
+                              selectedFunctions.includes(func.id)
                                 ? "bg-blue-50 text-blue-700 font-medium"
                                 : "text-gray-700"
                             }`}
                             onClick={() => {
-                              onToggleFunction(func);
+                              onToggleFunction(func.id);
                               onFunctionsSearchChange("");
                             }}
                           >
                             <div className="flex items-center justify-between">
-                              <span className="truncate">{func}</span>
-                              {selectedFunctions.includes(func) && (
+                              <span className="truncate">{func.name}</span>
+                              {selectedFunctions.includes(func.id) && (
                                 <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" />
                               )}
                             </div>
@@ -631,20 +638,20 @@ export const SearchFilters = memo(
                         {filteredIndustries.length > 0 ? (
                           filteredIndustries.map((industry) => (
                             <div
-                              key={industry}
+                              key={industry.id}
                               className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                                selectedIndustries.includes(industry)
+                                selectedIndustries.includes(industry.id)
                                   ? "bg-blue-50 text-blue-700 font-medium"
                                   : "text-gray-700"
                               }`}
                               onClick={() => {
-                                onToggleIndustry(industry);
+                                onToggleIndustry(industry.id);
                                 onIndustriesSearchChange("");
                               }}
                             >
                               <div className="flex items-center justify-between">
-                                <span>{industry}</span>
-                                {selectedIndustries.includes(industry) && (
+                                <span>{industry.name}</span>
+                                {selectedIndustries.includes(industry.id) && (
                                   <div className="w-2 h-2 bg-blue-500 rounded-full" />
                                 )}
                               </div>
@@ -696,20 +703,20 @@ export const SearchFilters = memo(
                         {filteredAudience.length > 0 ? (
                           filteredAudience.map((tech) => (
                             <div
-                              key={tech}
+                              key={tech.id}
                               className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                                selectedAudience.includes(tech)
+                                selectedAudience.includes(tech.id)
                                   ? "bg-blue-50 text-blue-700 font-medium"
                                   : "text-gray-700"
                               }`}
                               onClick={() => {
-                                onToggleTechnology(tech);
+                                onToggleTechnology(tech.id);
                                 onAudienceSearchChange("");
                               }}
                             >
                               <div className="flex items-center justify-between">
-                                <span>{tech}</span>
-                                {selectedAudience.includes(tech) && (
+                                <span>{tech.name}</span>
+                                {selectedAudience.includes(tech.id) && (
                                   <div className="w-2 h-2 bg-blue-500 rounded-full" />
                                 )}
                               </div>
@@ -761,20 +768,20 @@ export const SearchFilters = memo(
                         {filteredFunctions.length > 0 ? (
                           filteredFunctions.map((func) => (
                             <div
-                              key={func}
+                              key={func.id}
                               className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                                selectedFunctions.includes(func)
+                                selectedFunctions.includes(func.id)
                                   ? "bg-blue-50 text-blue-700 font-medium"
                                   : "text-gray-700"
                               }`}
                               onClick={() => {
-                                onToggleFunction(func);
+                                onToggleFunction(func.id);
                                 onFunctionsSearchChange("");
                               }}
                             >
                               <div className="flex items-center justify-between">
-                                <span>{func}</span>
-                                {selectedFunctions.includes(func) && (
+                                <span>{func.name}</span>
+                                {selectedFunctions.includes(func.id) && (
                                   <div className="w-2 h-2 bg-blue-500 rounded-full" />
                                 )}
                               </div>
@@ -893,6 +900,9 @@ export const SearchFilters = memo(
                 key={industry}
                 type="industry"
                 value={industry}
+                displayValue={
+                  getIndustryName ? getIndustryName(industry) : industry
+                }
                 onRemove={onToggleIndustry}
               />
             ))}
@@ -901,6 +911,7 @@ export const SearchFilters = memo(
                 key={tech}
                 type="technology"
                 value={tech}
+                displayValue={getAudienceName ? getAudienceName(tech) : tech}
                 onRemove={onToggleTechnology}
               />
             ))}
@@ -909,6 +920,7 @@ export const SearchFilters = memo(
                 key={func}
                 type="function"
                 value={func}
+                displayValue={getFunctionName ? getFunctionName(func) : func}
                 onRemove={onToggleFunction}
               />
             ))}

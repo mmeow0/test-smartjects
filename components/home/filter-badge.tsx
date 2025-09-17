@@ -5,11 +5,12 @@ import { X } from "lucide-react";
 interface FilterBadgeProps {
   type: "industry" | "technology" | "function" | "team" | "date";
   value: string;
+  displayValue?: string;
   onRemove: (value: string) => void;
 }
 
 export const FilterBadge = memo(
-  ({ type, value, onRemove }: FilterBadgeProps) => {
+  ({ type, value, displayValue, onRemove }: FilterBadgeProps) => {
     const handleRemove = useCallback(() => onRemove(value), [onRemove, value]);
 
     const colorConfig = {
@@ -27,7 +28,7 @@ export const FilterBadge = memo(
         variant="secondary"
         className={`flex items-center gap-1 ${bgColor} rounded-full px-3 py-1`}
       >
-        {value}
+        {displayValue || value}
         <X
           className="h-3 w-3 cursor-pointer ml-1 hover:text-red-500"
           onClick={handleRemove}

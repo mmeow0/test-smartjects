@@ -61,7 +61,7 @@ const SmartjectCard = dynamic(
   {
     loading: () => <CardSkeleton />,
     ssr: false,
-  },
+  }
 );
 
 const FilterCategory = dynamic(
@@ -71,7 +71,7 @@ const FilterCategory = dynamic(
     })),
   {
     loading: () => <div className="h-32 bg-gray-100 rounded animate-pulse" />,
-  },
+  }
 );
 
 // Memoized utility function
@@ -120,10 +120,12 @@ const FilterBadge = memo(
   ({
     type,
     value,
+    displayValue,
     onRemove,
   }: {
     type: "industry" | "technology" | "function" | "team";
     value: string;
+    displayValue: string;
     onRemove: (value: string) => void;
   }) => {
     const handleRemove = useCallback(() => onRemove(value), [onRemove, value]);
@@ -142,14 +144,14 @@ const FilterBadge = memo(
         variant="secondary"
         className={`flex items-center gap-1 ${bgColor} rounded-full px-3 py-1`}
       >
-        {value}
+        {displayValue}
         <X
           className="h-3 w-3 cursor-pointer ml-1 hover:text-red-500"
           onClick={handleRemove}
         />
       </Badge>
     );
-  },
+  }
 );
 
 FilterBadge.displayName = "FilterBadge";
@@ -194,7 +196,7 @@ const SmartjectsGrid = memo(
         ))}
       </div>
     );
-  },
+  }
 );
 
 SmartjectsGrid.displayName = "SmartjectsGrid";
@@ -280,7 +282,7 @@ export default function SmartjectsHubPage() {
         return updated;
       });
     },
-    [filters.industries, setFilter],
+    [filters.industries, setFilter]
   );
 
   const handleToggleAudience = useCallback(
@@ -292,7 +294,7 @@ export default function SmartjectsHubPage() {
         return updated;
       });
     },
-    [filters.audience, setFilter],
+    [filters.audience, setFilter]
   );
 
   const handleToggleFunction = useCallback(
@@ -304,7 +306,7 @@ export default function SmartjectsHubPage() {
         return updated;
       });
     },
-    [filters.businessFunctions, setFilter],
+    [filters.businessFunctions, setFilter]
   );
 
   const handleToggleTeams = useCallback(
@@ -316,7 +318,7 @@ export default function SmartjectsHubPage() {
         return updated;
       });
     },
-    [filters.teams, setFilter],
+    [filters.teams, setFilter]
   );
 
   const handleDateRangeChange = useCallback(
@@ -337,7 +339,7 @@ export default function SmartjectsHubPage() {
         setFilter("endDate", "");
       }
     },
-    [setFilter],
+    [setFilter]
   );
 
   // Memoized total filters count
@@ -354,7 +356,7 @@ export default function SmartjectsHubPage() {
       selectedFunctions.length,
       selectedTeams.length,
       dateRange,
-    ],
+    ]
   );
 
   // Memoized clear all filters handler
@@ -391,35 +393,35 @@ export default function SmartjectsHubPage() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setQuery(e.target.value);
     },
-    [],
+    []
   );
 
   // Filter functions for dropdown searches
   const filteredIndustries = useMemo(() => {
     if (!industriesSearchTerm) return meta.industries || [];
     return (meta.industries || []).filter((industry) =>
-      industry.toLowerCase().includes(industriesSearchTerm.toLowerCase()),
+      industry.name.toLowerCase().includes(industriesSearchTerm.toLowerCase())
     );
   }, [meta.industries, industriesSearchTerm]);
 
   const filteredAudience = useMemo(() => {
     if (!audienceSearchTerm) return meta.audience || [];
     return (meta.audience || []).filter((audience) =>
-      audience.toLowerCase().includes(audienceSearchTerm.toLowerCase()),
+      audience.name.toLowerCase().includes(audienceSearchTerm.toLowerCase())
     );
   }, [meta.audience, audienceSearchTerm]);
 
   const filteredFunctions = useMemo(() => {
     if (!functionsSearchTerm) return meta.businessFunctions || [];
     return (meta.businessFunctions || []).filter((func) =>
-      func.toLowerCase().includes(functionsSearchTerm.toLowerCase()),
+      func.name.toLowerCase().includes(functionsSearchTerm.toLowerCase())
     );
   }, [meta.businessFunctions, functionsSearchTerm]);
 
   const filteredTeams = useMemo(() => {
     if (!teamsSearchTerm) return meta.teams || [];
     return (meta.teams || []).filter((team) =>
-      team.toLowerCase().includes(teamsSearchTerm.toLowerCase()),
+      team.toLowerCase().includes(teamsSearchTerm.toLowerCase())
     );
   }, [meta.teams, teamsSearchTerm]);
 
@@ -437,6 +439,31 @@ export default function SmartjectsHubPage() {
 
   // Server-side sorting is now handled by the infinite scroll hook
   // No need for client-side sorting
+
+  // Helper functions to get display names from IDs
+  const getIndustryName = useCallback(
+    (id: string) => {
+      const industry = meta.industries?.find((ind) => ind.id === id);
+      return industry ? industry.name : id;
+    },
+    [meta.industries]
+  );
+
+  const getAudienceName = useCallback(
+    (id: string) => {
+      const audience = meta.audience?.find((aud) => aud.id === id);
+      return audience ? audience.name : id;
+    },
+    [meta.audience]
+  );
+
+  const getFunctionName = useCallback(
+    (id: string) => {
+      const func = meta.businessFunctions?.find((fn) => fn.id === id);
+      return func ? func.name : id;
+    },
+    [meta.businessFunctions]
+  );
 
   // Memoized refetch callback
   const memoizedRefetch = useCallback(refetch, [refetch]);
@@ -657,19 +684,19 @@ export default function SmartjectsHubPage() {
                               {filteredIndustries.length > 0 ? (
                                 filteredIndustries.map((industry) => (
                                   <div
-                                    key={industry}
+                                    key={industry.id}
                                     className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                                      selectedIndustries.includes(industry)
+                                      selectedIndustries.includes(industry.id)
                                         ? "bg-blue-50 text-blue-700"
                                         : "text-gray-700"
                                     }`}
                                     onClick={() => {
-                                      handleToggleIndustry(industry);
+                                      handleToggleIndustry(industry.id);
                                       setShowIndustriesDropdown(false);
                                       setIndustriesSearchTerm("");
                                     }}
                                   >
-                                    {industry}
+                                    {industry.name}
                                   </div>
                                 ))
                               ) : (
@@ -712,19 +739,19 @@ export default function SmartjectsHubPage() {
                               {filteredAudience.length > 0 ? (
                                 filteredAudience.map((tech) => (
                                   <div
-                                    key={tech}
+                                    key={tech.id}
                                     className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                                      selectedAudience.includes(tech)
+                                      selectedAudience.includes(tech.id)
                                         ? "bg-blue-50 text-blue-700"
                                         : "text-gray-700"
                                     }`}
                                     onClick={() => {
-                                      handleToggleAudience(tech);
+                                      handleToggleAudience(tech.id);
                                       setShowAudienceDropdown(false);
                                       setAudienceSearchTerm("");
                                     }}
                                   >
-                                    {tech}
+                                    {tech.name}
                                   </div>
                                 ))
                               ) : (
@@ -767,19 +794,19 @@ export default function SmartjectsHubPage() {
                               {filteredFunctions.length > 0 ? (
                                 filteredFunctions.map((func) => (
                                   <div
-                                    key={func}
+                                    key={func.id}
                                     className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
-                                      selectedFunctions.includes(func)
+                                      selectedFunctions.includes(func.id)
                                         ? "bg-blue-50 text-blue-700"
                                         : "text-gray-700"
                                     }`}
                                     onClick={() => {
-                                      handleToggleFunction(func);
+                                      handleToggleFunction(func.id);
                                       setShowFunctionsDropdown(false);
                                       setFunctionsSearchTerm("");
                                     }}
                                   >
-                                    {func}
+                                    {func.name}
                                   </div>
                                 ))
                               ) : (
@@ -918,7 +945,7 @@ export default function SmartjectsHubPage() {
                         className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
                         onClick={() =>
                           setShowMobileIndustriesDropdown(
-                            !showMobileIndustriesDropdown,
+                            !showMobileIndustriesDropdown
                           )
                         }
                       >
@@ -952,24 +979,19 @@ export default function SmartjectsHubPage() {
                             {filteredIndustries.length > 0 ? (
                               filteredIndustries.map((industry) => (
                                 <div
-                                  key={industry}
-                                  className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                                    selectedIndustries.includes(industry)
-                                      ? "bg-blue-50 text-blue-700 font-medium"
+                                  key={industry.id}
+                                  className={`px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm ${
+                                    selectedIndustries.includes(industry.id)
+                                      ? "bg-blue-50 text-blue-700"
                                       : "text-gray-700"
                                   }`}
                                   onClick={() => {
-                                    handleToggleIndustry(industry);
-                                    setShowMobileIndustriesDropdown(false);
+                                    handleToggleIndustry(industry.id);
+                                    setShowIndustriesDropdown(false);
                                     setIndustriesSearchTerm("");
                                   }}
                                 >
-                                  <div className="flex items-center justify-between">
-                                    <span>{industry}</span>
-                                    {selectedIndustries.includes(industry) && (
-                                      <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                                    )}
-                                  </div>
+                                  {industry.name}
                                 </div>
                               ))
                             ) : (
@@ -988,7 +1010,7 @@ export default function SmartjectsHubPage() {
                         className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
                         onClick={() =>
                           setShowMobileAudienceDropdown(
-                            !showMobileAudienceDropdown,
+                            !showMobileAudienceDropdown
                           )
                         }
                       >
@@ -1022,21 +1044,21 @@ export default function SmartjectsHubPage() {
                             {filteredAudience.length > 0 ? (
                               filteredAudience.map((tech) => (
                                 <div
-                                  key={tech}
+                                  key={tech.id}
                                   className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                                    selectedAudience.includes(tech)
+                                    selectedAudience.includes(tech.id)
                                       ? "bg-blue-50 text-blue-700 font-medium"
                                       : "text-gray-700"
                                   }`}
                                   onClick={() => {
-                                    handleToggleAudience(tech);
+                                    handleToggleAudience(tech.id);
                                     setShowMobileAudienceDropdown(false);
                                     setAudienceSearchTerm("");
                                   }}
                                 >
                                   <div className="flex items-center justify-between">
-                                    <span>{tech}</span>
-                                    {selectedAudience.includes(tech) && (
+                                    <span>{tech.name}</span>
+                                    {selectedAudience.includes(tech.id) && (
                                       <div className="w-2 h-2 bg-blue-500 rounded-full" />
                                     )}
                                   </div>
@@ -1058,7 +1080,7 @@ export default function SmartjectsHubPage() {
                         className="flex items-center justify-between gap-2 bg-white rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-50 border border-gray-200 transition-colors"
                         onClick={() =>
                           setShowMobileFunctionsDropdown(
-                            !showMobileFunctionsDropdown,
+                            !showMobileFunctionsDropdown
                           )
                         }
                       >
@@ -1092,21 +1114,21 @@ export default function SmartjectsHubPage() {
                             {filteredFunctions.length > 0 ? (
                               filteredFunctions.map((func) => (
                                 <div
-                                  key={func}
+                                  key={func.id}
                                   className={`px-4 py-3 cursor-pointer hover:bg-gray-50 text-sm transition-colors ${
-                                    selectedFunctions.includes(func)
+                                    selectedFunctions.includes(func.id)
                                       ? "bg-blue-50 text-blue-700 font-medium"
                                       : "text-gray-700"
                                   }`}
                                   onClick={() => {
-                                    handleToggleFunction(func);
+                                    handleToggleFunction(func.id);
                                     setShowMobileFunctionsDropdown(false);
                                     setFunctionsSearchTerm("");
                                   }}
                                 >
                                   <div className="flex items-center justify-between">
-                                    <span>{func}</span>
-                                    {selectedFunctions.includes(func) && (
+                                    <span>{func.name}</span>
+                                    {selectedFunctions.includes(func.id) && (
                                       <div className="w-2 h-2 bg-blue-500 rounded-full" />
                                     )}
                                   </div>
@@ -1266,6 +1288,7 @@ export default function SmartjectsHubPage() {
                       key={industry}
                       type="industry"
                       value={industry}
+                      displayValue={getIndustryName(industry)}
                       onRemove={handleToggleIndustry}
                     />
                   ))}
@@ -1274,6 +1297,7 @@ export default function SmartjectsHubPage() {
                       key={tech}
                       type="technology"
                       value={tech}
+                      displayValue={getAudienceName(tech)}
                       onRemove={handleToggleAudience}
                     />
                   ))}
@@ -1282,6 +1306,7 @@ export default function SmartjectsHubPage() {
                       key={func}
                       type="function"
                       value={func}
+                      displayValue={getFunctionName(func)}
                       onRemove={handleToggleFunction}
                     />
                   ))}
@@ -1290,6 +1315,7 @@ export default function SmartjectsHubPage() {
                       key={team}
                       type="team"
                       value={team}
+                      displayValue={team}
                       onRemove={handleToggleTeams}
                     />
                   ))}
@@ -1299,7 +1325,10 @@ export default function SmartjectsHubPage() {
                       className="flex items-center gap-1 bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-full px-3 py-1"
                     >
                       {dateRange.to
-                        ? `${format(dateRange.from, "MMM d")} - ${format(dateRange.to, "MMM d, y")}`
+                        ? `${format(dateRange.from, "MMM d")} - ${format(
+                            dateRange.to,
+                            "MMM d, y"
+                          )}`
                         : format(dateRange.from, "MMM d, y")}
                       <X
                         className="h-3 w-3 cursor-pointer ml-1 hover:text-red-500"
@@ -1326,21 +1355,23 @@ export default function SmartjectsHubPage() {
                       <FilterCategory
                         title="Industries"
                         icon={<Industries className="h-4 w-4 mr-2" />}
-                        options={meta.industries ?? []}
+                        options={meta.industries.map((ind) => ind.name) ?? []}
                         selected={selectedIndustries}
                         onToggle={handleToggleIndustry}
                       />
                       <FilterCategory
                         title="Users"
                         icon={<Cpu className="h-4 w-4 mr-2 text-blue-500" />}
-                        options={meta.audience ?? []}
+                        options={meta.audience.map((ind) => ind.name) ?? []}
                         selected={selectedAudience}
                         onToggle={handleToggleAudience}
                       />
                       <FilterCategory
                         title="Functions"
                         icon={<Functions className="h-4 w-4 mr-2" />}
-                        options={meta.businessFunctions ?? []}
+                        options={
+                          meta.businessFunctions.map((ind) => ind.name) ?? []
+                        }
                         selected={selectedFunctions}
                         onToggle={handleToggleFunction}
                       />
@@ -1364,7 +1395,9 @@ export default function SmartjectsHubPage() {
             smartjects={filteredSmartjects}
             isLoading={isLoading}
             onVoted={memoizedRefetch}
-            emptyMessage={`No ${sortBy === "recent" ? "recent " : ""}smartjects found matching your criteria.`}
+            emptyMessage={`No ${
+              sortBy === "recent" ? "recent " : ""
+            }smartjects found matching your criteria.`}
           />
 
           <LoadMore

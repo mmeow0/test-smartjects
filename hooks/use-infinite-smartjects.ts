@@ -5,10 +5,10 @@ import { useToast } from "@/hooks/use-toast";
 
 type Filters = {
   query?: string;
-  industries?: string[];
-  audience?: string[];
-  businessFunctions?: string[];
-  teams?: string[];
+  industries?: string[];         // тут теперь uuid[]
+  audience?: string[];           // uuid[]
+  businessFunctions?: string[];  // uuid[]
+  teams?: string[];              // строки, как и было
   startDate?: string;
   endDate?: string;
 };
@@ -16,10 +16,10 @@ type Filters = {
 type SortOption = "recent" | "most-needed" | "most-provided" | "most-believed";
 
 type AvailableFilters = {
-  industries: string[];
-  audience: string[];
-  businessFunctions: string[];
-  teams: string[];
+  industries: { id: string; name: string }[];
+  audience: { id: string; name: string }[];
+  businessFunctions: { id: string; name: string }[];
+  teams: string[]; // команды у тебя text[], оставляем как строки
 };
 
 interface InfiniteSmartjectsState {
