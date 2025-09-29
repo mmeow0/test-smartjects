@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { sepolia, ethereum, polygon, bsc } from "thirdweb/chains";
 import { lightTheme } from "thirdweb/react";
 import { Chain } from "thirdweb/chains";
-
+import { Wallet } from "lucide-react";
 
 const hardhatChain: Chain = {
   id: 31337,
@@ -28,7 +28,6 @@ const hardhatChain: Chain = {
   ],
   testnet: true,
 };
-
 
 interface WalletConnectProps {
   onConnect?: (address: string) => void;
@@ -125,7 +124,6 @@ export function WalletConnect({
         client={client}
         // Supported chains
         chains={chains}
-
         // Wallet options - popular wallets
         wallets={[
           createWallet("io.metamask"),
@@ -135,18 +133,25 @@ export function WalletConnect({
           createWallet("io.rabby"),
           createWallet("com.trustwallet.app"),
         ]}
-
         // Connect button customization for compact mode
         connectButton={{
-          label: "Connect wallet",
-          className: "h-9 px-1",
+          label: (
+            <div className="">
+              <Wallet className="w-4 h-4 text-black" />
+            </div>
+          ),
+          style: {
+            width: "2.5rem",
+            minWidth: "2.5rem",
+            height: "2.5rem",
+            borderRadius: "10px",
+            backgroundColor: "rgb(253 224 71)"
+          },
         }}
-
         // Details button customization for compact mode
         detailsButton={{
           className: "h-9 px-1",
         }}
-
         // Modal customization
         connectModal={{
           size: "compact",
@@ -154,19 +159,15 @@ export function WalletConnect({
           titleIcon: "/favicon.svg",
           showThirdwebBranding: false,
         }}
-
         // Details modal customization
         detailsModal={{
           assetTabs: ["token", "nft"],
         }}
-
         // Callbacks
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
-
         // Auto connect
         autoConnect={{ timeout: 15000 }}
-
         // Theme
         theme={lightTheme({
           colors: {
@@ -199,10 +200,8 @@ export function WalletConnect({
     <div className={className}>
       <ConnectButton
         client={client}
-
         // Supported chains
         chains={chains}
-
         // Wallet options - all popular wallets
         wallets={[
           createWallet("io.metamask"),
@@ -213,21 +212,17 @@ export function WalletConnect({
           createWallet("com.trustwallet.app"),
           createWallet("org.uniswap"),
         ]}
-
         // Show all wallets option
         showAllWallets={true}
-
         // Connect button customization
         connectButton={{
           label: "Connect Your Wallet",
           className: "w-full",
         }}
-
         // Details button customization
         detailsButton={{
           className: "w-full",
         }}
-
         // Modal customization
         connectModal={{
           size: "wide",
@@ -246,7 +241,6 @@ export function WalletConnect({
           termsOfServiceUrl: "/terms",
           privacyPolicyUrl: "/privacy",
         }}
-
         // Details modal customization
         detailsModal={{
           assetTabs: ["token", "nft"],
@@ -254,7 +248,6 @@ export function WalletConnect({
             console.log("Modal closed on screen:", screen);
           },
         }}
-
         // App metadata
         appMetadata={{
           name: "Smartjects Platform",
@@ -262,14 +255,11 @@ export function WalletConnect({
           url: "https://smartjects.com",
           logoUrl: "/logo.png",
         }}
-
         // Callbacks
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
-
         // Auto connect previously connected wallet
         autoConnect={{ timeout: 15000 }}
-
         // Theme customization
         theme={lightTheme({
           colors: {
@@ -297,7 +287,6 @@ export function WalletConnect({
           },
           fontFamily: "Inter, system-ui, sans-serif",
         })}
-
         // Supported tokens (optional - for send/receive features)
         supportedTokens={{
           [ethereum.id]: [

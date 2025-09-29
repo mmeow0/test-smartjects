@@ -186,9 +186,6 @@ export function TopNav({ isDarkNav: isHomePage = false }: TopNavProps) {
                   <DropdownMenuItem asChild>
                     <Link href="/profile">Profile</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings">Settings</Link>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   {user?.accountType === "paid" && (
                     <>

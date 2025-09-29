@@ -333,7 +333,6 @@ export const SearchFilters = memo(
                             }`}
                             onClick={() => {
                               onToggleIndustry(industry.id);
-                              onIndustriesSearchChange("");
                             }}
                           >
                             <div className="flex items-center justify-between">
@@ -394,7 +393,6 @@ export const SearchFilters = memo(
                             }`}
                             onClick={() => {
                               onToggleTechnology(tech.id);
-                              onAudienceSearchChange("");
                             }}
                           >
                             <div className="flex items-center justify-between">
@@ -457,7 +455,6 @@ export const SearchFilters = memo(
                             }`}
                             onClick={() => {
                               onToggleFunction(func.id);
-                              onFunctionsSearchChange("");
                             }}
                           >
                             <div className="flex items-center justify-between">
@@ -518,7 +515,6 @@ export const SearchFilters = memo(
                             }`}
                             onClick={() => {
                               onToggleTeams(team);
-                              onTeamsSearchChange("");
                             }}
                           >
                             <div className="flex items-center justify-between">
@@ -646,7 +642,6 @@ export const SearchFilters = memo(
                               }`}
                               onClick={() => {
                                 onToggleIndustry(industry.id);
-                                onIndustriesSearchChange("");
                               }}
                             >
                               <div className="flex items-center justify-between">
@@ -711,7 +706,6 @@ export const SearchFilters = memo(
                               }`}
                               onClick={() => {
                                 onToggleTechnology(tech.id);
-                                onAudienceSearchChange("");
                               }}
                             >
                               <div className="flex items-center justify-between">
@@ -776,7 +770,6 @@ export const SearchFilters = memo(
                               }`}
                               onClick={() => {
                                 onToggleFunction(func.id);
-                                onFunctionsSearchChange("");
                               }}
                             >
                               <div className="flex items-center justify-between">
@@ -839,7 +832,6 @@ export const SearchFilters = memo(
                               }`}
                               onClick={() => {
                                 onToggleTeams(team);
-                                onTeamsSearchChange("");
                               }}
                             >
                               <div className="flex items-center justify-between">

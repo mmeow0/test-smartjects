@@ -15,6 +15,10 @@ import {
   Signature,
   Contact,
   SquarePen,
+  Settings,
+  Eye,
+  EyeOff,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -87,7 +91,7 @@ export default function ProfilePage() {
   }
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setProfileData((prev) => ({ ...prev, [name]: value }));
@@ -183,15 +187,15 @@ export default function ProfilePage() {
                 </Button>
               )}
 
-                {isEditing && (
-                  <AvatarUpload
-                    userId={user?.id || ""}
-                    currentAvatar={currentAvatar || undefined}
-                    userName={profileData.name}
-                    onAvatarChange={handleAvatarChange}
-                    size="md"
-                  />
-                )}
+              {isEditing && (
+                <AvatarUpload
+                  userId={user?.id || ""}
+                  currentAvatar={currentAvatar || undefined}
+                  userName={profileData.name}
+                  onAvatarChange={handleAvatarChange}
+                  size="md"
+                />
+              )}
               <div className="flex items-start gap-4">
                 {/* Avatar section */}
                 {!isEditing && (
@@ -497,6 +501,73 @@ export default function ProfilePage() {
               </Tabs>
             </CardContent>
           </Card>
+
+          {/* Settings Section */}
+          {/* <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Account Settings
+              </CardTitle>
+              <CardDescription>
+                Manage your account preferences and data
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="max-w-2xl space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Account Type</CardTitle>
+                    <CardDescription>
+                      Your current subscription plan and benefits.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant={
+                            user?.accountType === "paid"
+                              ? "default"
+                              : "secondary"
+                          }
+                        >
+                          {user?.accountType === "paid" ? "Premium" : "Free"}{" "}
+                          Account
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          {user?.accountType === "paid"
+                            ? "Full access to all features"
+                            : "Limited features available"}
+                        </span>
+                      </div>
+                      {user?.accountType === "free" && (
+                        <Button asChild>
+                          <a href="/upgrade">Upgrade</a>
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Password</CardTitle>
+                    <CardDescription>
+                      Change your account password for better security.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="outline">Change Password</Button>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      You will be redirected to a secure page to update your
+                      password.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card> */}
         </div>
       </div>
     </div>

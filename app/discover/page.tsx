@@ -692,8 +692,6 @@ export default function SmartjectsHubPage() {
                                     }`}
                                     onClick={() => {
                                       handleToggleIndustry(industry.id);
-                                      setShowIndustriesDropdown(false);
-                                      setIndustriesSearchTerm("");
                                     }}
                                   >
                                     {industry.name}
@@ -747,8 +745,6 @@ export default function SmartjectsHubPage() {
                                     }`}
                                     onClick={() => {
                                       handleToggleAudience(tech.id);
-                                      setShowAudienceDropdown(false);
-                                      setAudienceSearchTerm("");
                                     }}
                                   >
                                     {tech.name}
@@ -802,8 +798,6 @@ export default function SmartjectsHubPage() {
                                     }`}
                                     onClick={() => {
                                       handleToggleFunction(func.id);
-                                      setShowFunctionsDropdown(false);
-                                      setFunctionsSearchTerm("");
                                     }}
                                   >
                                     {func.name}
@@ -857,8 +851,6 @@ export default function SmartjectsHubPage() {
                                     }`}
                                     onClick={() => {
                                       handleToggleTeams(team);
-                                      setShowTeamsDropdown(false);
-                                      setTeamsSearchTerm("");
                                     }}
                                   >
                                     {team}
@@ -1052,8 +1044,6 @@ export default function SmartjectsHubPage() {
                                   }`}
                                   onClick={() => {
                                     handleToggleAudience(tech.id);
-                                    setShowMobileAudienceDropdown(false);
-                                    setAudienceSearchTerm("");
                                   }}
                                 >
                                   <div className="flex items-center justify-between">
@@ -1122,8 +1112,6 @@ export default function SmartjectsHubPage() {
                                   }`}
                                   onClick={() => {
                                     handleToggleFunction(func.id);
-                                    setShowMobileFunctionsDropdown(false);
-                                    setFunctionsSearchTerm("");
                                   }}
                                 >
                                   <div className="flex items-center justify-between">
@@ -1190,8 +1178,6 @@ export default function SmartjectsHubPage() {
                                   }`}
                                   onClick={() => {
                                     handleToggleTeams(team);
-                                    setShowMobileTeamsDropdown(false);
-                                    setTeamsSearchTerm("");
                                   }}
                                 >
                                   <div className="flex items-center justify-between">

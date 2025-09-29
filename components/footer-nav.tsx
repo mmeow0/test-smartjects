@@ -123,9 +123,6 @@ export function FooterNav() {
                   <DropdownMenuItem asChild>
                     <Link href="/profile">Profile</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings">Settings</Link>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   {user?.accountType === "paid" && (
                     <>
@@ -237,13 +234,6 @@ export function FooterNav() {
                       className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-[#FFD900] hover:bg-gray-50 rounded-md"
                     >
                       Profile
-                    </Link>
-                    <Link
-                      href="/settings"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="block px-3 py-2 text-base font-medium text-gray-600 hover:text-[#FFD900] hover:bg-gray-50 rounded-md"
-                    >
-                      Settings
                     </Link>
                     {user?.accountType === "paid" && (
                       <>
