@@ -121,12 +121,12 @@ async getSmartjectsPaginated(
     query = query.in("smartject_business_functions.function_id", filters.businessFunctions);
   }
 
-  // 👨‍👩‍👧‍👦 Фильтр по командам (team text[])
-  if (filters?.teams?.length) {
-    query = query.contains("team", filters.teams);
-    // или query = query.filter("team", "cs", `{team1,team2}`) в raw SQL
-    // работает благодаря GIN индексу
-  }
+    // 👨‍👩‍👧‍👦 Фильтр по командам (team text[])
+    if (filters?.teams?.length) {
+      query = query.overlaps("team", filters.teams);
+      // или query = query.filter("team", "cs", `{team1,team2}`) в raw SQL
+      // работает благодаря GIN индексу
+    }
 
   // 📌 Сортировка
   if (sortBy === "recent") {
