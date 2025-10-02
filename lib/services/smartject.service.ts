@@ -21,7 +21,7 @@ const filtersCache: {
 export const smartjectService = {
   // Get user votes mapping
   async getUserVotes(
-    userId: string,
+    userId: string
   ): Promise<{ [smartjectId: string]: ("believe" | "need" | "provide")[] }> {
     const supabase = getSupabaseBrowserClient();
     const { data, error } = await supabase
@@ -54,137 +54,203 @@ export const smartjectService = {
     return result;
   },
 
-// Оптимизированная загрузка смартджектов с фильтрацией в SQL
-async getSmartjectsPaginated(
-  userId?: string,
-  page: number = 0,
-  pageSize: number = 12,
-  filters?: {
-    query?: string;
-    industries?: string[];         // industry_id[]
-    audience?: string[];           // audience_id[]
-    businessFunctions?: string[];  // function_id[]
-    teams?: string[];              // text[]
-    startDate?: string;
-    endDate?: string;
-  },
-  sortBy: "recent" | "most-needed" | "most-provided" | "most-believed" = "recent",
-): Promise<SmartjectType[]> {
-  const supabase = getSupabaseBrowserClient();
-  const userVotesMap = userId ? await this.getUserVotes(userId) : {};
+  // Оптимизированная загрузка смартджектов с фильтрацией в SQL
+  async getSmartjectsPaginated(
+    userId?: string,
+    page: number = 0,
+    pageSize: number = 12,
+    filters?: {
+      query?: string;
+      industries?: string[]; // industry_id[]
+      audience?: string[]; // audience_id[]
+      businessFunctions?: string[]; // function_id[]
+      teams?: string[]; // text[]
+      startDate?: string;
+      endDate?: string;
+    },
+    sortBy:
+      | "recent"
+      | "most-needed"
+      | "most-provided"
+      | "most-believed" = "recent"
+  ): Promise<SmartjectType[]> {
+    const supabase = getSupabaseBrowserClient();
+    const userVotesMap = userId ? await this.getUserVotes(userId) : {};
 
-  let query = supabase.from("smartjects").select(
-    `
+    let query = supabase.from("smartjects").select(
+      `
       *,
-      smartject_business_functions!inner (
+      smartject_business_functions (
         function_id,
         business_functions (id, name)
       ),
-      smartject_industries!inner (
+      smartject_industries (
         industry_id,
         industries (id, name)
       ),
-      smartject_audience!inner (
+      smartject_audience (
         audience_id,
         audience (id, name)
       ),
       votes (vote_type),
       comments(count)
     `,
-    { count: "exact" }
-  );
-
-  // 🔍 Поиск по тексту
-  if (filters?.query?.trim()) {
-    const searchTerm = `%${filters.query.toLowerCase()}%`;
-    query = query.or(
-      `title.ilike.${searchTerm},mission.ilike.${searchTerm},problematics.ilike.${searchTerm},scope.ilike.${searchTerm}`
+      { count: "exact" }
     );
-  }
 
-  // 📅 Фильтры по дате
-  if (filters?.startDate) query = query.gte("created_at", filters.startDate);
-  if (filters?.endDate) query = query.lte("created_at", filters.endDate);
+    // Применяем базовые фильтры напрямую к таблице smartjects
+    // 🔍 Поиск по тексту
+    if (filters?.query?.trim()) {
+      const searchTerm = `%${filters.query.toLowerCase()}%`;
+      query = query.or(
+        `title.ilike.${searchTerm},mission.ilike.${searchTerm},problematics.ilike.${searchTerm},scope.ilike.${searchTerm}`
+      );
+    }
 
-  // 🏭 Фильтры по индустриям
-  if (filters?.industries?.length) {
-    query = query.in("smartject_industries.industry_id", filters.industries);
-  }
-
-  // 👥 Фильтры по аудитории
-  if (filters?.audience?.length) {
-    query = query.in("smartject_audience.audience_id", filters.audience);
-  }
-
-  // ⚙️ Фильтры по бизнес-функциям
-  if (filters?.businessFunctions?.length) {
-    query = query.in("smartject_business_functions.function_id", filters.businessFunctions);
-  }
+    // 📅 Фильтры по дате
+    if (filters?.startDate) query = query.gte("created_at", filters.startDate);
+    if (filters?.endDate) query = query.lte("created_at", filters.endDate);
 
     // 👨‍👩‍👧‍👦 Фильтр по командам (team text[])
     if (filters?.teams?.length) {
       query = query.overlaps("team", filters.teams);
-      // или query = query.filter("team", "cs", `{team1,team2}`) в raw SQL
-      // работает благодаря GIN индексу
     }
 
-  // 📌 Сортировка
-  if (sortBy === "recent") {
-    query = query.order("created_at", { ascending: false });
-  } else {
-    // для сортировок по голосам тащим чуть больше данных
-    const multiplier = 3;
-    const batchSize = pageSize * multiplier;
-    const from = page * batchSize;
-    const to = from + batchSize - 1;
+    // Для фильтров по связанным таблицам нужно получить ID отдельно
+    let filteredSmartjectIds: string[] | null = null;
 
-    query = query.order("created_at", { ascending: false }).range(from, to);
-  }
+    if (
+      filters?.industries?.length ||
+      filters?.audience?.length ||
+      filters?.businessFunctions?.length
+    ) {
+      // Получаем ID смартджектов, которые соответствуют фильтрам
+      const filterPromises = [];
 
-  // 📄 Пагинация (для recent)
-  if (sortBy === "recent") {
-    const from = page * pageSize;
-    const to = from + pageSize - 1;
-    query = query.range(from, to);
-  }
+      if (filters?.industries?.length) {
+        filterPromises.push(
+          supabase
+            .from("smartject_industries")
+            .select("smartject_id")
+            .in("industry_id", filters.industries)
+        );
+      }
 
-  const { data, error } = await query;
+      if (filters?.audience?.length) {
+        filterPromises.push(
+          supabase
+            .from("smartject_audience")
+            .select("smartject_id")
+            .in("audience_id", filters.audience)
+        );
+      }
 
-  if (error || !data) {
-    console.error("Error fetching smartjects:", error);
-    return [];
-  }
+      if (filters?.businessFunctions?.length) {
+        filterPromises.push(
+          supabase
+            .from("smartject_business_functions")
+            .select("smartject_id")
+            .in("function_id", filters.businessFunctions)
+        );
+      }
 
-  // 🗳️ Подсчёт голосов (для сортировок кроме recent)
-  const withVoteCounts = data.map((item: any) => {
-    const voteCount = { believe: 0, need: 0, provide: 0 };
-    if (Array.isArray(item.votes)) {
-      item.votes.forEach((vote: any) => {
-        if (vote.vote_type && voteCount.hasOwnProperty(vote.vote_type)) {
-          voteCount[vote.vote_type as keyof typeof voteCount]++;
+      // Ожидаем все запросы
+      const results = await Promise.all(filterPromises);
+
+      // Находим пересечение ID (AND логика между фильтрами)
+      let intersectionIds = new Set<string>();
+      let isFirst = true;
+
+      for (const result of results) {
+        if (result.data) {
+          const currentIds = new Set(
+            result.data.map((item: any) => item.smartject_id)
+          );
+          if (isFirst) {
+            intersectionIds = currentIds;
+            isFirst = false;
+          } else {
+            intersectionIds = new Set(
+              [...intersectionIds].filter((id) => currentIds.has(id))
+            );
+          }
         }
-      });
+      }
+
+      filteredSmartjectIds = Array.from(intersectionIds);
+
+      // Если нет пересечений, возвращаем пустой результат
+      if (filteredSmartjectIds.length === 0) {
+        return [];
+      }
+
+      // Применяем фильтр по найденным ID
+      query = query.in("id", filteredSmartjectIds);
     }
-    return { ...item, voteCount };
-  });
 
-  // ⚡ Сортировка по голосам
-  let sortedData = withVoteCounts;
-  if (sortBy === "most-needed") {
-    sortedData = withVoteCounts.sort((a, b) => b.voteCount.need - a.voteCount.need);
-  } else if (sortBy === "most-provided") {
-    sortedData = withVoteCounts.sort((a, b) => b.voteCount.provide - a.voteCount.provide);
-  } else if (sortBy === "most-believed") {
-    sortedData = withVoteCounts.sort((a, b) => b.voteCount.believe - a.voteCount.believe);
-  }
+    // 📌 Сортировка
+    if (sortBy === "recent") {
+      query = query.order("created_at", { ascending: false });
+    } else {
+      // для сортировок по голосам тащим чуть больше данных
+      const multiplier = 3;
+      const batchSize = pageSize * multiplier;
+      const from = page * batchSize;
+      const to = from + batchSize - 1;
 
-  // ✂️ Обрезаем до pageSize после сортировки
-  if (sortBy !== "recent") {
-    sortedData = sortedData.slice(0, pageSize);
-  }
+      query = query.order("created_at", { ascending: false }).range(from, to);
+    }
 
-  return this.formatSmartjects(sortedData, userVotesMap, userId);
-},
+    // 📄 Пагинация (для recent)
+    if (sortBy === "recent") {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+    }
+
+    const { data, error } = await query;
+
+    if (error || !data) {
+      console.error("Error fetching smartjects:", error);
+      return [];
+    }
+
+    // 🗳️ Подсчёт голосов (для сортировок кроме recent)
+    const withVoteCounts = data.map((item: any) => {
+      const voteCount = { believe: 0, need: 0, provide: 0 };
+      if (Array.isArray(item.votes)) {
+        item.votes.forEach((vote: any) => {
+          if (vote.vote_type && voteCount.hasOwnProperty(vote.vote_type)) {
+            voteCount[vote.vote_type as keyof typeof voteCount]++;
+          }
+        });
+      }
+      return { ...item, voteCount };
+    });
+
+    // ⚡ Сортировка по голосам
+    let sortedData = withVoteCounts;
+    if (sortBy === "most-needed") {
+      sortedData = withVoteCounts.sort(
+        (a, b) => b.voteCount.need - a.voteCount.need
+      );
+    } else if (sortBy === "most-provided") {
+      sortedData = withVoteCounts.sort(
+        (a, b) => b.voteCount.provide - a.voteCount.provide
+      );
+    } else if (sortBy === "most-believed") {
+      sortedData = withVoteCounts.sort(
+        (a, b) => b.voteCount.believe - a.voteCount.believe
+      );
+    }
+
+    // ✂️ Обрезаем до pageSize после сортировки
+    if (sortBy !== "recent") {
+      sortedData = sortedData.slice(0, pageSize);
+    }
+
+    return this.formatSmartjects(sortedData, userVotesMap, userId);
+  },
   // Get all smartjects (legacy method)
   async getSmartjects(userId?: string): Promise<SmartjectType[]> {
     const supabase = getSupabaseBrowserClient();
@@ -204,13 +270,11 @@ async getSmartjectsPaginated(
       ),
       smartject_audience (
         audience (name)
-      ),
-      smartject_teams (
-        teams (name)
+      )
       ),
       votes (vote_type),
       comments(count)
-    `,
+    `
       )
       .order("created_at", { ascending: false });
 
@@ -226,7 +290,7 @@ async getSmartjectsPaginated(
   formatSmartjects(
     data: any[],
     userVotesMap: { [smartjectId: string]: ("believe" | "need" | "provide")[] },
-    userId?: string,
+    userId?: string
   ): SmartjectType[] {
     return data.map((item: any) => {
       const voteCount = {
@@ -276,9 +340,7 @@ async getSmartjectsPaginated(
             .map((a: any) => a.audience?.name)
             .filter(Boolean)
         : [];
-      const teams = Array.isArray(item.smartject_teams)
-        ? item.smartject_teams.map((t: any) => t.teams?.name).filter(Boolean)
-        : [];
+      const teams = Array.isArray(item.team) ? item.team : [];
 
       return {
         id: item.id as string,
@@ -309,7 +371,7 @@ async getSmartjectsPaginated(
   // Get a single smartject by ID
   async getSmartjectById(
     id: string,
-    userId?: string,
+    userId?: string
   ): Promise<SmartjectType | null> {
     const supabase = getSupabaseBrowserClient();
 
@@ -328,11 +390,8 @@ async getSmartjectsPaginated(
         ),
         smartject_audience (
           audience (name)
-        ),
-        smartject_teams (
-          teams (name)
         )
-      `,
+      `
       )
       .eq("id", id)
       .single();
@@ -393,7 +452,7 @@ async getSmartjectsPaginated(
     if (commentError) {
       console.error(
         `Error counting comments for smartject ${id}:`,
-        commentError,
+        commentError
       );
     }
 
@@ -418,9 +477,7 @@ async getSmartjectsPaginated(
           .filter(Boolean)
       : [];
 
-    const teams = Array.isArray(data.smartject_teams)
-      ? data.smartject_teams.map((aud: any) => aud.teams?.name).filter(Boolean)
-      : [];
+    const teams = Array.isArray(data.team) ? data.team : [];
 
     return {
       id: data.id as string,
@@ -484,7 +541,7 @@ async getSmartjectsPaginated(
         voteType === "provide"
       ) {
         userVotesMap[smartjectId].push(
-          voteType as "believe" | "need" | "provide",
+          voteType as "believe" | "need" | "provide"
         );
       }
     }
@@ -503,13 +560,11 @@ async getSmartjectsPaginated(
       ),
       smartject_audience (
         audience (name)
-      ),
-      smartject_teams (
-        teams (name)
+      )
       ),
       votes (vote_type),
       comments(count)
-    `,
+    `
       )
       .in("id", Array.from(smartjectIds));
 
@@ -521,75 +576,76 @@ async getSmartjectsPaginated(
     return this.formatSmartjects(data, userVotesMap, userId);
   },
 
-// Get available filter options from related tables (uuid + name)
-async getAvailableFilters(forceRefresh: boolean = false): Promise<{
-  industries: { id: string; name: string }[];
-  audience: { id: string; name: string }[];
-  businessFunctions: { id: string; name: string }[];
-  teams: string[];
-}> {
-  // Check cache first
-  const now = Date.now();
-  if (
-    !forceRefresh &&
-    filtersCache.data &&
-    now - filtersCache.timestamp < filtersCache.ttl
-  ) {
-    return filtersCache.data;
-  }
-
-  const supabase = getSupabaseBrowserClient();
-
-  try {
-    // ⚡ Вместо обхода всех smartjects сразу берём справочники
-    const [industriesRes, audienceRes, functionsRes] = await Promise.all([
-      supabase.from("industries").select("id, name").order("name"),
-      supabase.from("audience").select("id, name").order("name"),
-      supabase.from("business_functions").select("id, name").order("name"),
-    ]);
-
-    // ⚠️ Для команд у тебя нет отдельной таблицы — это text[] внутри smartjects
-    // значит надо собрать все уникальные значения из smartjects.team
-    const { data: teamData, error: teamError } = await supabase
-      .from("smartjects")
-      .select("team")
-      .not("team", "is", null);
-
-    if (teamError) {
-      console.error("Error fetching teams:", teamError);
+  // Get available filter options from related tables (uuid + name)
+  async getAvailableFilters(forceRefresh: boolean = false): Promise<{
+    industries: { id: string; name: string }[];
+    audience: { id: string; name: string }[];
+    businessFunctions: { id: string; name: string }[];
+    teams: string[];
+  }> {
+    // Check cache first
+    const now = Date.now();
+    if (
+      !forceRefresh &&
+      filtersCache.data &&
+      now - filtersCache.timestamp < filtersCache.ttl
+    ) {
+      return filtersCache.data;
     }
 
-    const teamsSet = new Set<string>();
-    teamData?.forEach((row: any) => {
-      if (Array.isArray(row.team)) {
-        row.team.forEach((t: string) => teamsSet.add(t));
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      // ⚡ Вместо обхода всех smartjects сразу берём справочники
+      const [industriesRes, audienceRes, functionsRes] = await Promise.all([
+        supabase.from("industries").select("id, name").order("name"),
+        supabase.from("audience").select("id, name").order("name"),
+        supabase.from("business_functions").select("id, name").order("name"),
+      ]);
+
+      // ⚠️ Для команд у тебя нет отдельной таблицы — это text[] внутри smartjects
+      // значит надо собрать все уникальные значения из smartjects.team
+      const { data: teamData, error: teamError } = await supabase
+        .from("smartjects")
+        .select("team")
+        .not("team", "is", null);
+
+      if (teamError) {
+        console.error("Error fetching teams:", teamError);
       }
-    });
 
-    const result = {
-      industries:
-        industriesRes.error || !industriesRes.data ? [] : industriesRes.data,
-      audience: audienceRes.error || !audienceRes.data ? [] : audienceRes.data,
-      businessFunctions:
-        functionsRes.error || !functionsRes.data ? [] : functionsRes.data,
-      teams: Array.from(teamsSet).sort(),
-    };
+      const teamsSet = new Set<string>();
+      teamData?.forEach((row: any) => {
+        if (Array.isArray(row.team)) {
+          row.team.forEach((t: string) => teamsSet.add(t));
+        }
+      });
 
-    // Cache result
-    filtersCache.data = result;
-    filtersCache.timestamp = Date.now();
+      const result = {
+        industries:
+          industriesRes.error || !industriesRes.data ? [] : industriesRes.data,
+        audience:
+          audienceRes.error || !audienceRes.data ? [] : audienceRes.data,
+        businessFunctions:
+          functionsRes.error || !functionsRes.data ? [] : functionsRes.data,
+        teams: Array.from(teamsSet).sort(),
+      };
 
-    return result;
-  } catch (error) {
-    console.error("Error in getAvailableFilters:", error);
+      // Cache result
+      filtersCache.data = result;
+      filtersCache.timestamp = Date.now();
 
-    // Fallback — вернём пустые списки, чтобы UI не упал
-    return {
-      industries: [],
-      audience: [],
-      businessFunctions: [],
-      teams: [],
-    };
-  }
-},
+      return result;
+    } catch (error) {
+      console.error("Error in getAvailableFilters:", error);
+
+      // Fallback — вернём пустые списки, чтобы UI не упал
+      return {
+        industries: [],
+        audience: [],
+        businessFunctions: [],
+        teams: [],
+      };
+    }
+  },
 };
