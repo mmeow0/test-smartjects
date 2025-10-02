@@ -66,6 +66,9 @@ export default function ProposalsPage() {
     null,
   );
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editingProposal, setEditingProposal] = useState<ProposalType | null>(
+    null,
+  );
   const { toast } = useToast();
   // Load proposals when authenticated
   const fetchProposals = useCallback(async () => {
@@ -124,6 +127,12 @@ export default function ProposalsPage() {
     e.stopPropagation(); // Prevent navigation to proposal details
     setProposalToDelete(proposal);
     setDeleteDialogOpen(true);
+  };
+
+  const handleEditClick = (proposal: ProposalType, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation to proposal details
+    setEditingProposal(proposal);
+    setCreateModalOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
@@ -310,6 +319,11 @@ export default function ProposalsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
+                            onClick={(e) => handleEditClick(proposal, e)}
+                          >
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={(e) => handleDeleteClick(proposal, e)}
                             className="text-red-600 focus:text-red-600"
                           >
@@ -329,7 +343,7 @@ export default function ProposalsPage() {
                         <p className="font-medium">
                           {proposal.budget
                             ? `$${proposal.budget.toLocaleString()}`
-                            : displayField(proposal.budget)}
+                            : displayField(proposal.budget?.toString())}
                         </p>
                       </div>
                     )}
@@ -362,7 +376,7 @@ export default function ProposalsPage() {
                     : "You haven't created any 'I Need' proposals yet."}
                 </p>
                 {!searchTerm && statusFilter === "all" && (
-                  <Button onClick={() => router.push("/proposals/create")}>
+                  <Button onClick={() => setCreateModalOpen(true)}>
                     Create Your First Proposal
                   </Button>
                 )}
@@ -404,6 +418,11 @@ export default function ProposalsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
+                            onClick={(e) => handleEditClick(proposal, e)}
+                          >
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={(e) => handleDeleteClick(proposal, e)}
                             className="text-red-600 focus:text-red-600"
                           >
@@ -423,7 +442,7 @@ export default function ProposalsPage() {
                         <p className="font-medium">
                           {proposal.budget
                             ? `$${proposal.budget.toLocaleString()}`
-                            : displayField(proposal.budget)}
+                            : displayField(proposal.budget?.toString())}
                         </p>
                       </div>
                     )}
@@ -456,7 +475,7 @@ export default function ProposalsPage() {
                     : "You haven't created any 'I Provide' proposals yet."}
                 </p>
                 {!searchTerm && statusFilter === "all" && (
-                  <Button onClick={() => router.push("/proposals/create")}>
+                  <Button onClick={() => setCreateModalOpen(true)}>
                     Create Your First Proposal
                   </Button>
                 )}
@@ -489,11 +508,16 @@ export default function ProposalsPage() {
 
       <CreateProposalModal
         isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
+        onClose={() => {
+          setCreateModalOpen(false);
+          setEditingProposal(null);
+        }}
         onSuccess={() => {
           fetchProposals();
           setCreateModalOpen(false);
+          setEditingProposal(null);
         }}
+        editingProposal={editingProposal}
       />
     </div>
   );

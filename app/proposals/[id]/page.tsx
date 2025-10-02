@@ -41,6 +41,7 @@ import { userService } from "@/lib/services/user.service";
 import { useProposal } from "@/hooks/use-proposal";
 import { useProposalNegotiations } from "@/hooks/use-proposal-negotiations";
 import { useInterest } from "@/hooks/use-interest";
+import { CreateProposalModal } from "@/components/create-proposal-modal";
 import type { UserType, NDARequest } from "@/lib/types";
 
 export default function ProposalDetailPage({
@@ -68,6 +69,7 @@ export default function ProposalDetailPage({
   const [userNdaRequest, setUserNdaRequest] = useState<NDARequest | null>(null);
   const [loadingUserRequest, setLoadingUserRequest] = useState(false);
   const [databaseError, setDatabaseError] = useState<string | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const { proposal, isLoading, refetch } = useProposal(id);
   const { conversations, completedConversations } = useProposalNegotiations(id);
 
@@ -205,7 +207,7 @@ export default function ProposalDetailPage({
   };
 
   const handleEdit = () => {
-    router.push(`/proposals/edit/${id}`);
+    setEditModalOpen(true);
   };
 
   // Fetch NDA signatures with user details
@@ -399,9 +401,7 @@ export default function ProposalDetailPage({
                   >
                     {isExpressingInterest ? "Submitting..." : "Accept proposal"}
                   </Button>
-                ) : (
-                 null
-                )}
+                ) : null}
               </div>
             )}
           </div>
@@ -1079,6 +1079,16 @@ export default function ProposalDetailPage({
           )}
         </Tabs>
       </div>
+
+      <CreateProposalModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        onSuccess={() => {
+          refetch();
+          setEditModalOpen(false);
+        }}
+        editingProposal={proposal}
+      />
     </div>
   );
 }

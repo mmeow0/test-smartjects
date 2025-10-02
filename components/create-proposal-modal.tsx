@@ -11,17 +11,9 @@ import {
   MobileDialogHeader,
   MobileDialogTitle,
 } from "@/components/ui/mobile-dialog";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
 import { Separator } from "@/components/ui/separator";
@@ -30,27 +22,21 @@ import { Progress } from "@/components/ui/progress";
 import { FileUploader } from "@/components/file-uploader";
 import { smartjectService } from "@/lib/services/smartject.service";
 import { proposalService } from "@/lib/services/proposal.service";
+import { voteService } from "@/lib/services";
 import {
   ArrowLeft,
   ArrowRight,
   Save,
   Send,
-  FileText,
-  Calendar,
-  DollarSign,
   Plus,
   Trash2,
-  ListChecks,
   Circle,
   CheckCircle2,
   X,
-  Check,
-  AlertCircle,
   Loader2,
 } from "lucide-react";
-import { ProposalDocumentPreview } from "@/components/proposal-document-preview";
 import type { DocumentVersion } from "@/components/document-version-history";
-import type { SmartjectType } from "@/lib/types";
+import type { SmartjectType, ProposalType } from "@/lib/types";
 import { Switch } from "@/components/ui/switch";
 import { PrivateFieldManager } from "@/components/private-field-manager/private-field-manager";
 import type { ProposalPrivateFields } from "@/lib/types";
@@ -84,6 +70,7 @@ interface CreateProposalModalProps {
   smartjectId?: string;
   proposalType?: "need" | "provide";
   onSuccess?: () => void;
+  editingProposal?: ProposalType | null;
 }
 
 export function CreateProposalModal({
@@ -92,6 +79,7 @@ export function CreateProposalModal({
   smartjectId,
   proposalType: initialProposalType,
   onSuccess,
+  editingProposal,
 }: CreateProposalModalProps) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -189,20 +177,24 @@ export function CreateProposalModal({
     setTotalPercentage(total);
   }, [milestones]);
 
-  // Load smartject data if ID is provided
+  // Load smartject data if ID is provided or when editing
   useEffect(() => {
     const fetchSmartject = async () => {
-      if (smartjectId && isOpen) {
+      const idToUse = smartjectId || editingProposal?.smartjectId;
+      if (idToUse && isOpen) {
         setLoadingSmartject(true);
         try {
-          const data = await smartjectService.getSmartjectById(smartjectId);
+          const data = await smartjectService.getSmartjectById(idToUse);
           if (data) {
             setSmartject(data);
-            setFormData((prev) => ({
-              ...prev,
-              title: `${data.title}`,
-              smartjectId: data.id,
-            }));
+            // Only set title and smartjectId if not editing (to avoid overriding existing proposal data)
+            if (!editingProposal) {
+              setFormData((prev) => ({
+                ...prev,
+                title: `${data.title}`,
+                smartjectId: data.id,
+              }));
+            }
           }
         } catch (error) {
           console.error("Error fetching smartject:", error);
@@ -219,7 +211,64 @@ export function CreateProposalModal({
     };
 
     fetchSmartject();
-  }, [smartjectId, isOpen, toast]);
+  }, [
+    smartjectId,
+    editingProposal?.smartjectId,
+    isOpen,
+    toast,
+    editingProposal,
+  ]);
+
+  // Populate form when editing
+  useEffect(() => {
+    if (isOpen && editingProposal) {
+      setCurrentStep(1);
+      setProposalType(editingProposal.type);
+      setIsCooperationProposal(editingProposal.isCooperationProposal || false);
+      setFormData({
+        title: editingProposal.title || "",
+        smartjectId: editingProposal.smartjectId || "",
+        description: editingProposal.description || "",
+        scope: editingProposal.scope || "",
+        timeline: editingProposal.timeline || "",
+        budget: editingProposal.budget || 0,
+        deliverables: editingProposal.deliverables || "",
+        requirements: editingProposal.requirements || "",
+        expertise: editingProposal.expertise || "",
+        approach: editingProposal.approach || "",
+        team: editingProposal.team || "",
+        additionalInfo: editingProposal.additionalInfo || "",
+      });
+
+      // Populate private fields if they exist
+      if (editingProposal.privateFields) {
+        setPrivateFields({
+          scope: editingProposal.privateFields.scope || "",
+          timeline: editingProposal.privateFields.timeline || "",
+          budget: editingProposal.privateFields.budget || undefined,
+          deliverables: editingProposal.privateFields.deliverables || "",
+          requirements: editingProposal.privateFields.requirements || "",
+          expertise: editingProposal.privateFields.expertise || "",
+          approach: editingProposal.privateFields.approach || "",
+          team: editingProposal.privateFields.team || "",
+          additionalInfo: editingProposal.privateFields.additionalInfo || "",
+        });
+
+        // Enable private fields that have content
+        setEnabledPrivateFields({
+          scope: !!editingProposal.privateFields.scope,
+          timeline: !!editingProposal.privateFields.timeline,
+          budget: !!editingProposal.privateFields.budget,
+          deliverables: !!editingProposal.privateFields.deliverables,
+          requirements: !!editingProposal.privateFields.requirements,
+          expertise: !!editingProposal.privateFields.expertise,
+          approach: !!editingProposal.privateFields.approach,
+          team: !!editingProposal.privateFields.team,
+          additionalInfo: !!editingProposal.privateFields.additionalInfo,
+        });
+      }
+    }
+  }, [isOpen, editingProposal]);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -326,26 +375,66 @@ export function CreateProposalModal({
         }
       });
 
-      // Save the proposal to Supabase
-      const proposalId = await proposalService.createProposal({
-        userId: user.id,
-        smartjectId: formData.smartjectId,
-        type: proposalType || "need",
-        title: formData.title,
-        description: formData.description,
-        isCooperationProposal: isCooperationProposal,
-        budget: formData.budget || undefined,
-        timeline: formData.timeline,
-        scope: formData.scope,
-        deliverables: formData.deliverables,
-        requirements: formData.requirements,
-        expertise: formData.expertise,
-        approach: formData.approach,
-        team: formData.team,
-        additionalInfo: formData.additionalInfo,
-        privateFields: proposalPrivateFields,
-        status: "draft",
-      });
+      let proposalId: string;
+
+      if (editingProposal) {
+        // Update existing proposal
+        const success = await proposalService.updateProposal(
+          editingProposal.id,
+          {
+            userId: user.id,
+            smartjectId: formData.smartjectId,
+            type: proposalType || "need",
+            title: formData.title,
+            description: formData.description,
+            isCooperationProposal: isCooperationProposal,
+            budget: formData.budget || undefined,
+            timeline: formData.timeline,
+            scope: formData.scope,
+            deliverables: formData.deliverables,
+            requirements: formData.requirements,
+            expertise: formData.expertise,
+            approach: formData.approach,
+            team: formData.team,
+            additionalInfo: formData.additionalInfo,
+            privateFields: proposalPrivateFields,
+            status: "draft",
+          },
+        );
+
+        if (!success) {
+          throw new Error("Failed to update proposal draft");
+        }
+
+        proposalId = editingProposal.id;
+      } else {
+        // Save the proposal to Supabase
+        const createdId = await proposalService.createProposal({
+          userId: user.id,
+          smartjectId: formData.smartjectId,
+          type: proposalType || "need",
+          title: formData.title,
+          description: formData.description,
+          isCooperationProposal: isCooperationProposal,
+          budget: formData.budget || undefined,
+          timeline: formData.timeline,
+          scope: formData.scope,
+          deliverables: formData.deliverables,
+          requirements: formData.requirements,
+          expertise: formData.expertise,
+          approach: formData.approach,
+          team: formData.team,
+          additionalInfo: formData.additionalInfo,
+          privateFields: proposalPrivateFields,
+          status: "draft",
+        });
+
+        if (!createdId) {
+          throw new Error("Failed to create proposal draft");
+        }
+
+        proposalId = createdId;
+      }
 
       if (!proposalId) {
         throw new Error("Failed to create proposal draft");
@@ -363,8 +452,10 @@ export function CreateProposalModal({
       setDraftVersions([newVersion, ...draftVersions]);
 
       toast({
-        title: "Draft saved",
-        description: "Your proposal draft has been saved successfully.",
+        title: editingProposal ? "Changes saved" : "Draft saved",
+        description: editingProposal
+          ? "Your proposal changes have been saved successfully."
+          : "Your proposal draft has been saved successfully.",
       });
 
       onClose();
@@ -444,30 +535,74 @@ export function CreateProposalModal({
         }
       });
 
-      // Save the proposal to Supabase
-      const proposalId = await proposalService.createProposal({
-        userId: user.id,
-        smartjectId: formData.smartjectId,
-        type: proposalType || "need",
-        title: formData.title,
-        description: formData.description,
-        isCooperationProposal: isCooperationProposal,
-        budget: isCooperationProposal
-          ? undefined
-          : formData.budget
-            ? formData.budget
-            : undefined,
-        timeline: isCooperationProposal ? "" : formData.timeline,
-        scope: isCooperationProposal ? "" : formData.scope,
-        deliverables: isCooperationProposal ? "" : formData.deliverables,
-        requirements: isCooperationProposal ? "" : formData.requirements,
-        expertise: isCooperationProposal ? "" : formData.expertise,
-        approach: isCooperationProposal ? "" : formData.approach,
-        team: isCooperationProposal ? "" : formData.team,
-        additionalInfo: formData.additionalInfo,
-        privateFields: proposalPrivateFields,
-        status: "submitted",
-      });
+      let proposalId: string;
+
+      if (editingProposal) {
+        // Update existing proposal
+        const success = await proposalService.updateProposal(
+          editingProposal.id,
+          {
+            userId: user.id,
+            smartjectId: formData.smartjectId,
+            type: proposalType || "need",
+            title: formData.title,
+            description: formData.description,
+            isCooperationProposal: isCooperationProposal,
+            budget: isCooperationProposal
+              ? undefined
+              : formData.budget
+                ? formData.budget
+                : undefined,
+            timeline: isCooperationProposal ? "" : formData.timeline,
+            scope: isCooperationProposal ? "" : formData.scope,
+            deliverables: isCooperationProposal ? "" : formData.deliverables,
+            requirements: isCooperationProposal ? "" : formData.requirements,
+            expertise: isCooperationProposal ? "" : formData.expertise,
+            approach: isCooperationProposal ? "" : formData.approach,
+            team: isCooperationProposal ? "" : formData.team,
+            additionalInfo: formData.additionalInfo,
+            privateFields: proposalPrivateFields,
+            status: "submitted",
+          },
+        );
+
+        if (!success) {
+          throw new Error("Failed to update proposal");
+        }
+
+        proposalId = editingProposal.id;
+      } else {
+        // Save the proposal to Supabase
+        const createdId = await proposalService.createProposal({
+          userId: user.id,
+          smartjectId: formData.smartjectId,
+          type: proposalType || "need",
+          title: formData.title,
+          description: formData.description,
+          isCooperationProposal: isCooperationProposal,
+          budget: isCooperationProposal
+            ? undefined
+            : formData.budget
+              ? formData.budget
+              : undefined,
+          timeline: isCooperationProposal ? "" : formData.timeline,
+          scope: isCooperationProposal ? "" : formData.scope,
+          deliverables: isCooperationProposal ? "" : formData.deliverables,
+          requirements: isCooperationProposal ? "" : formData.requirements,
+          expertise: isCooperationProposal ? "" : formData.expertise,
+          approach: isCooperationProposal ? "" : formData.approach,
+          team: isCooperationProposal ? "" : formData.team,
+          additionalInfo: formData.additionalInfo,
+          privateFields: proposalPrivateFields,
+          status: "submitted",
+        });
+
+        if (!createdId) {
+          throw new Error("Failed to create proposal");
+        }
+
+        proposalId = createdId;
+      }
 
       if (!proposalId) {
         throw new Error("Failed to create proposal");
@@ -522,10 +657,27 @@ export function CreateProposalModal({
         }
       }
 
+      // Automatic voting based on proposal type
+      if (proposalType && smartjectId) {
+        try {
+          const voteType = proposalType === "need" ? "need" : "provide";
+          await voteService.vote({
+            userId: user.id,
+            smartjectId: smartjectId,
+            voteType: voteType,
+          });
+        } catch (voteError) {
+          // Don't fail the whole process if voting fails
+          console.error("Failed to auto-vote:", voteError);
+        }
+      }
+
       // Show success notification
       toast({
-        title: "Proposal submitted",
-        description: "Your proposal has been submitted successfully.",
+        title: editingProposal ? "Proposal updated" : "Proposal submitted",
+        description: editingProposal
+          ? "Your proposal has been updated successfully."
+          : "Your proposal has been submitted successfully.",
       });
 
       onSuccess?.();
@@ -552,7 +704,10 @@ export function CreateProposalModal({
   };
 
   const prevStep = () => {
-    if (currentStep > 1) {
+    // For cooperation proposals, if we're on step 5, go back to step 1
+    if (currentStep === 5 && isCooperationProposal) {
+      setCurrentStep(1);
+    } else if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
@@ -585,12 +740,16 @@ export function CreateProposalModal({
                 <div className="grid grid-cols-2">
                   {/* I Need Option */}
                   <div
-                    className={`cursor-pointer p-4 rounded-lg transition-all ${
+                    className={`p-4 rounded-lg transition-all ${
                       proposalType === "need"
                         ? "border-yellow-500 bg-yellow-50"
                         : "border-gray-200 hover:border-gray-300"
+                    } ${
+                      editingProposal
+                        ? "opacity-50 cursor-not-allowed"
+                        : "cursor-pointer"
                     }`}
-                    onClick={() => setProposalType("need")}
+                    onClick={() => !editingProposal && setProposalType("need")}
                   >
                     <div className="flex items-center space-x-3">
                       <div
@@ -615,12 +774,18 @@ export function CreateProposalModal({
 
                   {/* I Provide Option */}
                   <div
-                    className={`cursor-pointer p-4 rounded-lg transition-all ${
+                    className={`p-4 rounded-lg transition-all ${
                       proposalType === "provide"
                         ? "border-yellow-500 bg-yellow-50"
                         : "border-gray-200 hover:border-gray-300"
+                    } ${
+                      editingProposal
+                        ? "opacity-50 cursor-not-allowed"
+                        : "cursor-pointer"
                     }`}
-                    onClick={() => setProposalType("provide")}
+                    onClick={() =>
+                      !editingProposal && setProposalType("provide")
+                    }
                   >
                     <div className="flex items-center space-x-3">
                       <div
@@ -656,14 +821,23 @@ export function CreateProposalModal({
                     <Loader2 className="h-5 w-5 animate-spin mr-2" />
                     <span>Loading smartject...</span>
                   </div>
-                ) : smartject ? (
-                  <div className="p-2 border rounded-md">
+                ) : smartject || editingProposal ? (
+                  <div className="p-2 border rounded-md bg-gray-50">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-medium">{smartject.title}</h3>
+                        <h3 className="font-medium">
+                          {smartject?.title ||
+                            editingProposal?.smartjectTitle ||
+                            "Smartject"}
+                        </h3>
+                        {editingProposal && !smartject && (
+                          <p className="text-xs text-muted-foreground">
+                            Cannot change smartject when editing
+                          </p>
+                        )}
                       </div>
                       <Badge className="bg-yellow-300 hover:bg-yellow-400 text-black">
-                        {smartjectId}
+                        {smartjectId || editingProposal?.smartjectId}
                       </Badge>
                     </div>
                   </div>
@@ -714,10 +888,23 @@ export function CreateProposalModal({
                     type="checkbox"
                     id="cooperation"
                     checked={isCooperationProposal}
-                    onChange={(e) => setIsCooperationProposal(e.target.checked)}
-                    className="h-4 w-4 rounded border-yellow-400 accent-yellow-400 focus:ring-2 focus:ring-yellow-400"
+                    onChange={(e) =>
+                      !editingProposal &&
+                      setIsCooperationProposal(e.target.checked)
+                    }
+                    disabled={!!editingProposal}
+                    className={`h-4 w-4 rounded border-yellow-400 accent-yellow-400 focus:ring-2 focus:ring-yellow-400 ${
+                      editingProposal ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   />
-                  <Label htmlFor="cooperation" className="cursor-pointer">
+                  <Label
+                    htmlFor="cooperation"
+                    className={
+                      editingProposal
+                        ? "cursor-not-allowed opacity-50"
+                        : "cursor-pointer"
+                    }
+                  >
                     This is a proposal for cooperation (partnership or
                     collaboration)
                   </Label>
@@ -726,6 +913,7 @@ export function CreateProposalModal({
                   <p className="text-sm text-muted-foreground">
                     Cooperation proposals will skip detailed project planning
                     and go directly to document upload.
+                    {editingProposal && " (Cannot be changed when editing)"}
                   </p>
                 )}
               </div>
@@ -1345,10 +1533,12 @@ export function CreateProposalModal({
           <TooltipProvider>
             <MobileDialogHeader>
               <MobileDialogTitle className="text-2xl font-bold">
-                Create Proposal
+                {editingProposal ? "Edit Proposal" : "Create Proposal"}
               </MobileDialogTitle>
               <MobileDialogDescription>
-                Create a detailed proposal for a smartject
+                {editingProposal
+                  ? "Edit your existing proposal for a smartject"
+                  : "Create a detailed proposal for a smartject"}
               </MobileDialogDescription>
             </MobileDialogHeader>
 
@@ -1433,12 +1623,14 @@ export function CreateProposalModal({
                     {isSubmitting ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Submitting...
+                        {editingProposal ? "Updating..." : "Submitting..."}
                       </>
                     ) : (
                       <>
                         <Send className="h-4 w-4 mr-2" />
-                        Submit Proposal
+                        {editingProposal
+                          ? "Update Proposal"
+                          : "Submit Proposal"}
                       </>
                     )}
                   </Button>
