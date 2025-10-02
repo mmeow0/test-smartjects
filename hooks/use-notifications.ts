@@ -5,6 +5,8 @@ import {
   notificationService,
   type Notification,
 } from "@/lib/services/notification.service";
+import { userSettingsService } from "@/lib/services/user-settings.service";
+import type { UserSettingsType } from "@/lib/types";
 
 interface UseNotificationsReturn {
   notifications: Notification[];
@@ -23,6 +25,47 @@ export const useNotifications = (): UseNotificationsReturn => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [userSettings, setUserSettings] = useState<UserSettingsType | null>(
+    null,
+  );
+
+  // Filter notifications based on user settings
+  const filterNotifications = useCallback(
+    (notifs: Notification[], settings: UserSettingsType | null) => {
+      if (!settings) return notifs;
+
+      return notifs.filter((notification) => {
+        // Check if notification is smartject-related
+        const isSmartjectNotification = [
+          "proposal_interest",
+          "proposal_message",
+          "match_update",
+          "nda_request",
+          "nda_approved",
+          "nda_rejected",
+        ].includes(notification.type);
+
+        // Check if notification is contract-related
+        const isContractNotification = [
+          "contract_update",
+          "terms_accepted",
+          "contract_signed",
+        ].includes(notification.type);
+
+        // Filter based on user preferences
+        if (isSmartjectNotification && !settings.smartjectUpdates) {
+          return false;
+        }
+        if (isContractNotification && !settings.contractUpdates) {
+          return false;
+        }
+
+        // Show other notifications by default
+        return true;
+      });
+    },
+    [],
+  );
 
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
@@ -32,13 +75,27 @@ export const useNotifications = (): UseNotificationsReturn => {
     }
 
     try {
-      const [notificationsData, unreadCountData] = await Promise.all([
+      const [notificationsData, unreadCountData, settings] = await Promise.all([
         notificationService.getNotifications(user.id),
         notificationService.getUnreadCount(user.id),
+        userSettingsService.getUserSettings(user.id),
       ]);
 
-      setNotifications(notificationsData);
-      setUnreadCount(unreadCountData);
+      setUserSettings(settings);
+
+      // Filter notifications based on user settings
+      const filteredNotifications = filterNotifications(
+        notificationsData,
+        settings,
+      );
+
+      setNotifications(filteredNotifications);
+
+      // Recalculate unread count based on filtered notifications
+      const filteredUnreadCount = filteredNotifications.filter(
+        (n) => !n.readAt,
+      ).length;
+      setUnreadCount(filteredUnreadCount);
     } catch (error) {
       console.error("Error fetching notifications:", error);
       toast({
@@ -49,7 +106,7 @@ export const useNotifications = (): UseNotificationsReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, canAccess]);
+  }, [user?.id, canAccess, filterNotifications]);
 
   // Mark notification as read
   const markAsRead = useCallback(
@@ -192,24 +249,32 @@ export const useNotifications = (): UseNotificationsReturn => {
     const subscription = notificationService.subscribeToNotifications(
       user.id,
       (newNotification: Notification) => {
-        // Add new notification to the beginning of the list
-        setNotifications((prev) => [newNotification, ...prev]);
+        // Check if notification should be shown based on user settings
+        const filteredNotifs = filterNotifications(
+          [newNotification],
+          userSettings,
+        );
 
-        // Increment unread count
-        setUnreadCount((prev) => prev + 1);
+        if (filteredNotifs.length > 0) {
+          // Add new notification to the beginning of the list
+          setNotifications((prev) => [newNotification, ...prev]);
 
-        // Show toast for new notification
-        toast({
-          title: newNotification.title,
-          description: newNotification.message,
-        });
+          // Increment unread count
+          setUnreadCount((prev) => prev + 1);
+
+          // Show toast for new notification
+          toast({
+            title: newNotification.title,
+            description: newNotification.message,
+          });
+        }
       },
     );
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [user?.id, canAccess]);
+  }, [user?.id, canAccess, userSettings, filterNotifications]);
 
   return {
     notifications,

@@ -42,6 +42,7 @@ import { useUserSmartjects } from "@/hooks/use-user-smartjects";
 import { Skeleton } from "@/components/ui/skeleton";
 import { userService } from "@/lib/services/user.service";
 import AvatarUpload from "@/components/ui/avatar-upload";
+import { NotificationSettingsModal } from "@/components/notification-settings-modal";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -49,6 +50,7 @@ export default function ProfilePage() {
   const { refreshUser } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [profileData, setProfileData] = useState({
     name: "",
     bio: "",
@@ -169,341 +171,357 @@ export default function ProfilePage() {
     user?.accountType === "paid" ? smartjects.provide : [];
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* Left column - Profile info */}
-        <div className="md:w-1/3">
-          <Card>
-            <CardHeader className="relative pb-0">
-              {!isEditing && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-4 top-4"
-                  onClick={() => setIsEditing(true)}
-                >
-                  <SquarePen className="h-4 w-4" />
-                  <span className="sr-only">Edit profile</span>
-                </Button>
-              )}
-
-              {isEditing && (
-                <AvatarUpload
-                  userId={user?.id || ""}
-                  currentAvatar={currentAvatar || undefined}
-                  userName={profileData.name}
-                  onAvatarChange={handleAvatarChange}
-                  size="md"
-                />
-              )}
-              <div className="flex items-start gap-4">
-                {/* Avatar section */}
+    <>
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Left column - Profile info */}
+          <div className="md:w-1/3">
+            <Card>
+              <CardHeader className="relative pb-0">
                 {!isEditing && (
-                  <Avatar className="h-16 w-16">
-                    <AvatarImage src={currentAvatar || "/placeholder.svg"} />
-                    <AvatarFallback>
-                      {profileData.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-4 top-4"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    <SquarePen className="h-4 w-4" />
+                    <span className="sr-only">Edit profile</span>
+                  </Button>
                 )}
 
-                {/* Контент справа от аватара */}
-                <div className="flex flex-col justify-center">
-                  {isEditing ? (
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="name"
-                        className="text-sm font-medium block pb-1"
-                      >
-                        Name
-                      </label>
-                      <Input
-                        id="name"
-                        name="name"
-                        value={profileData.name}
+                {isEditing && (
+                  <AvatarUpload
+                    userId={user?.id || ""}
+                    currentAvatar={currentAvatar || undefined}
+                    userName={profileData.name}
+                    onAvatarChange={handleAvatarChange}
+                    size="md"
+                  />
+                )}
+                <div className="flex items-start gap-4">
+                  {/* Avatar section */}
+                  {!isEditing && (
+                    <Avatar className="h-16 w-16">
+                      <AvatarImage src={currentAvatar || "/placeholder.svg"} />
+                      <AvatarFallback>
+                        {profileData.name.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+
+                  {/* Контент справа от аватара */}
+                  <div className="flex flex-col justify-center">
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="name"
+                          className="text-sm font-medium block pb-1"
+                        >
+                          Name
+                        </label>
+                        <Input
+                          id="name"
+                          name="name"
+                          value={profileData.name}
+                          onChange={handleInputChange}
+                          placeholder="Enter your name"
+                        />
+                      </div>
+                    ) : (
+                      <CardTitle className="text-lg">
+                        {profileData.name}
+                      </CardTitle>
+                    )}
+                    <CardDescription>
+                      <p className="capitalize border-none text-gray-400 pl-1 pt-1">
+                        {user?.accountType} Account
+                      </p>
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4 pt-6">
+                {isEditing ? (
+                  <div className="space-y-4">
+                    <div>
+                      <Textarea
+                        id="bio"
+                        name="bio"
+                        value={profileData.bio}
                         onChange={handleInputChange}
-                        placeholder="Enter your name"
+                        rows={4}
+                        placeholder="Tell us about yourself..."
                       />
                     </div>
-                  ) : (
-                    <CardTitle className="text-lg">
-                      {profileData.name}
-                    </CardTitle>
-                  )}
-                  <CardDescription>
-                    <p className="capitalize border-none text-gray-400 pl-1 pt-1">
-                      {user?.accountType} Account
-                    </p>
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CardContent className="space-y-4 pt-6">
-              {isEditing ? (
-                <div className="space-y-4">
-                  <div>
-                    <Textarea
-                      id="bio"
-                      name="bio"
-                      value={profileData.bio}
-                      onChange={handleInputChange}
-                      rows={4}
-                      placeholder="Tell us about yourself..."
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="location"
-                      className="text-sm font-medium mb-2 block"
-                    >
-                      Location
-                    </label>
-                    <Input
-                      id="location"
-                      name="location"
-                      value={profileData.location}
-                      onChange={handleInputChange}
-                      placeholder="e.g. New York, USA"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="company"
-                      className="text-sm font-medium mb-2 block"
-                    >
-                      Company
-                    </label>
-                    <Input
-                      id="company"
-                      name="company"
-                      value={profileData.company}
-                      onChange={handleInputChange}
-                      placeholder="e.g. Your Company Name"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="website"
-                      className="text-sm font-medium mb-2 block"
-                    >
-                      Website
-                    </label>
-                    <Input
-                      id="website"
-                      name="website"
-                      value={profileData.website}
-                      onChange={handleInputChange}
-                      placeholder="https://yourwebsite.com"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <p
-                      className={
-                        profileData.bio ? "" : "text-muted-foreground italic"
-                      }
-                    >
-                      {profileData.bio || "No bio added yet"}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{user?.email || "user@example.com"}</span>
+                    <div>
+                      <label
+                        htmlFor="location"
+                        className="text-sm font-medium mb-2 block"
+                      >
+                        Location
+                      </label>
+                      <Input
+                        id="location"
+                        name="location"
+                        value={profileData.location}
+                        onChange={handleInputChange}
+                        placeholder="e.g. New York, USA"
+                      />
                     </div>
-                    <div className="border-t border-gray-200" />
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span
+                    <div>
+                      <label
+                        htmlFor="company"
+                        className="text-sm font-medium mb-2 block"
+                      >
+                        Company
+                      </label>
+                      <Input
+                        id="company"
+                        name="company"
+                        value={profileData.company}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Your Company Name"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="website"
+                        className="text-sm font-medium mb-2 block"
+                      >
+                        Website
+                      </label>
+                      <Input
+                        id="website"
+                        name="website"
+                        value={profileData.website}
+                        onChange={handleInputChange}
+                        placeholder="https://yourwebsite.com"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <p
                         className={
-                          profileData.location
-                            ? ""
-                            : "text-muted-foreground italic"
+                          profileData.bio ? "" : "text-muted-foreground italic"
                         }
                       >
-                        {profileData.location || "No location specified"}
-                      </span>
+                        {profileData.bio || "No bio added yet"}
+                      </p>
                     </div>
-                    <div className="border-t border-gray-200" />
-                    <div className="flex items-center gap-2">
-                      <Briefcase className="h-4 w-4 text-muted-foreground" />
-                      <span
-                        className={
-                          profileData.company
-                            ? ""
-                            : "text-muted-foreground italic"
-                        }
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span>{user?.email || "user@example.com"}</span>
+                      </div>
+                      <div className="border-t border-gray-200" />
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span
+                          className={
+                            profileData.location
+                              ? ""
+                              : "text-muted-foreground italic"
+                          }
+                        >
+                          {profileData.location || "No location specified"}
+                        </span>
+                      </div>
+                      <div className="border-t border-gray-200" />
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                        <span
+                          className={
+                            profileData.company
+                              ? ""
+                              : "text-muted-foreground italic"
+                          }
+                        >
+                          {profileData.company || "No company specified"}
+                        </span>
+                      </div>
+                      <div className="border-t border-gray-200" />
+                      <div className="flex items-center gap-2">
+                        <Contact className="h-4 w-4 text-muted-foreground" />
+                        <span
+                          className={
+                            profileData.website
+                              ? ""
+                              : "text-muted-foreground italic"
+                          }
+                        >
+                          {profileData.website || "No website specified"}
+                        </span>
+                      </div>
+                      <div className="border-t border-gray-200" />
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span
+                          className={
+                            profileData.joinDate
+                              ? ""
+                              : "text-muted-foreground italic"
+                          }
+                        >
+                          {profileData.joinDate
+                            ? `Joined ${profileData.joinDate}`
+                            : "Join date not available"}
+                        </span>
+                      </div>
+                      <div className="border-t border-gray-200" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsSettingsOpen(true)}
+                        className="w-full mt-2"
                       >
-                        {profileData.company || "No company specified"}
-                      </span>
+                        <Settings className="h-4 w-4 mr-2" />
+                        Settings
+                      </Button>
                     </div>
-                    <div className="border-t border-gray-200" />
-                    <div className="flex items-center gap-2">
-                      <Contact className="h-4 w-4 text-muted-foreground" />
-                      <span
-                        className={
-                          profileData.website
-                            ? ""
-                            : "text-muted-foreground italic"
-                        }
-                      >
-                        {profileData.website || "No website specified"}
-                      </span>
-                    </div>
-                    <div className="border-t border-gray-200" />
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span
-                        className={
-                          profileData.joinDate
-                            ? ""
-                            : "text-muted-foreground italic"
-                        }
-                      >
-                        {profileData.joinDate
-                          ? `Joined ${profileData.joinDate}`
-                          : "Join date not available"}
-                      </span>
-                    </div>
+                  </>
+                )}
+              </CardContent>
+              <CardFooter className="flex flex-col justify-between gap-7">
+                {isEditing && (
+                  <div className="flex gap-2 w-full">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="w-full"
+                      onClick={handleCancel}
+                    >
+                      Cancel
+                    </Button>
+                    <Button size="lg" className="w-full" onClick={handleSave}>
+                      Save
+                    </Button>
                   </div>
-                </>
-              )}
-            </CardContent>
-            <CardFooter className="flex flex-col justify-between gap-7">
-              {isEditing && (
-                <div className="flex gap-2 w-full">
+                )}
+                {user?.accountType === "free" && (
                   <Button
                     variant="outline"
                     size="lg"
                     className="w-full"
-                    onClick={handleCancel}
+                    asChild
                   >
-                    Cancel
+                    <a href="/upgrade">Upgrade plan</a>
                   </Button>
-                  <Button size="lg" className="w-full" onClick={handleSave}>
-                    Save
-                  </Button>
-                </div>
-              )}
-              {user?.accountType === "free" && (
-                <Button variant="outline" size="lg" className="w-full" asChild>
-                  <a href="/upgrade">Upgrade plan</a>
-                </Button>
-              )}
-            </CardFooter>
-          </Card>
-        </div>
+                )}
+              </CardFooter>
+            </Card>
+          </div>
 
-        {/* Right column - Activity */}
-        <div className="w-full">
-          <Card>
-            <CardContent>
-              <Tabs defaultValue="believe" className="mt-8 w-full">
-                <TabsList className="mb-6 flex w-full">
-                  <TabsTrigger value="believe" className="flex-1 text-center">
-                    I Believe
-                  </TabsTrigger>
-                  <TabsTrigger value="need" className="flex-1 text-center">
-                    I Need
-                  </TabsTrigger>
-                  <TabsTrigger value="provide" className="flex-1 text-center">
-                    I Provide
-                  </TabsTrigger>
-                </TabsList>
+          {/* Right column - Activity */}
+          <div className="w-full">
+            <Card>
+              <CardContent>
+                <Tabs defaultValue="believe" className="mt-8 w-full">
+                  <TabsList className="mb-6 flex w-full">
+                    <TabsTrigger value="believe" className="flex-1 text-center">
+                      I Believe
+                    </TabsTrigger>
+                    <TabsTrigger value="need" className="flex-1 text-center">
+                      I Need
+                    </TabsTrigger>
+                    <TabsTrigger value="provide" className="flex-1 text-center">
+                      I Provide
+                    </TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="believe" className="space-y-4">
-                  {isLoading ? (
-                    <SkeletonGrid />
-                  ) : believedSmartjects.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-6">
-                      {believedSmartjects.map((smartject) => (
-                        <SmartjectCard
-                          key={smartject.id}
-                          smartject={smartject}
-                          onVoted={refetch}
-                          userVotes={smartject.userVotes}
+                  <TabsContent value="believe" className="space-y-4">
+                    {isLoading ? (
+                      <SkeletonGrid />
+                    ) : believedSmartjects.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-6">
+                        {believedSmartjects.map((smartject) => (
+                          <SmartjectCard
+                            key={smartject.id}
+                            smartject={smartject}
+                            onVoted={refetch}
+                            userVotes={smartject.userVotes}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <EmptyState
+                        message="You haven’t believed in any Smartjects yet."
+                        href="/discover"
+                        buttonText="Browse Smartjects"
+                      />
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="need" className="space-y-4">
+                    {isLoading ? (
+                      <SkeletonGrid />
+                    ) : user?.accountType === "paid" ? (
+                      needSmartjects.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-6">
+                          {needSmartjects.map((smartject) => (
+                            <SmartjectCard
+                              key={smartject.id}
+                              smartject={smartject}
+                              onVoted={refetch}
+                              userVotes={smartject.userVotes}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <EmptyState
+                          message="You haven't indicated need for any smartjects yet."
+                          href="/explore"
+                          buttonText="Explore Smartjects"
                         />
-                      ))}
-                    </div>
-                  ) : (
-                    <EmptyState
-                      message="You haven’t believed in any Smartjects yet."
-                      href="/discover"
-                      buttonText="Browse Smartjects"
-                    />
-                  )}
-                </TabsContent>
-
-                <TabsContent value="need" className="space-y-4">
-                  {isLoading ? (
-                    <SkeletonGrid />
-                  ) : user?.accountType === "paid" ? (
-                    needSmartjects.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-6">
-                        {needSmartjects.map((smartject) => (
-                          <SmartjectCard
-                            key={smartject.id}
-                            smartject={smartject}
-                            onVoted={refetch}
-                            userVotes={smartject.userVotes}
-                          />
-                        ))}
-                      </div>
+                      )
                     ) : (
                       <EmptyState
-                        message="You haven't indicated need for any smartjects yet."
-                        href="/explore"
-                        buttonText="Explore Smartjects"
+                        message="Upgrade to a paid account to indicate need for smartjects."
+                        href="/upgrade"
+                        buttonText="Upgrade Now"
                       />
-                    )
-                  ) : (
-                    <EmptyState
-                      message="Upgrade to a paid account to indicate need for smartjects."
-                      href="/upgrade"
-                      buttonText="Upgrade Now"
-                    />
-                  )}
-                </TabsContent>
+                    )}
+                  </TabsContent>
 
-                <TabsContent value="provide" className="space-y-4">
-                  {isLoading ? (
-                    <SkeletonGrid />
-                  ) : user?.accountType === "paid" ? (
-                    provideSmartjects.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-6">
-                        {provideSmartjects.map((smartject) => (
-                          <SmartjectCard
-                            key={smartject.id}
-                            smartject={smartject}
-                            onVoted={refetch}
-                            userVotes={smartject.userVotes}
-                          />
-                        ))}
-                      </div>
+                  <TabsContent value="provide" className="space-y-4">
+                    {isLoading ? (
+                      <SkeletonGrid />
+                    ) : user?.accountType === "paid" ? (
+                      provideSmartjects.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-6">
+                          {provideSmartjects.map((smartject) => (
+                            <SmartjectCard
+                              key={smartject.id}
+                              smartject={smartject}
+                              onVoted={refetch}
+                              userVotes={smartject.userVotes}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <EmptyState
+                          message="You haven't indicated ability to provide any smartjects yet."
+                          href="/explore"
+                          buttonText="Explore Smartjects"
+                        />
+                      )
                     ) : (
                       <EmptyState
-                        message="You haven't indicated ability to provide any smartjects yet."
-                        href="/explore"
-                        buttonText="Explore Smartjects"
+                        message="Upgrade to a paid account to indicate you can provide smartjects."
+                        href="/upgrade"
+                        buttonText="Upgrade Now"
                       />
-                    )
-                  ) : (
-                    <EmptyState
-                      message="Upgrade to a paid account to indicate you can provide smartjects."
-                      href="/upgrade"
-                      buttonText="Upgrade Now"
-                    />
-                  )}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
 
-          {/* Settings Section */}
-          {/* <Card className="mt-6">
+            {/* Settings Section */}
+            {/* <Card className="mt-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
@@ -568,9 +586,15 @@ export default function ProfilePage() {
               </div>
             </CardContent>
           </Card> */}
+          </div>
         </div>
       </div>
-    </div>
+
+      <NotificationSettingsModal
+        open={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
+      />
+    </>
   );
 }
 
