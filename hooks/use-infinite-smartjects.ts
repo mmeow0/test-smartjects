@@ -5,10 +5,10 @@ import { useToast } from "@/hooks/use-toast";
 
 type Filters = {
   query?: string;
-  industries?: string[];         // тут теперь uuid[]
-  audience?: string[];           // uuid[]
-  businessFunctions?: string[];  // uuid[]
-  teams?: string[];              // строки, как и было
+  industries?: string[]; // тут теперь uuid[]
+  audience?: string[]; // uuid[]
+  businessFunctions?: string[]; // uuid[]
+  teams?: string[]; // строки, как и было
   startDate?: string;
   endDate?: string;
 };
@@ -36,6 +36,7 @@ export function useInfiniteSmartjects(
   userId?: string,
   pageSize: number = 12,
   initialSort: SortOption = "recent",
+  initialFilters?: Partial<Filters>,
 ) {
   const { toast } = useToast();
 
@@ -50,12 +51,17 @@ export function useInfiniteSmartjects(
   });
 
   const [filters, setFilters] = useState<Filters>({
-    query: "",
-    industries: [],
-    audience: [],
-    businessFunctions: [],
-    teams: [],
+    query: initialFilters?.query || "",
+    industries: initialFilters?.industries || [],
+    audience: initialFilters?.audience || [],
+    businessFunctions: initialFilters?.businessFunctions || [],
+    teams: initialFilters?.teams || [],
+    startDate: initialFilters?.startDate || "",
+    endDate: initialFilters?.endDate || "",
   });
+
+  console.log("🎣 Hook initialized with initial filters:", initialFilters);
+  console.log("🎣 Hook filters state after initialization:", filters);
 
   const [sortBy, setSortBy] = useState<SortOption>(initialSort);
 
@@ -110,6 +116,10 @@ export function useInfiniteSmartjects(
       reset: boolean = false,
     ) => {
       try {
+        console.log("📊 Loading data with filters:", currentFilters);
+        console.log("📊 Loading data with sort:", currentSort);
+        console.log("📊 Loading page:", page, "reset:", reset);
+
         if (reset) {
           setState((prev) => ({
             ...prev,
@@ -131,6 +141,8 @@ export function useInfiniteSmartjects(
           currentFilters,
           currentSort,
         );
+
+        console.log("📊 Received data:", data.length, "items");
 
         // Track consecutive empty loads to prevent infinite attempts
         const newConsecutiveEmpty =
@@ -180,17 +192,27 @@ export function useInfiniteSmartjects(
     const filtersKey = JSON.stringify(memoizedFilters);
     const sortKey = sortBy;
 
+    console.log("🔄 Filters/sort changed - checking if reload needed");
+    console.log("🔄 Current memoized filters:", memoizedFilters);
+    console.log("🔄 Current sort:", sortBy);
+    console.log("🔄 Is initial load:", isInitialLoadRef.current);
+    console.log("🔄 Last filters key:", lastFiltersRef.current);
+    console.log("🔄 Current filters key:", filtersKey);
+
     // Only reload if filters or sort actually changed
     if (
       isInitialLoadRef.current ||
       lastFiltersRef.current !== filtersKey ||
       lastSortRef.current !== sortKey
     ) {
+      console.log("🔄 Reloading data due to filter/sort change");
       lastFiltersRef.current = filtersKey;
       lastSortRef.current = sortKey;
       isInitialLoadRef.current = false;
 
       loadData(0, memoizedFilters, sortBy, true);
+    } else {
+      console.log("🔄 No reload needed - filters/sort unchanged");
     }
   }, [memoizedFilters, sortBy, loadData]);
 
@@ -226,10 +248,15 @@ export function useInfiniteSmartjects(
   // Set filter and reset pagination
   const setFilter = useCallback(
     (field: keyof Filters, value: string[] | string) => {
-      setFilters((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
+      console.log("🔧 Setting filter:", field, "=", value);
+      setFilters((prev) => {
+        const updated = {
+          ...prev,
+          [field]: value,
+        };
+        console.log("🔧 Updated filters:", updated);
+        return updated;
+      });
     },
     [],
   );
@@ -242,6 +269,8 @@ export function useInfiniteSmartjects(
       audience: [],
       businessFunctions: [],
       teams: [],
+      startDate: "",
+      endDate: "",
     });
   }, []);
 

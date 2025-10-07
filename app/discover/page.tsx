@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
 import dynamic from "next/dynamic";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -201,12 +202,59 @@ const SmartjectsGrid = memo(
 
 SmartjectsGrid.displayName = "SmartjectsGrid";
 
+// Helper function to extract initial filters from URL
+const getInitialFiltersFromURL = (searchParams: URLSearchParams) => {
+  const filters = {
+    query: searchParams.get("q") || "",
+    industries:
+      searchParams
+        .get("industries")
+        ?.split(",")
+        .filter((item) => item && item.trim()) || [],
+    audience:
+      searchParams
+        .get("audience")
+        ?.split(",")
+        .filter((item) => item && item.trim()) || [],
+    businessFunctions:
+      searchParams
+        .get("functions")
+        ?.split(",")
+        .filter((item) => item && item.trim()) || [],
+    teams:
+      searchParams
+        .get("teams")
+        ?.split(",")
+        .filter((item) => item && item.trim()) || [],
+    startDate: searchParams.get("startDate") || "",
+    endDate: searchParams.get("endDate") || "",
+    sort: searchParams.get("sort") || "recent",
+  };
+
+  return filters;
+};
+
 export default function SmartjectsHubPage() {
-  const [query, setQuery] = useState("");
-  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
-  const [selectedAudience, setSelectedAudience] = useState<string[]>([]);
-  const [selectedFunctions, setSelectedFunctions] = useState<string[]>([]);
-  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Extract initial filters from URL
+  const initialFilters = getInitialFiltersFromURL(searchParams);
+
+  // Initialize state from URL parameters
+  const [query, setQuery] = useState(initialFilters.query);
+  const [selectedIndustries, setSelectedIndustries] = useState<string[]>(
+    initialFilters.industries
+  );
+  const [selectedAudience, setSelectedAudience] = useState<string[]>(
+    initialFilters.audience
+  );
+  const [selectedFunctions, setSelectedFunctions] = useState<string[]>(
+    initialFilters.businessFunctions
+  );
+  const [selectedTeams, setSelectedTeams] = useState<string[]>(
+    initialFilters.teams
+  );
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const [showIndustriesDropdown, setShowIndustriesDropdown] = useState(false);
@@ -214,8 +262,22 @@ export default function SmartjectsHubPage() {
   const [showFunctionsDropdown, setShowFunctionsDropdown] = useState(false);
   const [showTeamsDropdown, setShowTeamsDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+
   const [showDateRangeDropdown, setShowDateRangeDropdown] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (initialFilters.startDate && initialFilters.endDate) {
+      return {
+        from: new Date(initialFilters.startDate),
+        to: new Date(initialFilters.endDate),
+      };
+    } else if (initialFilters.startDate) {
+      return {
+        from: new Date(initialFilters.startDate),
+        to: undefined,
+      };
+    }
+    return undefined;
+  });
 
   // Mobile dropdown states
   const [showMobileIndustriesDropdown, setShowMobileIndustriesDropdown] =
@@ -262,15 +324,103 @@ export default function SmartjectsHubPage() {
     sortBy,
     setSortBy,
     meta,
-  } = useInfiniteSmartjects(user?.id, 12);
+  } = useInfiniteSmartjects(user?.id, 12, initialFilters.sort as any, {
+    query: initialFilters.query,
+    industries: initialFilters.industries,
+    audience: initialFilters.audience,
+    businessFunctions: initialFilters.businessFunctions,
+    teams: initialFilters.teams,
+    startDate: initialFilters.startDate,
+    endDate: initialFilters.endDate,
+  });
+
+  console.log("🎣 Hook initialized with filters:", {
+    query: initialFilters.query,
+    industries: initialFilters.industries,
+    audience: initialFilters.audience,
+    businessFunctions: initialFilters.businessFunctions,
+    teams: initialFilters.teams,
+    startDate: initialFilters.startDate,
+    endDate: initialFilters.endDate,
+  });
+  console.log("🎣 Current hook filters state:", filters);
 
   // Debounce search query for better performance
   const debouncedQuery = useDebounce(query, 300);
 
+  // Function to update URL with current filters
+  const updateURL = useCallback(
+    (filters: {
+      query?: string;
+      industries?: string[];
+      audience?: string[];
+      functions?: string[];
+      teams?: string[];
+      startDate?: string;
+      endDate?: string;
+      sortBy?: string;
+    }) => {
+      const params = new URLSearchParams();
+
+      if (filters.query) {
+        params.set("q", filters.query);
+      }
+      if (filters.industries && filters.industries.length > 0) {
+        params.set("industries", filters.industries.join(","));
+      }
+      if (filters.audience && filters.audience.length > 0) {
+        params.set("audience", filters.audience.join(","));
+      }
+      if (filters.functions && filters.functions.length > 0) {
+        params.set("functions", filters.functions.join(","));
+      }
+      if (filters.teams && filters.teams.length > 0) {
+        params.set("teams", filters.teams.join(","));
+      }
+      if (filters.startDate) {
+        params.set("startDate", filters.startDate);
+      }
+      if (filters.endDate) {
+        params.set("endDate", filters.endDate);
+      }
+      if (filters.sortBy && filters.sortBy !== "recent") {
+        params.set("sort", filters.sortBy);
+      }
+
+      const queryString = params.toString();
+      const newURL = queryString
+        ? `${window.location.pathname}?${queryString}`
+        : window.location.pathname;
+
+      router.replace(newURL, { scroll: false });
+    },
+    [router]
+  );
+
   // Update server-side filters when debounced query changes
   useEffect(() => {
     setFilter("query", debouncedQuery);
-  }, [debouncedQuery, setFilter]);
+    updateURL({
+      query: debouncedQuery,
+      industries: selectedIndustries,
+      audience: selectedAudience,
+      functions: selectedFunctions,
+      teams: selectedTeams,
+      startDate: dateRange?.from?.toISOString().split("T")[0],
+      endDate: dateRange?.to?.toISOString().split("T")[0],
+      sortBy,
+    });
+  }, [
+    debouncedQuery,
+    setFilter,
+    selectedIndustries,
+    selectedAudience,
+    selectedFunctions,
+    selectedTeams,
+    dateRange,
+    sortBy,
+    updateURL,
+  ]);
 
   // Memoized filter handlers to prevent unnecessary re-renders
   const handleToggleIndustry = useCallback(
@@ -279,10 +429,35 @@ export default function SmartjectsHubPage() {
         const updated = toggleItem(prev, industry);
         const filterUpdated = toggleItem(filters.industries || [], industry);
         setFilter("industries", filterUpdated);
+
+        // Update URL
+        setTimeout(() => {
+          updateURL({
+            query: debouncedQuery,
+            industries: updated,
+            audience: selectedAudience,
+            functions: selectedFunctions,
+            teams: selectedTeams,
+            startDate: dateRange?.from?.toISOString().split("T")[0],
+            endDate: dateRange?.to?.toISOString().split("T")[0],
+            sortBy,
+          });
+        }, 0);
+
         return updated;
       });
     },
-    [filters.industries, setFilter]
+    [
+      filters.industries,
+      setFilter,
+      debouncedQuery,
+      selectedAudience,
+      selectedFunctions,
+      selectedTeams,
+      dateRange,
+      sortBy,
+      updateURL,
+    ]
   );
 
   const handleToggleAudience = useCallback(
@@ -291,10 +466,35 @@ export default function SmartjectsHubPage() {
         const updated = toggleItem(prev, tech);
         const filterUpdated = toggleItem(filters.audience || [], tech);
         setFilter("audience", filterUpdated);
+
+        // Update URL
+        setTimeout(() => {
+          updateURL({
+            query: debouncedQuery,
+            industries: selectedIndustries,
+            audience: updated,
+            functions: selectedFunctions,
+            teams: selectedTeams,
+            startDate: dateRange?.from?.toISOString().split("T")[0],
+            endDate: dateRange?.to?.toISOString().split("T")[0],
+            sortBy,
+          });
+        }, 0);
+
         return updated;
       });
     },
-    [filters.audience, setFilter]
+    [
+      filters.audience,
+      setFilter,
+      debouncedQuery,
+      selectedIndustries,
+      selectedFunctions,
+      selectedTeams,
+      dateRange,
+      sortBy,
+      updateURL,
+    ]
   );
 
   const handleToggleFunction = useCallback(
@@ -303,10 +503,35 @@ export default function SmartjectsHubPage() {
         const updated = toggleItem(prev, fn);
         const filterUpdated = toggleItem(filters.businessFunctions || [], fn);
         setFilter("businessFunctions", filterUpdated);
+
+        // Update URL
+        setTimeout(() => {
+          updateURL({
+            query: debouncedQuery,
+            industries: selectedIndustries,
+            audience: selectedAudience,
+            functions: updated,
+            teams: selectedTeams,
+            startDate: dateRange?.from?.toISOString().split("T")[0],
+            endDate: dateRange?.to?.toISOString().split("T")[0],
+            sortBy,
+          });
+        }, 0);
+
         return updated;
       });
     },
-    [filters.businessFunctions, setFilter]
+    [
+      filters.businessFunctions,
+      setFilter,
+      debouncedQuery,
+      selectedIndustries,
+      selectedAudience,
+      selectedTeams,
+      dateRange,
+      sortBy,
+      updateURL,
+    ]
   );
 
   const handleToggleTeams = useCallback(
@@ -315,10 +540,35 @@ export default function SmartjectsHubPage() {
         const updated = toggleItem(prev, team);
         const filterUpdated = toggleItem(filters.teams || [], team);
         setFilter("teams", filterUpdated);
+
+        // Update URL
+        setTimeout(() => {
+          updateURL({
+            query: debouncedQuery,
+            industries: selectedIndustries,
+            audience: selectedAudience,
+            functions: selectedFunctions,
+            teams: updated,
+            startDate: dateRange?.from?.toISOString().split("T")[0],
+            endDate: dateRange?.to?.toISOString().split("T")[0],
+            sortBy,
+          });
+        }, 0);
+
         return updated;
       });
     },
-    [filters.teams, setFilter]
+    [
+      filters.teams,
+      setFilter,
+      debouncedQuery,
+      selectedIndustries,
+      selectedAudience,
+      selectedFunctions,
+      dateRange,
+      sortBy,
+      updateURL,
+    ]
   );
 
   const handleDateRangeChange = useCallback(
@@ -338,8 +588,29 @@ export default function SmartjectsHubPage() {
         setFilter("startDate", "");
         setFilter("endDate", "");
       }
+
+      // Update URL
+      updateURL({
+        query: debouncedQuery,
+        industries: selectedIndustries,
+        audience: selectedAudience,
+        functions: selectedFunctions,
+        teams: selectedTeams,
+        startDate: newDateRange?.from?.toISOString().split("T")[0],
+        endDate: newDateRange?.to?.toISOString().split("T")[0],
+        sortBy,
+      });
     },
-    [setFilter]
+    [
+      setFilter,
+      debouncedQuery,
+      selectedIndustries,
+      selectedAudience,
+      selectedFunctions,
+      selectedTeams,
+      sortBy,
+      updateURL,
+    ]
   );
 
   // Memoized total filters count
@@ -366,6 +637,7 @@ export default function SmartjectsHubPage() {
     setSelectedAudience([]);
     setSelectedTeams([]);
     setDateRange(undefined);
+    setQuery("");
     // Clear search terms
     setIndustriesSearchTerm("");
     setAudienceSearchTerm("");
@@ -386,7 +658,9 @@ export default function SmartjectsHubPage() {
     setShowMobileSortDropdown(false);
     // Clear server-side filters
     clearFilters();
-  }, [clearFilters]);
+    // Clear URL
+    router.replace(window.location.pathname, { scroll: false });
+  }, [clearFilters, router]);
 
   // Memoized search change handler
   const handleSearchChange = useCallback(
@@ -900,6 +1174,21 @@ export default function SmartjectsHubPage() {
                                 onClick={() => {
                                   setSortBy(option.value);
                                   setShowSortDropdown(false);
+                                  // Update URL
+                                  updateURL({
+                                    query: debouncedQuery,
+                                    industries: selectedIndustries,
+                                    audience: selectedAudience,
+                                    functions: selectedFunctions,
+                                    teams: selectedTeams,
+                                    startDate: dateRange?.from
+                                      ?.toISOString()
+                                      .split("T")[0],
+                                    endDate: dateRange?.to
+                                      ?.toISOString()
+                                      .split("T")[0],
+                                    sortBy: option.value,
+                                  });
                                 }}
                               >
                                 {option.label}
@@ -1237,6 +1526,21 @@ export default function SmartjectsHubPage() {
                               onClick={() => {
                                 setSortBy(option.value);
                                 setShowMobileSortDropdown(false);
+                                // Update URL
+                                updateURL({
+                                  query: debouncedQuery,
+                                  industries: selectedIndustries,
+                                  audience: selectedAudience,
+                                  functions: selectedFunctions,
+                                  teams: selectedTeams,
+                                  startDate: dateRange?.from
+                                    ?.toISOString()
+                                    .split("T")[0],
+                                  endDate: dateRange?.to
+                                    ?.toISOString()
+                                    .split("T")[0],
+                                  sortBy: option.value,
+                                });
                               }}
                             >
                               {option.label}
