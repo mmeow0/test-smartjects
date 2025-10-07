@@ -192,7 +192,6 @@ const SmartjectsGrid = memo(
             key={smartject.id}
             smartject={smartject}
             onVoted={onVoted}
-            userVotes={smartject.userVotes}
           />
         ))}
       </div>
@@ -741,6 +740,32 @@ export default function SmartjectsHubPage() {
 
   // Memoized refetch callback
   const memoizedRefetch = useCallback(refetch, [refetch]);
+
+  // Store scroll position for restoration after voting
+  const scrollPositionRef = useRef<number>(0);
+
+  // Optimized vote handler that preserves scroll position
+  const handleVoted = useCallback(() => {
+    // Store current scroll position before refetch
+    scrollPositionRef.current = window.scrollY;
+
+    // Refetch data to get updated vote counts
+    refetch();
+  }, [refetch]);
+
+  // Restore scroll position after refetch completes
+  useEffect(() => {
+    if (!isLoading && scrollPositionRef.current > 0) {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: scrollPositionRef.current,
+          behavior: "smooth",
+        });
+        scrollPositionRef.current = 0; // Reset after restoring
+      });
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     if (
@@ -1684,7 +1709,7 @@ export default function SmartjectsHubPage() {
           <SmartjectsGrid
             smartjects={filteredSmartjects}
             isLoading={isLoading}
-            onVoted={memoizedRefetch}
+            onVoted={handleVoted}
             emptyMessage={`No ${
               sortBy === "recent" ? "recent " : ""
             }smartjects found matching your criteria.`}

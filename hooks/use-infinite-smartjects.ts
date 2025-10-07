@@ -60,9 +60,6 @@ export function useInfiniteSmartjects(
     endDate: initialFilters?.endDate || "",
   });
 
-  console.log("🎣 Hook initialized with initial filters:", initialFilters);
-  console.log("🎣 Hook filters state after initialization:", filters);
-
   const [sortBy, setSortBy] = useState<SortOption>(initialSort);
 
   const [availableFilters, setAvailableFilters] = useState<AvailableFilters>({
@@ -76,6 +73,7 @@ export function useInfiniteSmartjects(
   const isInitialLoadRef = useRef(true);
   const lastFiltersRef = useRef<string>("");
   const lastSortRef = useRef<string>("");
+  const lastUserIdRef = useRef<string | undefined>(undefined);
 
   // Memoize filters to prevent unnecessary re-renders
   const memoizedFilters = useMemo(
@@ -142,8 +140,6 @@ export function useInfiniteSmartjects(
           currentSort,
         );
 
-        console.log("📊 Received data:", data.length, "items");
-
         // Track consecutive empty loads to prevent infinite attempts
         const newConsecutiveEmpty =
           data.length === 0 ? (reset ? 0 : state.consecutiveEmptyLoads + 1) : 0;
@@ -192,29 +188,21 @@ export function useInfiniteSmartjects(
     const filtersKey = JSON.stringify(memoizedFilters);
     const sortKey = sortBy;
 
-    console.log("🔄 Filters/sort changed - checking if reload needed");
-    console.log("🔄 Current memoized filters:", memoizedFilters);
-    console.log("🔄 Current sort:", sortBy);
-    console.log("🔄 Is initial load:", isInitialLoadRef.current);
-    console.log("🔄 Last filters key:", lastFiltersRef.current);
-    console.log("🔄 Current filters key:", filtersKey);
-
-    // Only reload if filters or sort actually changed
+    // Only reload if filters, sort, or userId actually changed
     if (
       isInitialLoadRef.current ||
       lastFiltersRef.current !== filtersKey ||
-      lastSortRef.current !== sortKey
+      lastSortRef.current !== sortKey ||
+      lastUserIdRef.current !== userId
     ) {
-      console.log("🔄 Reloading data due to filter/sort change");
       lastFiltersRef.current = filtersKey;
       lastSortRef.current = sortKey;
+      lastUserIdRef.current = userId;
       isInitialLoadRef.current = false;
 
       loadData(0, memoizedFilters, sortBy, true);
-    } else {
-      console.log("🔄 No reload needed - filters/sort unchanged");
     }
-  }, [memoizedFilters, sortBy, loadData]);
+  }, [memoizedFilters, sortBy, loadData, userId]);
 
   // Load more data
   const loadMore = useCallback(() => {
@@ -244,6 +232,21 @@ export function useInfiniteSmartjects(
   const refetch = useCallback(() => {
     loadData(0, memoizedFilters, sortBy, true);
   }, [memoizedFilters, sortBy, loadData]);
+
+  // Update a specific smartject locally without refetching
+  const updateSmartject = useCallback(
+    (smartjectId: string, updates: Partial<SmartjectType>) => {
+      setState((prev) => ({
+        ...prev,
+        smartjects: prev.smartjects.map((smartject) =>
+          smartject.id === smartjectId
+            ? { ...smartject, ...updates }
+            : smartject,
+        ),
+      }));
+    },
+    [],
+  );
 
   // Set filter and reset pagination
   const setFilter = useCallback(
@@ -324,5 +327,6 @@ export function useInfiniteSmartjects(
     // Actions
     refetch,
     refreshFilters,
+    updateSmartject,
   };
 }

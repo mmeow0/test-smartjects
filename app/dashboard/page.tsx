@@ -889,10 +889,31 @@ export default function DashboardPage() {
     ]).catch(console.error);
   }, [authLoading, canAccess, fetchContracts, fetchProposals]);
 
-  // Memoized refetch callback
-  const memoizedRefetch = useCallback(() => {
+  // Store scroll position for restoration after voting
+  const scrollPositionRef = useRef<number>(0);
+
+  // Optimized vote handler that preserves scroll position
+  const handleVoted = useCallback(() => {
+    // Store current scroll position before refetch
+    scrollPositionRef.current = window.scrollY;
+
+    // Refetch data to get updated vote counts
     refetch();
   }, [refetch]);
+
+  // Restore scroll position after refetch completes
+  useEffect(() => {
+    if (!isLoading && scrollPositionRef.current > 0) {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: scrollPositionRef.current,
+          behavior: "smooth",
+        });
+        scrollPositionRef.current = 0; // Reset after restoring
+      });
+    }
+  }, [isLoading]);
 
   // Scroll to tabs and switch to specific tab
   const scrollToTabsAndSwitch = useCallback((tabValue: string) => {
@@ -959,7 +980,7 @@ export default function DashboardPage() {
                 <SmartjectCard
                   key={smartject.id}
                   smartject={smartject}
-                  onVoted={memoizedRefetch}
+                  onVoted={handleVoted}
                   userVotes={smartject.userVotes}
                 />
               ))}
@@ -983,7 +1004,7 @@ export default function DashboardPage() {
                   <SmartjectCard
                     key={smartject.id}
                     smartject={smartject}
-                    onVoted={memoizedRefetch}
+                    onVoted={handleVoted}
                     userVotes={smartject.userVotes}
                   />
                 ))}
@@ -1014,7 +1035,7 @@ export default function DashboardPage() {
                   <SmartjectCard
                     key={smartject.id}
                     smartject={smartject}
-                    onVoted={memoizedRefetch}
+                    onVoted={handleVoted}
                     userVotes={smartject.userVotes}
                   />
                 ))}

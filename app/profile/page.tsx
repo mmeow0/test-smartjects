@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Pencil,
@@ -62,6 +62,32 @@ export default function ProfilePage() {
   const [currentAvatar, setCurrentAvatar] = useState<string | null>(null);
 
   const { smartjects, isLoading, refetch } = useUserSmartjects(user?.id);
+
+  // Store scroll position for restoration after voting
+  const scrollPositionRef = useRef<number>(0);
+
+  // Optimized vote handler that preserves scroll position
+  const handleVoted = useCallback(() => {
+    // Store current scroll position before refetch
+    scrollPositionRef.current = window.scrollY;
+
+    // Refetch data to get updated vote counts
+    refetch();
+  }, [refetch]);
+
+  // Restore scroll position after refetch completes
+  useEffect(() => {
+    if (!isLoading && scrollPositionRef.current > 0) {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: scrollPositionRef.current,
+          behavior: "smooth",
+        });
+        scrollPositionRef.current = 0; // Reset after restoring
+      });
+    }
+  }, [isLoading]);
 
   // Set profile data when user is loaded
   useEffect(() => {
@@ -441,8 +467,7 @@ export default function ProfilePage() {
                           <SmartjectCard
                             key={smartject.id}
                             smartject={smartject}
-                            onVoted={refetch}
-                            userVotes={smartject.userVotes}
+                            onVoted={handleVoted}
                           />
                         ))}
                       </div>
@@ -465,8 +490,7 @@ export default function ProfilePage() {
                             <SmartjectCard
                               key={smartject.id}
                               smartject={smartject}
-                              onVoted={refetch}
-                              userVotes={smartject.userVotes}
+                              onVoted={handleVoted}
                             />
                           ))}
                         </div>
@@ -496,8 +520,7 @@ export default function ProfilePage() {
                             <SmartjectCard
                               key={smartject.id}
                               smartject={smartject}
-                              onVoted={refetch}
-                              userVotes={smartject.userVotes}
+                              onVoted={handleVoted}
                             />
                           ))}
                         </div>

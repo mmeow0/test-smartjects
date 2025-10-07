@@ -560,7 +560,6 @@ export const smartjectService = {
       ),
       smartject_audience (
         audience (name)
-      )
       ),
       votes (vote_type),
       comments(count)

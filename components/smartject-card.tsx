@@ -31,19 +31,10 @@ import { Provide } from "./icons/Provide";
 
 interface SmartjectCardProps {
   smartject: SmartjectType;
-  userVotes?: {
-    believe?: boolean;
-    need?: boolean;
-    provide?: boolean;
-  };
   onVoted: () => void;
 }
 
-export function SmartjectCard({
-  smartject,
-  userVotes,
-  onVoted,
-}: SmartjectCardProps) {
+export function SmartjectCard({ smartject, onVoted }: SmartjectCardProps) {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -433,7 +424,7 @@ export function SmartjectCard({
                 <button
                   disabled={!isAuthenticated}
                   className={`flex items-center gap-1 hover:text-red-500 transition-colors ${
-                    userVotes?.believe ? "text-red-500" : ""
+                    smartject.userVotes?.believe ? "text-red-500" : ""
                   }
                   ${
                     !isAuthenticated
@@ -444,7 +435,7 @@ export function SmartjectCard({
                 >
                   <Heart
                     className={`h-4 w-4 ${
-                      userVotes?.believe ? "fill-current" : ""
+                      smartject.userVotes?.believe ? "fill-current" : ""
                     }`}
                   />
                   <span>{smartject.votes.believe}</span>
@@ -462,7 +453,7 @@ export function SmartjectCard({
                 <button
                   disabled={!isAuthenticated || user?.accountType === "free"}
                   className={`flex items-center gap-1 transition-colors
-                  ${userVotes?.need ? "text-green-500" : ""}
+                  ${smartject.userVotes?.need ? "text-green-500" : ""}
                   ${
                     !isAuthenticated || user?.accountType === "free"
                       ? "opacity-50 cursor-not-allowed pointer-events-none"
@@ -487,7 +478,9 @@ export function SmartjectCard({
                 <button
                   disabled={!isAuthenticated || user?.accountType === "free"}
                   className={`flex items-center gap-1 transition-colors ${
-                    userVotes?.provide ? "stroke-blue-500 text-blue-500" : ""
+                    smartject.userVotes?.provide
+                      ? "stroke-blue-500 text-blue-500"
+                      : ""
                   }
                   ${
                     !isAuthenticated || user?.accountType === "free"
@@ -498,7 +491,7 @@ export function SmartjectCard({
                 >
                   <Provide
                     className={`h-[18px] ${
-                      userVotes?.provide
+                      smartject.userVotes?.provide
                         ? "text-blue-500 stroke-blue-500"
                         : "text-gray-400 stroke-gray-400"
                     } hover:text-blue-500 hover:stroke-blue-500`}
