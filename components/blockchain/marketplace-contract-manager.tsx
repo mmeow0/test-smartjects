@@ -728,7 +728,7 @@ export function MarketplaceContractManager({
                 <div className="flex items-center gap-2">
                   <code className="text-xs bg-muted px-2 py-1 rounded flex-1 truncate">
                     {process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS ||
-                      "0x5FbDB2315678afecb367f032d93F642f64180aa3"}
+                      ""}
                   </code>
                   <Button
                     variant="ghost"
@@ -737,7 +737,7 @@ export function MarketplaceContractManager({
                     onClick={() =>
                       copyAddress(
                         process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS ||
-                          "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+                          "",
                       )
                     }
                   >
@@ -788,7 +788,7 @@ export function MarketplaceContractManager({
                     window.open(
                       getAddressUrl(
                         process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS ||
-                          "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+                          "",
                       ),
                       "_blank",
                     )

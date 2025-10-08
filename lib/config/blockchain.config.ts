@@ -31,7 +31,7 @@ export const CONTRACT_ADDRESSES = {
   // SmartjectsMarketplace contract (deployed on hardhat)
   smartjectsMarketplace:
     process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS ||
-    "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "",
 } as const;
 
 // ThirdWeb configuration

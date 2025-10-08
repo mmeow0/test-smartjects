@@ -43,6 +43,7 @@ interface BlockchainStatusProps {
   contractId: string;
   blockchainAddress?: string | null;
   blockchainStatus?: string;
+  currentStatus?: string;
   escrowFunded?: boolean;
   escrowAmount?: string;
   isClient?: boolean;
@@ -56,6 +57,7 @@ export function BlockchainStatus({
   contractId,
   blockchainAddress,
   blockchainStatus = "pending",
+  currentStatus = "pending",
   escrowFunded = false,
   escrowAmount,
   isClient = false,
@@ -69,6 +71,7 @@ export function BlockchainStatus({
   const [isRetryingDeployment, setIsRetryingDeployment] = useState(false);
   const [escrowDetails, setEscrowDetails] = useState<any>(null);
   const [walletConnected, setWalletConnected] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   console.log("escrowDetails");
   console.log(escrowDetails);
@@ -83,15 +86,194 @@ export function BlockchainStatus({
     checkWalletConnection();
     if (blockchainAddress) {
       loadEscrowDetails();
+      // Also check acceptance state if contract is pending acceptance
+      if (blockchainStatus === "pending_acceptance") {
+        checkAcceptanceState();
+      }
+      // Also check completion state if contract is pending review
+      if (
+        blockchainStatus === "funded" &&
+        (currentStatus === "pending_review" || currentStatus === "completed")
+      ) {
+        checkCompletionState();
+      }
+      // Also check withdrawal state if contract is completed
+      if (blockchainStatus === "completed" && currentStatus === "completed") {
+        checkWithdrawalState();
+      }
+    } else if (isFullySigned) {
+      // Check if blockchain agreement exists but database wasn't updated
+      syncBlockchainState();
+      // Also check for interrupted transactions
+      checkInterruptedTransactions();
     }
-  }, [blockchainAddress, walletConnected]);
+  }, [blockchainAddress, walletConnected, isFullySigned]);
+
+  // Periodic blockchain state checking for contracts awaiting deployment or acceptance
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    // Run periodic checks for deployment (no blockchain address) or acceptance (pending_acceptance status)
+    const needsDeploymentCheck =
+      isFullySigned && !blockchainAddress && !isProvider;
+    const needsAcceptanceCheck =
+      blockchainAddress && blockchainStatus === "pending_acceptance";
+    const needsCompletionCheck =
+      blockchainAddress && blockchainStatus === "funded";
+    const needsWithdrawalCheck =
+      blockchainAddress &&
+      blockchainStatus === "completed" &&
+      currentStatus === "completed";
+
+    if (
+      needsDeploymentCheck ||
+      needsAcceptanceCheck ||
+      needsCompletionCheck ||
+      needsWithdrawalCheck
+    ) {
+      if (needsDeploymentCheck) {
+        console.log("🔄 Starting periodic blockchain deployment checks...");
+      }
+      if (needsAcceptanceCheck) {
+        console.log("🔄 Starting periodic blockchain acceptance checks...");
+      }
+      if (needsCompletionCheck) {
+        console.log("🔄 Starting periodic blockchain completion checks...");
+      }
+      if (needsWithdrawalCheck) {
+        console.log("🔄 Starting periodic blockchain withdrawal checks...");
+      }
+
+      // Check every 30 seconds
+      intervalId = setInterval(async () => {
+        if (needsDeploymentCheck) {
+          console.log("🔄 Periodic blockchain deployment check...");
+          try {
+            const result =
+              await contractService.recoverContractState(contractId);
+            if (result.recovered) {
+              console.log(
+                "✅ Blockchain state recovered during periodic check",
+              );
+
+              toast({
+                title: "Smart Contract Synchronized",
+                description:
+                  "Found and synchronized with blockchain deployment!",
+              });
+
+              // Trigger callback to refresh the page
+              if (onDeploymentRetried) {
+                onDeploymentRetried();
+              }
+            }
+          } catch (error) {
+            console.error(
+              "Error during periodic blockchain deployment check:",
+              error,
+            );
+          }
+        }
+
+        if (needsAcceptanceCheck) {
+          console.log("🔄 Periodic blockchain acceptance check...");
+          try {
+            const result =
+              await contractService.recoverAcceptanceState(contractId);
+            if (result.recovered) {
+              console.log(
+                "✅ Acceptance state recovered during periodic check",
+              );
+
+              toast({
+                title: "Acceptance State Synchronized",
+                description: "Contract acceptance state has been synchronized!",
+              });
+
+              // Trigger callback to refresh the page
+              if (onDeploymentRetried) {
+                onDeploymentRetried();
+              }
+            }
+          } catch (error) {
+            console.error("Error during periodic acceptance check:", error);
+          }
+        }
+
+        if (needsCompletionCheck) {
+          console.log("🔄 Periodic blockchain completion check...");
+          try {
+            const result =
+              await contractService.recoverCompletionState(contractId);
+            if (result.recovered) {
+              console.log(
+                "✅ Completion state recovered during periodic check",
+              );
+
+              toast({
+                title: "Completion State Synchronized",
+                description: "Contract completion state has been synchronized!",
+              });
+
+              // Trigger callback to refresh the page
+              if (onDeploymentRetried) {
+                onDeploymentRetried();
+              }
+            }
+          } catch (error) {
+            console.error("Error during periodic completion check:", error);
+          }
+        }
+
+        if (needsWithdrawalCheck) {
+          console.log("🔄 Periodic blockchain withdrawal check...");
+          try {
+            const result =
+              await contractService.recoverWithdrawalState(contractId);
+            if (result.recovered) {
+              console.log(
+                "✅ Withdrawal state recovered during periodic check",
+              );
+
+              toast({
+                title: "Withdrawal State Synchronized",
+                description: "Escrow withdrawal state has been synchronized!",
+              });
+
+              // Trigger callback to refresh the page
+              if (onDeploymentRetried) {
+                onDeploymentRetried();
+              }
+            }
+          } catch (error) {
+            console.error("Error during periodic withdrawal check:", error);
+          }
+        }
+      }, 30000); // Check every 30 seconds
+    }
+
+    // Cleanup interval on unmount or when no longer needed
+    return () => {
+      if (intervalId) {
+        console.log("🛑 Stopping periodic blockchain state checks");
+        clearInterval(intervalId);
+      }
+    };
+  }, [
+    isFullySigned,
+    blockchainAddress,
+    isProvider,
+    blockchainStatus,
+    currentStatus,
+    contractId,
+    onDeploymentRetried,
+  ]);
 
   const checkWalletConnection = async () => {
     const connected = await blockchainService.isWalletConnected();
     setWalletConnected(connected);
   };
 
-  
   const loadEscrowDetails = async () => {
     if (!blockchainAddress) return;
 
@@ -118,6 +300,286 @@ export function BlockchainStatus({
     } catch (error) {
       console.error("Error loading escrow details:", error);
       setEscrowDetails(null);
+    }
+  };
+
+  const checkAcceptanceState = async () => {
+    if (!blockchainAddress) return;
+
+    setIsSyncing(true);
+    try {
+      console.log(
+        "🔄 Checking acceptance state for deployed contract:",
+        contractId,
+      );
+
+      const acceptanceResult =
+        await contractService.recoverAcceptanceState(contractId);
+
+      if (acceptanceResult.recovered) {
+        console.log("✅ Acceptance state recovered successfully");
+
+        toast({
+          title: "Acceptance State Recovered",
+          description: acceptanceResult.message,
+        });
+
+        // Trigger page refresh to show updated state
+        if (onDeploymentRetried) {
+          onDeploymentRetried();
+        }
+      } else {
+        console.log(
+          "ℹ️ No acceptance recovery needed:",
+          acceptanceResult.message,
+        );
+      }
+    } catch (error) {
+      console.error("Error checking acceptance state:", error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const checkWithdrawalState = async () => {
+    if (!blockchainAddress) return;
+
+    setIsSyncing(true);
+    try {
+      console.log(
+        "🔄 Checking withdrawal state for deployed contract:",
+        contractId,
+      );
+
+      const withdrawalResult =
+        await contractService.recoverWithdrawalState(contractId);
+
+      if (withdrawalResult.recovered) {
+        console.log("✅ Withdrawal state recovered successfully");
+
+        toast({
+          title: "Withdrawal State Recovered",
+          description: withdrawalResult.message,
+        });
+
+        // Trigger page refresh to show updated state
+        if (onDeploymentRetried) {
+          onDeploymentRetried();
+        }
+      } else {
+        console.log(
+          "ℹ️ No withdrawal recovery needed:",
+          withdrawalResult.message,
+        );
+      }
+    } catch (error) {
+      console.error("Error checking withdrawal state:", error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const checkCompletionState = async () => {
+    if (!blockchainAddress) return;
+
+    setIsSyncing(true);
+    try {
+      console.log(
+        "🔄 Checking completion state for deployed contract:",
+        contractId,
+      );
+
+      const completionResult =
+        await contractService.recoverCompletionState(contractId);
+
+      if (completionResult.recovered) {
+        console.log("✅ Completion state recovered successfully");
+
+        toast({
+          title: "Completion State Recovered",
+          description: completionResult.message,
+        });
+
+        // Trigger page refresh to show updated state
+        if (onDeploymentRetried) {
+          onDeploymentRetried();
+        }
+      } else {
+        console.log(
+          "ℹ️ No completion recovery needed:",
+          completionResult.message,
+        );
+      }
+    } catch (error) {
+      console.error("Error checking completion state:", error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const syncBlockchainState = async () => {
+    if (!isFullySigned || blockchainAddress) return;
+
+    setIsSyncing(true);
+    try {
+      console.log(
+        "🔄 Attempting to recover blockchain state for contract:",
+        contractId,
+      );
+
+      // Use contract service recovery method
+      const result = await contractService.recoverContractState(contractId);
+
+      if (result.recovered) {
+        console.log("✅ Contract state recovered successfully");
+
+        toast({
+          title: "State Recovered",
+          description: result.message,
+        });
+
+        // Trigger page refresh to show updated state
+        if (onDeploymentRetried) {
+          onDeploymentRetried();
+        }
+      } else {
+        console.log("ℹ️ No deployment recovery needed:", result.message);
+
+        // If deployment recovery wasn't needed, try acceptance recovery
+        if (blockchainAddress) {
+          const acceptanceResult =
+            await contractService.recoverAcceptanceState(contractId);
+
+          if (acceptanceResult.recovered) {
+            console.log("✅ Acceptance state recovered successfully");
+
+            toast({
+              title: "Acceptance State Recovered",
+              description: acceptanceResult.message,
+            });
+
+            // Trigger page refresh to show updated state
+            if (onDeploymentRetried) {
+              onDeploymentRetried();
+            }
+          } else {
+            console.log(
+              "ℹ️ No acceptance recovery needed:",
+              acceptanceResult.message,
+            );
+
+            // Show user-friendly message for manual sync
+            if (result.message === "No agreement found on blockchain") {
+              toast({
+                title: "No Smart Contract Found",
+                description:
+                  "This contract has not been deployed to the blockchain yet.",
+              });
+            } else if (
+              result.message === "Contract already has blockchain address"
+            ) {
+              toast({
+                title: "Already Synchronized",
+                description:
+                  "This contract is already synchronized with the blockchain.",
+              });
+            }
+          }
+        } else {
+          // Show user-friendly message for manual sync
+          if (result.message === "No agreement found on blockchain") {
+            toast({
+              title: "No Smart Contract Found",
+              description:
+                "This contract has not been deployed to the blockchain yet.",
+            });
+          } else if (
+            result.message === "Contract already has blockchain address"
+          ) {
+            toast({
+              title: "Already Synchronized",
+              description:
+                "This contract is already synchronized with the blockchain.",
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error recovering blockchain state:", error);
+
+      toast({
+        title: "Recovery Failed",
+        description: "Could not recover blockchain state",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const checkInterruptedTransactions = async () => {
+    if (!isFullySigned || blockchainAddress) return;
+
+    try {
+      console.log("🔍 Checking for interrupted transactions...");
+
+      const result =
+        await contractService.checkInterruptedTransactions(contractId);
+
+      if (result.hasInterrupted) {
+        console.log(
+          "⚠️ Found interrupted transaction:",
+          result.transactionType,
+        );
+
+        toast({
+          title: "Interrupted Transaction Detected",
+          description: result.message,
+          variant: "default",
+        });
+
+        // If it was a successful deployment that was interrupted, try to recover
+        if (
+          result.transactionType === "deployment" &&
+          result.message.includes("completed successfully")
+        ) {
+          // Trigger page refresh to show updated state
+          if (onDeploymentRetried) {
+            onDeploymentRetried();
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error checking interrupted transactions:", error);
+    }
+  };
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    try {
+      // If contract has blockchain address, also check acceptance state directly
+      if (blockchainAddress && blockchainStatus === "pending_acceptance") {
+        console.log(
+          "🔄 Manual sync: checking acceptance state for deployed contract",
+        );
+        await checkAcceptanceState();
+      } else if (blockchainAddress && blockchainStatus === "funded") {
+        console.log(
+          "🔄 Manual sync: checking completion state for deployed contract",
+        );
+        await checkCompletionState();
+      } else if (blockchainAddress && blockchainStatus === "completed") {
+        console.log(
+          "🔄 Manual sync: checking withdrawal state for deployed contract",
+        );
+        await checkWithdrawalState();
+      } else {
+        // For contracts without blockchain address, check deployment state
+        await syncBlockchainState();
+        await checkInterruptedTransactions();
+      }
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -219,19 +681,27 @@ export function BlockchainStatus({
 
     console.log("🔍 Environment check before deployment:");
     console.log("Client ID available:", !!clientId);
-    console.log("Marketplace address available:", !!marketplaceAddress);
+    console.log("Marketplace address:", marketplaceAddress || "NOT SET");
+    console.log("Expected address: 0x3BEC4fe14E15CB7B9F6d31bCF7AEf96D0180846F");
 
-    if (!clientId || !marketplaceAddress) {
+    if (!clientId) {
       toast({
         title: "Configuration Error",
         description:
-          "Blockchain configuration is incomplete. Please contact support.",
+          "Thirdweb client ID is not configured. Please contact support.",
         variant: "destructive",
       });
-      console.error("❌ Missing required environment variables");
+      console.error("❌ Missing NEXT_PUBLIC_THIRDWEB_CLIENT_ID");
       return;
     }
 
+    if (!marketplaceAddress) {
+      console.warn(
+        "⚠️ NEXT_PUBLIC_MARKETPLACE_ADDRESS not set, using correct address",
+      );
+      // The service will use the correct address
+    }
+  
     setIsRetryingDeployment(true);
     try {
       console.log("🚀 Attempting to deploy contract:", contractId);
@@ -360,7 +830,12 @@ export function BlockchainStatus({
                   Deployment Required
                 </AlertTitle>
                 <AlertDescription className="text-orange-700">
-                  The contract is fully signed and needs to be deployed on the blockchain.
+                  The contract is fully signed and needs to be deployed on the
+                  blockchain.
+                  <br />
+                  <strong>⚠️ Important:</strong> Do not refresh or close this
+                  page during deployment. If interrupted, use "Check Blockchain
+                  State" below to recover the deployment status.
                 </AlertDescription>
               </Alert>
               <Button
@@ -380,15 +855,52 @@ export function BlockchainStatus({
                   </>
                 )}
               </Button>
+              {isRetryingDeployment && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-xs text-yellow-800 text-center font-medium">
+                    ⚠️ Transaction in progress - do not refresh this page!
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Awaiting Deployment</AlertTitle>
-              <AlertDescription>
-                The smartject contract will be deployed by the needer.
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Awaiting Deployment</AlertTitle>
+                <AlertDescription>
+                  The smartject contract will be deployed by the needer.
+                </AlertDescription>
+              </Alert>
+
+              {/* Manual sync button for cases where deployment was interrupted */}
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleManualSync}
+                  disabled={isSyncing}
+                  size="sm"
+                >
+                  {isSyncing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Checking Blockchain...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="mr-2 h-4 w-4" />
+                      Check Blockchain State
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Click this if deployment was interrupted (page refresh during
+                  transaction) or if you see "Deploy Contract" button after
+                  confirming a transaction
+                </p>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

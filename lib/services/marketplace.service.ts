@@ -15,24 +15,16 @@ import {
 } from "@/lib/utils/thirdweb-wallet";
 import { toWei, toEther } from "thirdweb/utils";
 import { defineChain } from "thirdweb";
+import { ethereum } from "thirdweb/chains";
+// import { sepolia } from "thirdweb/chains";
 
-// Hardhat local network configuration
-const hardhatChain = defineChain({
-  id: 31337,
-  name: "Hardhat",
-  nativeCurrency: {
-    name: "Ether",
-    symbol: "ETH",
-    decimals: 18,
-  },
-  rpc: "http://127.0.0.1:8545",
-  testnet: true,
-});
+// Use Sepolia testnet for Thirdweb deployment
+const sepoliaChain = ethereum;
 
 // Contract configuration
 const MARKETPLACE_ADDRESS =
   process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS ||
-  "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+  "";
 
 // New SmartjectsMarketplace ABI
 const MARKETPLACE_ABI = [
@@ -93,9 +85,11 @@ class MarketplaceService {
 
   constructor() {
     this.client = client;
-    // Use hardhat for local development
-    this.chain =
-      process.env.NODE_ENV === "development" ? hardhatChain : hardhatChain;
+    // Use Sepolia testnet for Thirdweb deployment
+    this.chain = sepoliaChain;
+    console.log(
+      "🌐 MarketplaceService using Sepolia testnet (Chain ID: 11155111)",
+    );
   }
 
   // Get marketplace contract instance
@@ -110,6 +104,7 @@ class MarketplaceService {
       chain: this.chain,
       address: MARKETPLACE_ADDRESS,
       client: this.client,
+      abi: MARKETPLACE_ABI,
     });
   }
 
@@ -125,7 +120,26 @@ class MarketplaceService {
   // Convert string ID to bytes32 using contract's computeExternalId
   async computeExternalId(externalIdStr: string): Promise<string> {
     try {
+      console.log("🔍 Computing external ID for:", externalIdStr);
+      console.log("📍 Marketplace address:", MARKETPLACE_ADDRESS);
+      console.log("🌐 Chain:", this.chain.name, "ID:", this.chain.id);
+
       const contract = this.getMarketplaceContract();
+
+      // Add contract validation
+      if (!contract || !contract.address) {
+        console.error("❌ Invalid contract instance");
+        throw new MarketplaceError("Invalid marketplace contract instance");
+      }
+
+      console.log("📝 Contract instance:", {
+        address: contract.address,
+        chain: contract.chain?.id,
+        client: !!contract.client,
+      });
+
+      // Ensure we have ABI for the method
+      console.log("📋 Calling computeExternalId with param:", externalIdStr);
 
       const result = await readContract({
         contract,
@@ -133,12 +147,34 @@ class MarketplaceService {
         params: [externalIdStr],
       });
 
+      console.log("✅ External ID computed:", result);
       return result as string;
     } catch (error: any) {
-      console.error("Error computing external ID:", error);
-      // Fallback to local computation if contract call fails
-      // This is a simple keccak256 hash of the string
-      throw new MarketplaceError("Failed to compute external ID");
+      console.error("❌ Error computing external ID:", error);
+      console.error("Error details:", {
+        message: error.message,
+        code: error.code,
+        cause: error.cause,
+        stack: error.stack,
+      });
+
+      // Check specific error types
+      if (error.message?.includes("decode zero data")) {
+        console.error(
+          "⚠️ Contract might not be deployed at this address on this network",
+        );
+        console.error("Please verify:");
+        console.error("1. Contract is deployed at:", MARKETPLACE_ADDRESS);
+        console.error("2. You are connected to Sepolia network");
+        console.error(
+          "3. Check contract on: https://sepolia.etherscan.io/address/" +
+            MARKETPLACE_ADDRESS,
+        );
+      }
+
+      throw new MarketplaceError(
+        `Failed to compute external ID: ${error.message || "Unknown error"}`,
+      );
     }
   }
 
@@ -387,10 +423,15 @@ class MarketplaceService {
       console.log("📋 Provider accepting agreement:", externalIdStr);
 
       const account = await this.ensureWalletConnected();
+      console.log("👤 Connected wallet:", account.address);
+
       const contract = this.getMarketplaceContract();
+      console.log("📍 Contract address:", contract.address);
 
       // Compute bytes32 ID
+      console.log("🔐 Computing external ID for acceptance...");
       const externalId = await this.computeExternalId(externalIdStr);
+      console.log("🔐 External ID computed:", externalId);
 
       // Prepare transaction
       const transaction = prepareContractCall({
@@ -408,7 +449,7 @@ class MarketplaceService {
       // Wait for confirmation
       const receipt = await waitForReceipt({
         client: this.client,
-        chain: hardhatChain,
+        chain: this.chain,
         transactionHash: result.transactionHash,
       });
 
@@ -447,7 +488,7 @@ class MarketplaceService {
       // Wait for confirmation
       const receipt = await waitForReceipt({
         client: this.client,
-        chain: hardhatChain,
+        chain: this.chain,
         transactionHash: result.transactionHash,
       });
 
@@ -486,7 +527,7 @@ class MarketplaceService {
       // Wait for confirmation
       const receipt = await waitForReceipt({
         client: this.client,
-        chain: hardhatChain,
+        chain: this.chain,
         transactionHash: result.transactionHash,
       });
 
@@ -682,7 +723,6 @@ class MarketplaceService {
     // Redirect to fundAgreement which will show the warning
     return this.fundAgreement(contractId, amount);
   }
-
 
   // Legacy method - get contract details
   async getContractDetails(contractId: string): Promise<any> {

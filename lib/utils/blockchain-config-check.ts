@@ -46,7 +46,7 @@ export function checkBlockchainConfig(): BlockchainConfigStatus {
   // Check marketplace address (new system only)
   const marketplaceAddress =
     process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS ||
-    "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+    "";
   const hasMarketplaceAddress =
     !!marketplaceAddress && marketplaceAddress.length > 0;
 
@@ -118,7 +118,7 @@ export function logBlockchainConfig(): void {
   );
   console.log(`RPC URL: ${status.config.rpcUrl}`);
   console.log(
-    `Marketplace Address: ${process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS || "0x5FbDB2315678afecb367f032d93F642f64180aa3"}`,
+    `Marketplace Address: ${process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS || ""}`,
   );
   console.log("");
   console.log("Configuration Status:");

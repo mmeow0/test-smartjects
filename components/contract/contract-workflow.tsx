@@ -138,6 +138,198 @@ export function ContractWorkflow({
     }
   };
 
+  // Check and recover acceptance state
+  const checkAcceptanceState = async () => {
+    console.log("🔄 checkAcceptanceState called:");
+    console.log("   - currentStatus:", currentStatus);
+    console.log("   - userRole:", workflowStatus.userRole);
+    console.log("   - contractId:", contractId);
+
+    if (
+      currentStatus !== "pending_acceptance" ||
+      workflowStatus.userRole !== "provider"
+    ) {
+      console.log("❌ Skipping acceptance check - conditions not met");
+      return;
+    }
+
+    console.log("✅ Conditions met, proceeding with acceptance check...");
+
+    try {
+      // Check for interrupted acceptance transactions
+      console.log("🔍 Checking for interrupted acceptance transactions...");
+      const interruptedResult =
+        await contractService.checkInterruptedTransactions(contractId);
+
+      console.log("📋 Interrupted transaction result:", interruptedResult);
+
+      if (
+        interruptedResult.hasInterrupted &&
+        interruptedResult.transactionType === "acceptance"
+      ) {
+        console.log("⚠️ Found interrupted acceptance transaction");
+        console.log("📋 Interrupted message:", interruptedResult.message);
+
+        if (interruptedResult.message.includes("completed successfully")) {
+          console.log(
+            "✅ Interrupted transaction was successful, triggering refresh",
+          );
+          // Trigger status refresh to show updated state
+          onStatusChange?.();
+        }
+      } else {
+        console.log(
+          "🔍 No interrupted acceptance transaction, trying direct recovery...",
+        );
+        // Also try to recover acceptance state in case it was missed
+        const recoveryResult =
+          await contractService.recoverAcceptanceState(contractId);
+
+        console.log("📋 Direct recovery result:", recoveryResult);
+
+        if (recoveryResult.recovered) {
+          console.log("✅ Acceptance state recovered via direct recovery");
+          onStatusChange?.();
+        } else {
+          console.log(
+            "ℹ️ No acceptance recovery needed:",
+            recoveryResult.message,
+          );
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error checking acceptance state:", error);
+    }
+  };
+
+  // Check and recover completion state
+  const checkCompletionState = async () => {
+    console.log("🔄 checkCompletionState called:");
+    console.log("   - currentStatus:", currentStatus);
+    console.log("   - userRole:", workflowStatus.userRole);
+    console.log("   - contractId:", contractId);
+
+    if (
+      (currentStatus !== "pending_review" && currentStatus !== "completed") ||
+      workflowStatus.userRole !== "needer"
+    ) {
+      console.log("❌ Skipping completion check - conditions not met");
+      return;
+    }
+
+    console.log("✅ Conditions met, proceeding with completion check...");
+
+    try {
+      // Check for interrupted completion transactions
+      console.log("🔍 Checking for interrupted completion transactions...");
+      const interruptedResult =
+        await contractService.checkInterruptedTransactions(contractId);
+
+      console.log("📋 Interrupted transaction result:", interruptedResult);
+
+      if (
+        interruptedResult.hasInterrupted &&
+        interruptedResult.transactionType === "completion"
+      ) {
+        console.log("⚠️ Found interrupted completion transaction");
+        console.log("📋 Interrupted message:", interruptedResult.message);
+
+        if (interruptedResult.message.includes("completed successfully")) {
+          console.log(
+            "✅ Interrupted transaction was successful, triggering refresh",
+          );
+          // Trigger status refresh to show updated state
+          onStatusChange?.();
+        }
+      } else {
+        console.log(
+          "🔍 No interrupted completion transaction, trying direct recovery...",
+        );
+        // Also try to recover completion state in case it was missed
+        const recoveryResult =
+          await contractService.recoverCompletionState(contractId);
+
+        console.log("📋 Direct recovery result:", recoveryResult);
+
+        if (recoveryResult.recovered) {
+          console.log("✅ Completion state recovered via direct recovery");
+          onStatusChange?.();
+        } else {
+          console.log(
+            "ℹ️ No completion recovery needed:",
+            recoveryResult.message,
+          );
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error checking completion state:", error);
+    }
+  };
+
+  // Check and recover withdrawal state
+  const checkWithdrawalState = async () => {
+    console.log("🔄 checkWithdrawalState called:");
+    console.log("   - currentStatus:", currentStatus);
+    console.log("   - userRole:", workflowStatus.userRole);
+    console.log("   - contractId:", contractId);
+
+    if (
+      currentStatus !== "completed" ||
+      workflowStatus.userRole !== "provider"
+    ) {
+      console.log("❌ Skipping withdrawal check - conditions not met");
+      return;
+    }
+
+    console.log("✅ Conditions met, proceeding with withdrawal check...");
+
+    try {
+      // Check for interrupted withdrawal transactions
+      console.log("🔍 Checking for interrupted withdrawal transactions...");
+      const interruptedResult =
+        await contractService.checkInterruptedTransactions(contractId);
+
+      console.log("📋 Interrupted transaction result:", interruptedResult);
+
+      if (
+        interruptedResult.hasInterrupted &&
+        interruptedResult.transactionType === "withdrawal"
+      ) {
+        console.log("⚠️ Found interrupted withdrawal transaction");
+        console.log("📋 Interrupted message:", interruptedResult.message);
+
+        if (interruptedResult.message.includes("completed successfully")) {
+          console.log(
+            "✅ Interrupted transaction was successful, triggering refresh",
+          );
+          // Trigger status refresh to show updated state
+          onStatusChange?.();
+        }
+      } else {
+        console.log(
+          "🔍 No interrupted withdrawal transaction, trying direct recovery...",
+        );
+        // Also try to recover withdrawal state in case it was missed
+        const recoveryResult =
+          await contractService.recoverWithdrawalState(contractId);
+
+        console.log("📋 Direct recovery result:", recoveryResult);
+
+        if (recoveryResult.recovered) {
+          console.log("✅ Withdrawal state recovered via direct recovery");
+          onStatusChange?.();
+        } else {
+          console.log(
+            "ℹ️ No withdrawal recovery needed:",
+            recoveryResult.message,
+          );
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error checking withdrawal state:", error);
+    }
+  };
+
   const handleWithdrawEscrow = async () => {
     setIsSubmitting(true);
     try {
@@ -245,7 +437,7 @@ export function ContractWorkflow({
       toast({
         title: approved ? "Contract approved" : "Contract rejected",
         description: approved
-          ? "Contract has been approved and the agreement is marked as completed. The provider can now withdraw the escrow funds from the smart contract."
+          ? "Contract has been approved and completed on the blockchain. The provider can now withdraw the escrow funds from the smart contract."
           : "Contract has been rejected and returned for revision.",
       });
       setReviewComments("");
@@ -282,12 +474,18 @@ export function ContractWorkflow({
         // Get contract details to check funding and acceptance status
         const contract = await contractService.getContractById(contractId);
 
-
-        console.log('canAcceptAgreement', status.userRole, currentStatus, contract?.escrow_funded, contract?.blockchain_status, status.userRole === "provider" &&
+        console.log(
+          "canAcceptAgreement",
+          status.userRole,
+          currentStatus,
+          contract?.escrow_funded,
+          contract?.blockchain_status,
+          status.userRole === "provider" &&
             currentStatus === "pending_acceptance" &&
             contract?.escrow_funded &&
-            contract?.blockchain_status !== "accepted" );
-        
+            contract?.blockchain_status !== "accepted",
+        );
+
         setWorkflowStatus({
           ...status,
           canFundContract:
@@ -304,11 +502,49 @@ export function ContractWorkflow({
           canWithdrawEscrow:
             status.userRole === "provider" &&
             status.isCompleted &&
+            contract?.blockchain_status !== "completed" &&
             contract?.escrow_funded &&
             !contract?.escrow_released,
           escrowReleased: contract?.escrow_released || false,
         });
         setIsLoading(false);
+
+        // Check for interrupted transactions first
+        try {
+          console.log("🔍 Checking for interrupted transactions on mount...");
+          const interruptedResult =
+            await contractService.checkInterruptedTransactions(contractId);
+
+          if (interruptedResult.hasInterrupted) {
+            console.log(
+              "⚠️ Found interrupted transaction on mount:",
+              interruptedResult.transactionType,
+            );
+
+            if (interruptedResult.message.includes("completed successfully")) {
+              console.log(
+                "✅ Interrupted transaction was successful, triggering refresh",
+              );
+              // Trigger status refresh to show updated state
+              onStatusChange?.();
+              return; // Exit early, let the refresh handle the rest
+            }
+          }
+        } catch (interruptedError) {
+          console.error(
+            "Error checking interrupted transactions on mount:",
+            interruptedError,
+          );
+        }
+
+        // Check for acceptance recovery after loading status
+        await checkAcceptanceState();
+
+        // Also check for completion recovery if applicable
+        await checkCompletionState();
+
+        // Also check for withdrawal recovery if applicable
+        await checkWithdrawalState();
       } catch (error) {
         console.error("Error loading workflow status:", error);
         setIsLoading(false);
@@ -397,11 +633,6 @@ export function ContractWorkflow({
     );
   }
 
-  // Don't show workflow controls if contract has milestones
-  if (workflowStatus.hasMilestones) {
-    return null;
-  }
-
   return (
     <Card>
       <CardHeader>
@@ -448,6 +679,9 @@ export function ContractWorkflow({
               <p className="text-sm text-indigo-700 mb-3">
                 The contract has been funded. Accept the agreement to begin work
                 on this contract.
+                <br />
+                <strong>⚠️ Important:</strong> Do not refresh or close this page
+                during acceptance.
               </p>
               <Button
                 onClick={handleAcceptAgreement}
@@ -461,6 +695,13 @@ export function ContractWorkflow({
                 )}
                 Accept Agreement
               </Button>
+              {isSubmitting && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-xs text-yellow-800 text-center font-medium">
+                    ⚠️ Transaction in progress - do not refresh this page!
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -606,6 +847,13 @@ export function ContractWorkflow({
                       Request Changes
                     </Button>
                   </div>
+                  {isSubmitting && (
+                    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                      <p className="text-xs text-yellow-800 text-center font-medium">
+                        ⚠️ Transaction in progress - do not refresh this page!
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -648,6 +896,13 @@ export function ContractWorkflow({
                 )}
                 Withdraw Escrow
               </Button>
+              {isSubmitting && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-xs text-yellow-800 text-center font-medium">
+                    ⚠️ Transaction in progress - do not refresh this page!
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

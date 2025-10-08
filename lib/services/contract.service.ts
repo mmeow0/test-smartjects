@@ -3038,7 +3038,9 @@ export const contractService = {
       console.log("🔍 Contract budget type:", typeof contractData.budget);
 
       // Calculate deployment amount
-      const deploymentAmount = await getDeploymentAmount(contractData.budget || 0);
+      const deploymentAmount = await getDeploymentAmount(
+        contractData.budget || 0,
+      );
 
       console.log("💰 Escrow amount for agreement:", deploymentAmount, "ETH");
       console.log("📋 Creating agreement with escrow");
@@ -3149,6 +3151,13 @@ export const contractService = {
         return { success: true, message: "Agreement is already accepted" };
       }
 
+      // Save transaction state before acceptance
+      await this.saveTransactionState(contractId, "acceptance", "processing", {
+        providerId: currentUser.id,
+        contractStatus: contractData.status,
+        blockchainStatus: contractData.blockchain_status,
+      });
+
       // Call acceptAgreement on smart contract
       console.log("📋 Provider accepting agreement for contract:", contractId);
 
@@ -3184,6 +3193,9 @@ export const contractService = {
           status: "pending_start",
         });
 
+        // Clear transaction state on success
+        await this.clearTransactionState(contractId, "acceptance");
+
         // Send notification
         await this.sendContractMessage(
           contractId,
@@ -3195,10 +3207,18 @@ export const contractService = {
           message: "Agreement accepted successfully. You can now start work.",
         };
       } else {
+        // Update transaction state to failed
+        await this.saveTransactionState(contractId, "acceptance", "failed");
         throw new Error("Failed to accept agreement on blockchain");
       }
     } catch (error: any) {
       console.error("Error accepting agreement:", error);
+
+      // Update transaction state to failed
+      await this.saveTransactionState(contractId, "acceptance", "failed", {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+
       return {
         success: false,
         message: error.message || "Failed to accept agreement",
@@ -3558,7 +3578,7 @@ This milestone is now ready for review and approval.`;
         throw new Error("Contract must be submitted for review");
       }
 
-      const newStatus = approved ? "completed" : "active";
+      // Status will be determined after blockchain operation
 
       // If approved and blockchain is enabled, provider can now withdraw escrow
       if (approved && contractData.blockchain_address) {
@@ -3570,48 +3590,56 @@ This milestone is now ready for review and approval.`;
           );
         }
 
-          // If blockchain is enabled, call completeAgreement on blockchain
-      if (contractData.blockchain_address) {
-        // Check if wallet is connected
-        const isWalletConnected = await blockchainService.isWalletConnected();
-        if (!isWalletConnected) {
-          throw new Error(
-            "Wallet not connected. Please connect your wallet to submit contract completion.",
-          );
-        }
-
-        try {
-          console.log("📋 Calling completeAgreement for contract:", contractId);
-
-          // Import marketplaceService if not already imported
-          const { marketplaceService } = await import(
-            "@/lib/services/marketplace.service"
-          );
-
-          // Needer marks agreement as completed
-          const success =
-            await marketplaceService.completeAgreement(contractId);
-
-          if (success) {
-            console.log("✅ Agreement marked as completed on blockchain");
-            console.log(
-              "💡 Next step: needer should approve to enable fund withdrawal",
+        // If blockchain is enabled, call completeAgreement on blockchain
+        if (contractData.blockchain_address) {
+          // Check if wallet is connected
+          const isWalletConnected = await blockchainService.isWalletConnected();
+          if (!isWalletConnected) {
+            throw new Error(
+              "Wallet not connected. Please connect your wallet to submit contract completion.",
             );
-          } else {
-            console.error(
-              "Failed to mark agreement as completed on blockchain",
-            );
-            // Don't throw - allow database update to proceed
           }
-        } catch (blockchainError) {
-          console.error(
-            "Error marking agreement as completed on blockchain:",
-            blockchainError,
-          );
-          // Don't throw - allow database update to proceed
-        }
-      }
 
+          try {
+            console.log(
+              "📋 Calling completeAgreement for contract:",
+              contractId,
+            );
+
+            // Save transaction state before blockchain call
+            await this.saveTransactionState(contractId, "completion");
+
+            // Import marketplaceService if not already imported
+            const { marketplaceService } = await import(
+              "@/lib/services/marketplace.service"
+            );
+
+            // Needer marks agreement as completed
+            const success =
+              await marketplaceService.completeAgreement(contractId);
+
+            if (success) {
+              console.log("✅ Agreement marked as completed on blockchain");
+              console.log(
+                "💡 Next step: needer should approve to enable fund withdrawal",
+              );
+
+              // Clear transaction state on successful completion
+              await this.clearTransactionState(contractId, "completion");
+            } else {
+              console.error(
+                "Failed to mark agreement as completed on blockchain",
+              );
+              throw new Error("Failed to complete agreement on blockchain");
+            }
+          } catch (blockchainError) {
+            console.error(
+              "Error marking agreement as completed on blockchain:",
+              blockchainError,
+            );
+            throw blockchainError;
+          }
+        }
 
         try {
           console.log(
@@ -3628,6 +3656,9 @@ This milestone is now ready for review and approval.`;
           console.error("Error notifying about approval:", error);
         }
       }
+
+      // Determine final status based on approval and blockchain success
+      const newStatus = approved ? "completed" : "active";
 
       // Update contract in database
       const { error: updateError } = await supabase
@@ -3647,7 +3678,7 @@ This milestone is now ready for review and approval.`;
 
       // Send notification message
       const message = approved
-        ? `✅ Contract has been approved and marked as completed.${reviewComments ? "\n\n📝 Client comments: " + reviewComments : ""}${contractData.blockchain_address ? "\n\n💰 Escrow funds have been released to the provider." : ""}`
+        ? `✅ Contract has been approved and completed on the blockchain.${reviewComments ? "\n\n📝 Client comments: " + reviewComments : ""}${contractData.blockchain_address ? "\n\n💰 Provider can now withdraw the escrow funds from the smart contract." : ""}`
         : `❌ Contract has been rejected and returned for revision.${reviewComments ? "\n\n📝 Client comments: " + reviewComments : ""}`;
 
       await this.sendContractMessage(contractId, message);
@@ -3706,6 +3737,9 @@ This milestone is now ready for review and approval.`;
         "@/lib/services/marketplace.service"
       );
 
+      // Save transaction state before blockchain call
+      await this.saveTransactionState(contractId, "withdrawal");
+
       // Provider withdraws escrow
       const success = await marketplaceService.withdrawEscrow(contractId);
 
@@ -3721,6 +3755,9 @@ This milestone is now ready for review and approval.`;
           .eq("id", contractId);
 
         console.log("✅ Escrow funds withdrawn successfully");
+
+        // Clear transaction state on successful withdrawal
+        await this.clearTransactionState(contractId, "withdrawal");
 
         // Send notification
         await this.sendContractMessage(
@@ -4105,6 +4142,76 @@ This milestone is now ready for review and approval.`;
     }
   },
 
+  // Save transaction state for recovery
+  async saveTransactionState(
+    contractId: string,
+    transactionType: string,
+    status: string,
+    data?: any,
+  ): Promise<void> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      await supabase.from("contract_transactions").upsert(
+        {
+          contract_id: contractId,
+          transaction_type: transactionType,
+          status: status,
+          transaction_data: data,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "contract_id,transaction_type",
+        },
+      );
+
+      console.log(`💾 Transaction state saved: ${transactionType} - ${status}`);
+    } catch (error) {
+      console.error("Error saving transaction state:", error);
+    }
+  },
+
+  // Load pending transactions for recovery
+  async loadPendingTransactions(contractId: string): Promise<any[]> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      const { data, error } = await supabase
+        .from("contract_transactions")
+        .select("*")
+        .eq("contract_id", contractId)
+        .in("status", ["pending", "processing"])
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Error loading pending transactions:", error);
+      return [];
+    }
+  },
+
+  // Clear transaction state
+  async clearTransactionState(
+    contractId: string,
+    transactionType: string,
+  ): Promise<void> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      await supabase
+        .from("contract_transactions")
+        .delete()
+        .eq("contract_id", contractId)
+        .eq("transaction_type", transactionType);
+
+      console.log(`🗑️ Transaction state cleared: ${transactionType}`);
+    } catch (error) {
+      console.error("Error clearing transaction state:", error);
+    }
+  },
+
   // Retry blockchain deployment for fully signed contracts
   async retryBlockchainDeployment(contractId: string): Promise<boolean> {
     const supabase = getSupabaseBrowserClient();
@@ -4168,7 +4275,9 @@ This milestone is now ready for review and approval.`;
       console.log("🔍 Contract budget type:", typeof contractData.budget);
 
       // Deploy escrow smart contract
-      const deploymentAmount = await getDeploymentAmount(contractData.budget || 0);
+      const deploymentAmount = await getDeploymentAmount(
+        contractData.budget || 0,
+      );
 
       console.log("💰 Calculated deployment amount:", deploymentAmount);
       console.log("🔍 Deployment params:", {
@@ -4177,6 +4286,14 @@ This milestone is now ready for review and approval.`;
         providerAddress: providerWallet.wallet_address,
         originalBudget: contractData.budget,
         deploymentAmount: deploymentAmount,
+      });
+
+      // Save transaction state before deployment
+      await this.saveTransactionState(contractId, "deployment", "processing", {
+        deploymentAmount,
+        clientAddress: neederWallet.wallet_address,
+        providerAddress: providerWallet.wallet_address,
+        originalBudget: contractData.budget,
       });
 
       const escrowAddress = await blockchainService.deployEscrowContract({
@@ -4221,6 +4338,9 @@ This milestone is now ready for review and approval.`;
           escrow_amount: deploymentAmount,
         });
 
+        // Clear transaction state on success
+        await this.clearTransactionState(contractId, "deployment");
+
         // Send notification about smart contract deployment
         const deploymentMessage = `Smart contract agreement has been successfully created and funded! The agreement is now secured on the blockchain at address: ${escrowAddress}\n\nThe provider can now accept the agreement to begin work.`;
         await this.sendContractMessage(contractId, deploymentMessage);
@@ -4228,6 +4348,10 @@ This milestone is now ready for review and approval.`;
         return true;
       } else {
         console.error("Failed to deploy smart contract");
+
+        // Update transaction state to failed
+        await this.saveTransactionState(contractId, "deployment", "failed");
+
         await this.sendContractMessage(
           contractId,
           "Smart contract deployment failed. Please try again or contact support if the issue persists.",
@@ -4236,11 +4360,611 @@ This milestone is now ready for review and approval.`;
       }
     } catch (error) {
       console.error("Error in retryBlockchainDeployment:", error);
+
+      // Update transaction state to failed
+      await this.saveTransactionState(contractId, "deployment", "failed", {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+
       await this.sendContractMessage(
         contractId,
         "Smart contract deployment failed due to an error. Please try again or contact support.",
       );
       return false;
+    }
+  },
+
+  // Check for and recover from interrupted transactions
+  async checkInterruptedTransactions(contractId: string): Promise<{
+    hasInterrupted: boolean;
+    transactionType?: string;
+    message: string;
+  }> {
+    try {
+      const pendingTransactions =
+        await this.loadPendingTransactions(contractId);
+
+      if (pendingTransactions.length === 0) {
+        return {
+          hasInterrupted: false,
+          message: "No interrupted transactions found",
+        };
+      }
+
+      const latestTransaction = pendingTransactions[0];
+      console.log("🔄 Found interrupted transaction:", latestTransaction);
+
+      // Check if the transaction actually succeeded on blockchain
+      if (latestTransaction.transaction_type === "deployment") {
+        const agreementExists =
+          await blockchainService.agreementExists(contractId);
+
+        if (agreementExists) {
+          console.log(
+            "✅ Found successful deployment on blockchain, recovering state...",
+          );
+
+          const recoveryResult = await this.recoverContractState(contractId);
+          if (recoveryResult.recovered) {
+            return {
+              hasInterrupted: true,
+              transactionType: "deployment",
+              message:
+                "Deployment transaction was interrupted but completed successfully on blockchain. State has been recovered.",
+            };
+          }
+        }
+      } else if (latestTransaction.transaction_type === "acceptance") {
+        const isAccepted =
+          await blockchainService.isAgreementAccepted(contractId);
+
+        if (isAccepted) {
+          console.log(
+            "✅ Found successful acceptance on blockchain, recovering state...",
+          );
+
+          const recoveryResult = await this.recoverAcceptanceState(contractId);
+          if (recoveryResult.recovered) {
+            return {
+              hasInterrupted: true,
+              transactionType: "acceptance",
+              message:
+                "Acceptance transaction was interrupted but completed successfully on blockchain. State has been recovered.",
+            };
+          }
+        }
+      } else if (latestTransaction.transaction_type === "completion") {
+        const isCompleted =
+          await blockchainService.isAgreementCompleted(contractId);
+
+        if (isCompleted) {
+          console.log(
+            "✅ Found successful completion on blockchain, recovering state...",
+          );
+
+          const recoveryResult = await this.recoverCompletionState(contractId);
+          if (recoveryResult.recovered) {
+            return {
+              hasInterrupted: true,
+              transactionType: "completion",
+              message:
+                "Completion transaction was interrupted but completed successfully on blockchain. State has been recovered.",
+            };
+          }
+        }
+      } else if (latestTransaction.transaction_type === "withdrawal") {
+        const isWithdrawn =
+          await blockchainService.isEscrowWithdrawn(contractId);
+
+        if (isWithdrawn) {
+          console.log(
+            "✅ Found successful withdrawal on blockchain, recovering state...",
+          );
+
+          const recoveryResult = await this.recoverWithdrawalState(contractId);
+          if (recoveryResult.recovered) {
+            return {
+              hasInterrupted: true,
+              transactionType: "withdrawal",
+              message:
+                "Withdrawal transaction was interrupted but completed successfully on blockchain. State has been recovered.",
+            };
+          }
+        }
+      }
+
+      return {
+        hasInterrupted: true,
+        transactionType: latestTransaction.transaction_type,
+        message: `Found interrupted ${latestTransaction.transaction_type} transaction. You may need to retry the operation.`,
+      };
+    } catch (error) {
+      console.error("Error checking interrupted transactions:", error);
+      return {
+        hasInterrupted: false,
+        message: "Error checking for interrupted transactions",
+      };
+    }
+  },
+
+  // Recover contract state from blockchain (for interrupted deployments)
+  async recoverContractState(contractId: string): Promise<{
+    recovered: boolean;
+    message: string;
+  }> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      console.log("🔄 Attempting to recover contract state for:", contractId);
+
+      // Get current contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        return {
+          recovered: false,
+          message: "Contract not found in database",
+        };
+      }
+
+      // Skip if contract already has blockchain address
+      if (contractData.blockchain_address) {
+        return {
+          recovered: false,
+          message: "Contract already has blockchain address",
+        };
+      }
+
+      // Check if contract is fully signed
+      if (!contractData.provider_signed || !contractData.needer_signed) {
+        return {
+          recovered: false,
+          message: "Contract is not fully signed",
+        };
+      }
+
+      // Check if agreement exists on blockchain
+      const agreementExists =
+        await blockchainService.agreementExists(contractId);
+      if (!agreementExists) {
+        return {
+          recovered: false,
+          message: "No agreement found on blockchain",
+        };
+      }
+
+      console.log("✅ Found existing agreement on blockchain");
+
+      // Get agreement details
+      const escrowDetails =
+        await blockchainService.getEscrowDetails(contractId);
+      if (!escrowDetails) {
+        return {
+          recovered: false,
+          message: "Could not retrieve agreement details",
+        };
+      }
+
+      console.log(
+        "💰 Agreement escrow amount:",
+        escrowDetails.balance.toString(),
+      );
+
+      const marketplaceAddress = process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS;
+      // Update database with recovered blockchain information
+      const { error: updateError } = await supabase
+        .from("contracts")
+        .update({
+          blockchain_address: marketplaceAddress, // Marketplace address
+          blockchain_deployed_at: new Date().toISOString(),
+          blockchain_status:
+            escrowDetails.state === 0
+              ? "pending_acceptance"
+              : escrowDetails.state === 1
+                ? "accepted"
+                : "completed",
+          escrow_funded: escrowDetails.balance > BigInt(0),
+          escrow_funded_at: new Date().toISOString(),
+          escrow_amount: Number(escrowDetails.balance) / 1e18, // Convert from wei to ETH
+          status:
+            escrowDetails.state === 0
+              ? "pending_acceptance"
+              : escrowDetails.state === 1
+                ? "pending_start"
+                : "completed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", contractId);
+
+      if (updateError) {
+        console.error("Error updating contract state:", updateError);
+        return {
+          recovered: false,
+          message: "Failed to update database",
+        };
+      }
+
+      console.log("✅ Database synchronized with blockchain state");
+
+      // Send recovery notification
+      const statusMessage =
+        escrowDetails.state === 0
+          ? "🔄 Contract state recovered! Smart contract agreement found on blockchain and is ready for provider acceptance."
+          : escrowDetails.state === 1
+            ? "🔄 Contract state recovered! Smart contract agreement is already accepted and ready for work to begin."
+            : "🔄 Contract state recovered! Smart contract agreement is completed.";
+
+      await this.sendContractMessage(contractId, statusMessage);
+
+      // Clear any pending transaction states on successful recovery
+      await this.clearTransactionState(contractId, "deployment");
+
+      return {
+        recovered: true,
+        message: "Contract state successfully recovered from blockchain",
+      };
+    } catch (error) {
+      console.error("Error recovering contract state:", error);
+      return {
+        recovered: false,
+        message: `Recovery failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      };
+    }
+  },
+
+  // Recover acceptance state from blockchain (for interrupted acceptance)
+  async recoverAcceptanceState(contractId: string): Promise<{
+    recovered: boolean;
+    message: string;
+  }> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      console.log("🔄 Attempting to recover acceptance state for:", contractId);
+      console.log("📋 Starting acceptance recovery process...");
+
+      // Get current contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        console.log("❌ Contract not found in database:", contractError);
+        return {
+          recovered: false,
+          message: "Contract not found in database",
+        };
+      }
+
+      console.log("📋 Current contract data:");
+      console.log("   - Status:", contractData.status);
+      console.log("   - Blockchain status:", contractData.blockchain_status);
+      console.log("   - Blockchain address:", contractData.blockchain_address);
+
+      // Always check blockchain state regardless of current database status
+      console.log(
+        "📋 Checking blockchain state regardless of current DB status",
+      );
+
+      // Check if contract has blockchain address
+      if (!contractData.blockchain_address) {
+        return {
+          recovered: false,
+          message: "Contract is not deployed on blockchain",
+        };
+      }
+
+      // Check if agreement is accepted on blockchain
+      console.log("🔍 Checking if agreement is accepted on blockchain...");
+      const isAccepted =
+        await blockchainService.isAgreementAccepted(contractId);
+
+      console.log(
+        "📋 Agreement acceptance status from blockchain:",
+        isAccepted,
+      );
+      if (!isAccepted) {
+        console.log(
+          "❌ Agreement is not accepted on blockchain, no recovery needed",
+        );
+        return {
+          recovered: false,
+          message: "Agreement is not accepted on blockchain",
+        };
+      }
+
+      console.log("✅ Found accepted agreement on blockchain");
+      console.log("💾 Updating database with acceptance information...");
+      console.log("📋 Current contract status:", contractData.status);
+      console.log(
+        "📋 Current blockchain status:",
+        contractData.blockchain_status,
+      );
+
+      // Update database with acceptance information
+      const { error: updateError } = await supabase
+        .from("contracts")
+        .update({
+          blockchain_status: "accepted",
+          status: "pending_start",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", contractId);
+
+      if (updateError) {
+        console.error(
+          "❌ Error updating contract acceptance state:",
+          updateError,
+        );
+        return {
+          recovered: false,
+          message: "Failed to update database",
+        };
+      }
+
+      console.log("✅ Database synchronized with blockchain acceptance state");
+      console.log("📋 New status: pending_start");
+      console.log("📋 New blockchain_status: accepted");
+
+      // Send recovery notification
+      await this.sendContractMessage(
+        contractId,
+        "🔄 Acceptance state recovered! Agreement has been accepted on blockchain and is ready for work to begin.",
+      );
+
+      // Clear any pending transaction states on successful recovery
+      await this.clearTransactionState(contractId, "acceptance");
+
+      return {
+        recovered: true,
+        message: "Acceptance state successfully recovered from blockchain",
+      };
+    } catch (error) {
+      console.error("Error recovering acceptance state:", error);
+      return {
+        recovered: false,
+        message: `Acceptance recovery failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      };
+    }
+  },
+
+  // Recover completion state from blockchain (for interrupted completion)
+  async recoverCompletionState(contractId: string): Promise<{
+    recovered: boolean;
+    message: string;
+  }> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      console.log("🔄 Attempting to recover completion state for:", contractId);
+      console.log("📋 Starting completion recovery process...");
+
+      // Get current contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        console.log("❌ Contract not found in database:", contractError);
+        return {
+          recovered: false,
+          message: "Contract not found in database",
+        };
+      }
+
+      console.log("📋 Current contract data:");
+      console.log("   - Status:", contractData.status);
+      console.log("   - Blockchain status:", contractData.blockchain_status);
+      console.log("   - Blockchain address:", contractData.blockchain_address);
+
+      // Check if contract has blockchain address
+      if (!contractData.blockchain_address) {
+        return {
+          recovered: false,
+          message: "Contract is not deployed on blockchain",
+        };
+      }
+
+      // Check if agreement is completed on blockchain
+      console.log("🔍 Checking if agreement is completed on blockchain...");
+      const isCompleted =
+        await blockchainService.isAgreementCompleted(contractId);
+
+      console.log(
+        "📋 Agreement completion status from blockchain:",
+        isCompleted,
+      );
+      if (!isCompleted) {
+        console.log(
+          "❌ Agreement is not completed on blockchain, no recovery needed",
+        );
+        return {
+          recovered: false,
+          message: "Agreement is not completed on blockchain",
+        };
+      }
+
+      // Check if database already reflects completion
+      if (
+        contractData.status === "completed" &&
+        contractData.blockchain_status === "completed"
+      ) {
+        console.log("ℹ️ Database already shows completed status");
+        return {
+          recovered: false,
+          message: "Contract is already marked as completed",
+        };
+      }
+
+      console.log("✅ Found completed agreement on blockchain");
+      console.log("💾 Updating database with completion information...");
+
+      // Update database with completion information
+      const { error: updateError } = await supabase
+        .from("contracts")
+        .update({
+          blockchain_status: "completed",
+          status: "completed",
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", contractId);
+
+      if (updateError) {
+        console.error(
+          "❌ Error updating contract completion state:",
+          updateError,
+        );
+        return {
+          recovered: false,
+          message: "Failed to update database",
+        };
+      }
+
+      console.log("✅ Database synchronized with blockchain completion state");
+      console.log("📋 New status: completed");
+      console.log("📋 New blockchain_status: completed");
+
+      // Send recovery notification
+      await this.sendContractMessage(
+        contractId,
+        "🔄 Completion state recovered! Agreement has been completed on blockchain and the provider can now withdraw escrow funds.",
+      );
+
+      // Clear any pending transaction states on successful recovery
+      await this.clearTransactionState(contractId, "completion");
+
+      return {
+        recovered: true,
+        message: "Completion state successfully recovered from blockchain",
+      };
+    } catch (error) {
+      console.error("Error recovering completion state:", error);
+      return {
+        recovered: false,
+        message: `Completion recovery failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      };
+    }
+  },
+
+  // Recover withdrawal state from blockchain (for interrupted withdrawal)
+  async recoverWithdrawalState(contractId: string): Promise<{
+    recovered: boolean;
+    message: string;
+  }> {
+    const supabase = getSupabaseBrowserClient();
+
+    try {
+      console.log("🔄 Attempting to recover withdrawal state for:", contractId);
+      console.log("📋 Starting withdrawal recovery process...");
+
+      // Get current contract data
+      const { data: contractData, error: contractError } = await supabase
+        .from("contracts")
+        .select("*")
+        .eq("id", contractId)
+        .single();
+
+      if (contractError || !contractData) {
+        console.log("❌ Contract not found in database:", contractError);
+        return {
+          recovered: false,
+          message: "Contract not found in database",
+        };
+      }
+
+      console.log("📋 Current contract data:");
+      console.log("   - Status:", contractData.status);
+      console.log("   - Blockchain status:", contractData.blockchain_status);
+      console.log("   - Blockchain address:", contractData.blockchain_address);
+      console.log("   - Escrow released:", contractData.escrow_released);
+
+      // Check if contract has blockchain address
+      if (!contractData.blockchain_address) {
+        return {
+          recovered: false,
+          message: "Contract is not deployed on blockchain",
+        };
+      }
+
+      // Check if escrow is withdrawn on blockchain
+      console.log("🔍 Checking if escrow is withdrawn on blockchain...");
+      const isWithdrawn = await blockchainService.isEscrowWithdrawn(contractId);
+
+      console.log("📋 Escrow withdrawal status from blockchain:", isWithdrawn);
+      if (!isWithdrawn) {
+        console.log(
+          "❌ Escrow is not withdrawn on blockchain, no recovery needed",
+        );
+        return {
+          recovered: false,
+          message: "Escrow is not withdrawn on blockchain",
+        };
+      }
+
+      // Check if database already reflects withdrawal
+      if (contractData.escrow_released) {
+        console.log("ℹ️ Database already shows withdrawal status");
+        return {
+          recovered: false,
+          message: "Escrow withdrawal is already recorded in database",
+        };
+      }
+
+      console.log("✅ Found withdrawn escrow on blockchain");
+      console.log("💾 Updating database with withdrawal information...");
+
+      // Update database with withdrawal information
+      const { error: updateError } = await supabase
+        .from("contracts")
+        .update({
+          escrow_released: true,
+          escrow_released_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", contractId);
+
+      if (updateError) {
+        console.error(
+          "❌ Error updating contract withdrawal state:",
+          updateError,
+        );
+        return {
+          recovered: false,
+          message: "Failed to update database",
+        };
+      }
+
+      console.log("✅ Database synchronized with blockchain withdrawal state");
+      console.log("📋 Escrow released: true");
+
+      // Send recovery notification
+      await this.sendContractMessage(
+        contractId,
+        "🔄 Withdrawal state recovered! Escrow funds have been successfully withdrawn from the blockchain.",
+      );
+
+      // Clear any pending transaction states on successful recovery
+      await this.clearTransactionState(contractId, "withdrawal");
+
+      return {
+        recovered: true,
+        message: "Withdrawal state successfully recovered from blockchain",
+      };
+    } catch (error) {
+      console.error("Error recovering withdrawal state:", error);
+      return {
+        recovered: false,
+        message: `Withdrawal recovery failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      };
     }
   },
 

@@ -41,7 +41,7 @@ export const WALLET_REQUIRED_FOR_COMPLETION = true;
  * Minimal amount used for blockchain record-keeping contracts
  * This satisfies smart contract requirements while being negligible cost
  */
-export const MINIMAL_BLOCKCHAIN_AMOUNT = "0.0001";
+export const MINIMAL_BLOCKCHAIN_AMOUNT = "0.00001";
 
 /**
  * USD to ETH exchange rate
@@ -54,7 +54,7 @@ export const USD_TO_ETH_RATE = 2500;
  * Threshold for detecting zero-budget contracts
  * Contracts with amount <= this value are considered zero-budget
  */
-export const ZERO_BUDGET_THRESHOLD = 0.0001;
+export const ZERO_BUDGET_THRESHOLD = 0.00001;
 
 // =============================================================================
 // UI CONFIGURATION
@@ -190,7 +190,7 @@ export async function getFundingAmount(contractBudget: number | string): Promise
   // For zero or invalid budgets, return minimal amount
   if (!budget || isNaN(budget) || budget <= 0) {
     console.log("🔍 Zero or invalid budget, returning minimal amount");
-    return '0.0001';
+    return '0.00001';
   }
 
   // Convert USD to ETH for funding

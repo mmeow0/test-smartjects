@@ -66,7 +66,7 @@ export default function ContractDetailsPage({
   const [contract, setContract] = useState<any>(null);
 
   console.log(contract);
-  
+
   // Load contract data
   const loadContract = async () => {
     // Don't load while auth is still loading or access is denied
@@ -82,7 +82,7 @@ export default function ContractDetailsPage({
       const { isSigned, matchId, proposalId } =
         await contractService.isContractFullySigned(id);
 
-      setIsSignTrue(isSigned)
+      setIsSignTrue(isSigned);
 
       if (!isSigned) {
         // Contract not fully signed - redirect to signing page if we have match/proposal IDs
@@ -108,6 +108,118 @@ export default function ContractDetailsPage({
       }
 
       setContract(contractData);
+
+      try {
+        if (
+          contractData &&
+          !contractData.blockchain_address &&
+          contractData.role
+        ) {
+
+          toast({
+            title: "Checking Blockchain State",
+            description: "Verifying smart contract deployment status...",
+          });
+
+          // Check for interrupted transactions first
+          const interruptedResult =
+            await contractService.checkInterruptedTransactions(id);
+
+          if (interruptedResult.hasInterrupted) {
+            toast({
+              title: "Interrupted Transaction Detected",
+              description: interruptedResult.message,
+            });
+          }
+
+          const recoveryResult = await contractService.recoverContractState(id);
+          if (recoveryResult.recovered) {
+            console.log("✅ Blockchain state recovered, reloading contract...");
+
+            toast({
+              title: "Smart Contract Found",
+              description:
+                "Successfully recovered blockchain deployment that was interrupted. The contract is now synchronized.",
+            });
+
+            // Reload contract data after successful recovery
+            const updatedContractData =
+              await contractService.getContractById(id);
+            if (updatedContractData) {
+              setContract(updatedContractData);
+            }
+          } else if (
+            recoveryResult.message !==
+              "Contract already has blockchain address" &&
+            recoveryResult.message !== "Contract is not fully signed" &&
+            recoveryResult.message !== "No agreement found on blockchain"
+          ) {
+            // Only show error for unexpected failures
+            console.log("ℹ️ Recovery not needed:", recoveryResult.message);
+          }
+
+          // Direct acceptance check - always run if contract has blockchain address
+          console.log("🔍 Direct acceptance state check...");
+          if (contractData && contractData.blockchain_address) {
+            console.log("✅ Running direct acceptance recovery...");
+
+            try {
+              const acceptanceRecoveryResult =
+                await contractService.recoverAcceptanceState(id);
+
+              console.log(
+                "📋 Direct acceptance recovery result:",
+                acceptanceRecoveryResult,
+              );
+
+              if (acceptanceRecoveryResult.recovered) {
+                console.log(
+                  "✅ Acceptance state recovered, reloading contract...",
+                );
+
+                // Reload contract data after successful acceptance recovery
+                const updatedContractData =
+                  await contractService.getContractById(id);
+                if (updatedContractData) {
+                  console.log(
+                    "📋 Contract data updated after acceptance recovery",
+                  );
+                  console.log("   - new status:", updatedContractData.status);
+                  console.log(
+                    "   - new blockchain_status:",
+                    updatedContractData.blockchain_status,
+                  );
+                  setContract(updatedContractData);
+                }
+              } else {
+                console.log(
+                  "ℹ️ No acceptance recovery needed:",
+                  acceptanceRecoveryResult.message,
+                );
+              }
+            } catch (acceptanceError) {
+              console.error(
+                "❌ Error during acceptance recovery:",
+                acceptanceError,
+              );
+            }
+          } else {
+            console.log(
+              "❌ Skipping acceptance recovery - no blockchain address",
+            );
+          }
+        }
+      } catch (recoveryError) {
+        console.error("Error during blockchain state recovery:", recoveryError);
+
+        toast({
+          title: "Blockchain Check Failed",
+          description:
+            "Could not verify blockchain state, but contract page will continue to load.",
+          variant: "destructive",
+        });
+      }
+
       setIsCheckingSigningStatus(false);
       setIsLoading(false);
     } catch (error) {
@@ -608,6 +720,7 @@ export default function ContractDetailsPage({
             contractId={id}
             blockchainAddress={contract?.blockchain_address}
             blockchainStatus={contract?.blockchain_status}
+            currentStatus={contract?.status}
             escrowFunded={contract?.escrow_funded}
             escrowAmount={contract?.budget?.toString()}
             isClient={!isProvider}
@@ -656,20 +769,20 @@ export default function ContractDetailsPage({
                     />
                   ))
                 ) : (
-                  <div className="space-y-4">
-                    <div className="text-center py-8 text-muted-foreground">
-                      <p>This contract doesn't have specific milestones.</p>
-                      <p>
-                        Use the workflow below to manage the contract progress.
-                      </p>
-                    </div>
-                    <ContractWorkflow
-                      contractId={id}
-                      currentStatus={contract?.status}
-                      onStatusChange={loadContract}
-                    />
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>This contract doesn't have specific milestones.</p>
+                    <p>
+                      Use the workflow below to manage the contract progress.
+                    </p>
                   </div>
                 )}
+                <div className="space-y-4">
+                  <ContractWorkflow
+                    contractId={id}
+                    currentStatus={contract?.status}
+                    onStatusChange={loadContract}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

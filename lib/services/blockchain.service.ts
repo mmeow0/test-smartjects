@@ -19,19 +19,19 @@ import {
 } from "@/lib/utils/thirdweb-wallet";
 import {
   THIRDWEB_CONFIG,
-  TX_CONFIG,
   BLOCKCHAIN_ERRORS,
   logTransaction,
   validateAddress,
-  hardhatChain,
 } from "@/lib/config/blockchain.config";
-import MARKETPLACE_JSON from "./hardhat-SmartjectsMarketplace-ABI.json"
+import MARKETPLACE_JSON from "./hardhat-SmartjectsMarketplace-ABI.json";
 import { parseAbi } from "viem";
+// import { sepolia } from "thirdweb/chains";
+import { ethereum } from "thirdweb/chains";
 
 // Marketplace contract configuration
 const MARKETPLACE_ADDRESS =
   process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS ||
-  "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+  "";
 
 // Marketplace contract types
 export enum AgreementStatus {
@@ -79,8 +79,9 @@ class BlockchainService {
 
   constructor() {
     this.initializeClient();
-    // Always use hardhat for now
-    this.chain = hardhatChain;
+    // Use Sepolia testnet for Thirdweb deployment
+    this.chain = ethereum;
+    console.log("🌐 Using Sepolia testnet (Chain ID: 11155111)");
   }
 
   // Initialize Thirdweb client
@@ -196,6 +197,8 @@ class BlockchainService {
       }
 
       console.log("✅ Client and wallet are ready");
+      console.log("🏠 Using marketplace address:", MARKETPLACE_ADDRESS);
+      console.log("🌐 Network: Sepolia testnet");
 
       // Validate addresses
       if (
@@ -209,6 +212,12 @@ class BlockchainService {
       console.log("📝 Getting marketplace contract...");
       const marketplaceContract = this.getMarketplaceContract();
       console.log("✅ Marketplace contract instance created");
+      console.log("📍 Contract address:", marketplaceContract.address);
+      console.log("🌐 Chain:", this.chain.name, "ID:", this.chain.id);
+      console.log(
+        "🔗 Explorer: https://sepolia.etherscan.io/address/" +
+          marketplaceContract.address,
+      );
 
       // Convert amount to wei
       console.log("💰 Converting to wei - Amount:", params.amount, "ETH");
@@ -241,11 +250,16 @@ class BlockchainService {
       );
 
       // Wait for agreement creation confirmation
-      await waitForReceipt({
+      console.log("⏳ Waiting for transaction confirmation...");
+      const receipt = await waitForReceipt({
         client: this.client,
         chain: this.chain,
         transactionHash: agreementResult.transactionHash,
       });
+
+      console.log("📋 Transaction receipt status:", receipt.status);
+      console.log("⛽ Gas used:", receipt.gasUsed?.toString());
+      console.log("📍 Contract address in receipt:", receipt.contractAddress);
       console.log("✅ Agreement created on marketplace with escrow");
 
       logTransaction(
@@ -389,70 +403,215 @@ class BlockchainService {
     return MARKETPLACE_ADDRESS;
   }
 
-  // Добавьте эту функцию в ваш BlockchainService
-async diagnosticContractState(): Promise<void> {
-  try {
-    console.log("🔧 BLOCKCHAIN DIAGNOSTIC START");
-    
-    const marketplaceContract = this.getMarketplaceContract();
-    console.log("📍 Contract address:", marketplaceContract.address);
-    console.log("🌐 Chain ID:", marketplaceContract.chain.id);
-    console.log("🔗 RPC URL:", marketplaceContract.chain.rpc);
-    console.log("🔗 marketplaceContract:", marketplaceContract);
 
-    const rpcRequest = getRpcClient({
-        client: this.client,
-        chain: this.chain,
-      });
-
-    // Проверяем код контракта
-    const code = await rpcRequest({
-      method: "eth_getCode", 
-      params: [marketplaceContract.address, "latest"],
-    });
-    
-    console.log("📜 Contract code length:", code.length);
-    console.log("🏗️ Contract deployed:", code !== "0x");
-
-    if (code === "0x") {
-      console.error("❌ CONTRACT NOT DEPLOYED!");
-      console.log("💡 Solutions:");
-      console.log("   1. Deploy contract: npx hardhat run scripts/deploy.ts --network localhost");
-      console.log("   2. Check contract address in your config");
-      console.log("   3. Make sure you're on the right network");
-      return;
-    }
-
-    // Пробуем простые вызовы
+  // Check if agreement exists on blockchain
+  async agreementExists(contractId: string): Promise<boolean> {
     try {
-      const testId = await readContract({
+      if (!this.client) {
+        console.warn("Thirdweb client not initialized");
+        return false;
+      }
+
+      console.log("🔍 Checking if agreement exists for contract:", contractId);
+
+      const marketplaceContract = this.getMarketplaceContract();
+
+      // Compute bytes32 external ID
+      const externalIdResult = await readContract({
         contract: marketplaceContract,
         method: "function computeExternalId(string) pure returns (bytes32)",
-        params: ["test-123"],
+        params: [contractId],
       });
-      console.log("✅ computeExternalId works:", testId);
-    } catch (error) {
-      console.error("❌ computeExternalId failed:", error);
-    }
+      const externalId = externalIdResult as `0x${string}`;
 
-    try {
-      const agreementIds = await readContract({
+      // Check if agreement exists
+      const exists = await readContract({
         contract: marketplaceContract,
-        method: "function listAgreementIds() view returns (bytes32[])",
-        params: [],
+        method: "function exists(bytes32) view returns (bool)",
+        params: [externalId],
       });
-      console.log("✅ Total agreements:", agreementIds.length);
-      console.log("📋 Agreement IDs:", agreementIds);
+
+      console.log("✅ Agreement exists check result:", exists);
+      return exists as boolean;
     } catch (error) {
-      console.error("❌ listAgreementIds failed:", error);
+      console.error("Error checking agreement existence:", error);
+      return false;
     }
-
-    console.log("🔧 BLOCKCHAIN DIAGNOSTIC END");
-
-  } catch (error) {
-    console.error("❌ Diagnostic failed:", error);
   }
-}
+
+  // Check if agreement is accepted on blockchain
+  async isAgreementAccepted(contractId: string): Promise<boolean> {
+    try {
+      if (!this.client) {
+        console.warn("Thirdweb client not initialized");
+        return false;
+      }
+
+      console.log(
+        "🔍 Checking if agreement is accepted for contract:",
+        contractId,
+      );
+
+      const marketplaceContract = this.getMarketplaceContract();
+
+      // Compute bytes32 external ID
+      const externalIdResult = await readContract({
+        contract: marketplaceContract,
+        method: "function computeExternalId(string) pure returns (bytes32)",
+        params: [contractId],
+      });
+      const externalId = externalIdResult as `0x${string}`;
+      console.log("📋 External ID for acceptance check:", externalId);
+
+      // Check if agreement exists first
+      const exists = await readContract({
+        contract: marketplaceContract,
+        method: "function exists(bytes32) view returns (bool)",
+        params: [externalId],
+      });
+
+      console.log("📋 Agreement exists:", exists);
+      if (!exists) {
+        console.log("❌ Agreement does not exist");
+        return false;
+      }
+
+      // Get agreement details to check status
+      const result = await readContract({
+        contract: marketplaceContract,
+        method:
+          "function getAgreement(bytes32) view returns (bytes32,address,address,string,string,uint8,uint256,uint256)",
+        params: [externalId],
+      });
+
+      if (!result) {
+        console.log("❌ Could not retrieve agreement details");
+        return false;
+      }
+
+      const [, , , , , status] = result as any;
+      console.log("📋 Agreement status from blockchain:", status);
+      console.log(
+        "📋 Status types: Created=0, Accepted=1, Completed=2, Cancelled=3",
+      );
+      const isAccepted = status === 1; // AgreementStatus.Accepted = 1
+
+      console.log("✅ Agreement acceptance check result:", isAccepted);
+      console.log("🔄 Should trigger acceptance recovery:", isAccepted);
+      return isAccepted;
+    } catch (error) {
+      console.error("❌ Error checking agreement acceptance:", error);
+      return false;
+    }
+  }
+
+  // Check if agreement is completed on blockchain
+  async isAgreementCompleted(contractId: string): Promise<boolean> {
+    try {
+      if (!this.client) {
+        console.warn("Thirdweb client not initialized");
+        return false;
+      }
+
+      console.log(
+        "🔍 Checking if agreement is completed for contract:",
+        contractId,
+      );
+
+      const marketplaceContract = this.getMarketplaceContract();
+
+      // Compute bytes32 external ID
+      const externalIdResult = await readContract({
+        contract: marketplaceContract,
+        method: "function computeExternalId(string) pure returns (bytes32)",
+        params: [contractId],
+      });
+      const externalId = externalIdResult as `0x${string}`;
+      console.log("📋 External ID for completion check:", externalId);
+
+      // Check if agreement exists first
+      const exists = await readContract({
+        contract: marketplaceContract,
+        method: "function exists(bytes32) view returns (bool)",
+        params: [externalId],
+      });
+
+      console.log("📋 Agreement exists:", exists);
+      if (!exists) {
+        console.log("❌ Agreement does not exist");
+        return false;
+      }
+
+      // Get agreement details to check status
+      const result = await readContract({
+        contract: marketplaceContract,
+        method:
+          "function getAgreement(bytes32) view returns (bytes32,address,address,string,string,uint8,uint256,uint256)",
+        params: [externalId],
+      });
+
+      if (!result) {
+        console.log("❌ Could not retrieve agreement details");
+        return false;
+      }
+
+      const [, , , , , status] = result as any;
+      console.log("📋 Agreement status from blockchain:", status);
+      console.log(
+        "📋 Status types: Created=0, Accepted=1, Completed=2, Cancelled=3",
+      );
+      const isCompleted = status === 2; // AgreementStatus.Completed = 2
+
+      console.log("✅ Agreement completion check result:", isCompleted);
+      console.log("🔄 Should trigger completion recovery:", isCompleted);
+      return isCompleted;
+    } catch (error) {
+      console.error("❌ Error checking agreement completion:", error);
+      return false;
+    }
+  }
+
+  // Check if escrow has been withdrawn (balance is 0 for completed agreements)
+  async isEscrowWithdrawn(contractId: string): Promise<boolean> {
+    try {
+      if (!this.client) {
+        console.warn("Thirdweb client not initialized");
+        return false;
+      }
+
+      console.log(
+        "🔍 Checking if escrow is withdrawn for contract:",
+        contractId,
+      );
+
+      const escrowDetails = await this.getEscrowDetails(contractId);
+
+      if (!escrowDetails) {
+        console.log("❌ No escrow details found");
+        return false;
+      }
+
+      console.log("📋 Escrow details for withdrawal check:");
+      console.log("   - Balance:", escrowDetails.balance.toString());
+      console.log("   - State:", escrowDetails.state);
+      console.log(
+        "   - Status types: Created=0, Accepted=1, Completed=2, Cancelled=3",
+      );
+
+      // Escrow is considered withdrawn if:
+      // 1. Agreement is completed (state = 2) AND
+      // 2. Balance is 0 (funds have been withdrawn)
+      const isWithdrawn =
+        escrowDetails.state === 2 && escrowDetails.balance === BigInt(0);
+
+      console.log("✅ Escrow withdrawal check result:", isWithdrawn);
+      console.log("🔄 Should trigger withdrawal recovery:", isWithdrawn);
+      return isWithdrawn;
+    } catch (error) {
+      console.error("❌ Error checking escrow withdrawal:", error);
+      return false;
+    }
+  }
 
   // Get escrow details - FROM MARKETPLACE AGREEMENT
   async getEscrowDetails(contractId: string): Promise<EscrowDetails | null> {
@@ -460,9 +619,16 @@ async diagnosticContractState(): Promise<void> {
       if (!this.client) {
         throw new BlockchainError("Thirdweb client not initialized");
       }
-      await blockchainService.diagnosticContractState();
+      console.log("📋 Getting escrow details for contract:", contractId);
 
+      // Run diagnostics first
+      console.log("🔍 Running diagnostics before getting escrow details...");
+      // await blockchainService.diagnosticContractState();
+      console.log("✅ Diagnostics completed, proceeding with escrow details");
+
+      console.log("🔍 Getting marketplace contract instance...");
       const marketplaceContract = this.getMarketplaceContract();
+      console.log("✅ Marketplace contract instance obtained");
 
       // Compute bytes32 external ID
       const externalIdResult = await readContract({
@@ -490,6 +656,11 @@ async diagnosticContractState(): Promise<void> {
       });
 
       if (!result) return null;
+
+      console.log(
+        "📋 Checking blockchain state regardless of current DB status",
+        result,
+      );
 
       const [
         returnedId,

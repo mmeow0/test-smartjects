@@ -236,7 +236,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     if (isNaN(num)) return "0";
 
     if (num === 0) return "0";
-    if (num < 0.0001) return "< 0.0001";
+    if (num < 0.0001) return "< 0.00001";
 
     return num.toFixed(decimals);
   }, []);

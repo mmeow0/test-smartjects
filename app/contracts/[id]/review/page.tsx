@@ -97,13 +97,13 @@ export default function ContractReviewPage({
       await contractService.reviewContract(
         contractId,
         approved,
-        reviewComments.trim() || undefined
+        reviewComments.trim() || undefined,
       );
 
       toast({
         title: approved ? "Contract approved" : "Contract rejected",
         description: approved
-          ? "Contract has been approved and marked as completed."
+          ? "Contract has been approved and completed on the blockchain."
           : "Contract has been rejected and returned for revision.",
       });
 
@@ -367,9 +367,17 @@ export default function ContractReviewPage({
                 </Button>
               </div>
 
+              {isSubmitting && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-xs text-yellow-800 text-center font-medium">
+                    ⚠️ Transaction in progress - do not refresh this page!
+                  </p>
+                </div>
+              )}
+
               <p className="text-xs text-muted-foreground text-center">
-                Once you approve this contract, it will be marked as completed
-                and payment will be processed according to your contract terms.
+                Once you approve this contract, it will be completed on the
+                blockchain and the provider can withdraw the escrow funds.
               </p>
             </div>
           </CardContent>
