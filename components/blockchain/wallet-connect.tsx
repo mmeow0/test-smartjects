@@ -111,7 +111,7 @@ export function WalletConnect({
     }
   };
 
-  const chains = [ethereum, polygon, bsc, sepolia];
+  const chains = [ethereum];
 
   if (process.env.NODE_ENV === "development") {
     chains.push(hardhatChain);
@@ -303,14 +303,14 @@ export function WalletConnect({
               icon: "https://assets.coingecko.com/coins/images/325/small/Tether.png",
             },
           ],
-          [polygon.id]: [
-            {
-              address: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174", // USDC on Polygon
-              name: "USD Coin",
-              symbol: "USDC",
-              icon: "https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png",
-            },
-          ],
+          // [polygon.id]: [
+          //   {
+          //     address: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174", // USDC on Polygon
+          //     name: "USD Coin",
+          //     symbol: "USDC",
+          //     icon: "https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png",
+          //   },
+          // ],
         }}
       />
     </div>
