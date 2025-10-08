@@ -678,6 +678,7 @@ export const contractService = {
         .eq("id", contractData.match_id)
         .single();
 
+      let smartjectId = "none";
       let smartjectTitle = "Unknown Project";
       if (matchData) {
         const { data: smartjectData } = await supabase
@@ -688,6 +689,7 @@ export const contractService = {
 
         if (smartjectData) {
           smartjectTitle = smartjectData.title;
+          smartjectId = matchData.smartject_id;
         }
       }
 
@@ -802,7 +804,7 @@ export const contractService = {
       const contract = {
         id: contractData.id,
         title: contractData.title || smartjectTitle,
-        smartjectId: contractData.match_id,
+        smartjectId: smartjectId,
         smartjectTitle: smartjectTitle,
         status: status,
         role: role,
